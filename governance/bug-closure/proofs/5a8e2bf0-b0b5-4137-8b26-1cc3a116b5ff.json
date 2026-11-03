@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "5a8e2bf0-b0b5-4137-8b26-1cc3a116b5ff",
+  "defectId": "ENG-TESTES-VACUOSOS-PROVADOS-POR-MUTACAO",
+  "severityBefore": "P2",
+  "severityAfter": "P2",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "810865f05ff8e16ce0c339540a0a791bf58cbca4",
+  "codeFingerprint": "673645b16d38e249bd742c39d5467a0cbc3b3887b04608ff2ea095b9f0aa4c7a",
+  "requiredTests": [
+    "tests/integration/engineeringBugLoop.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/integration/engineeringBugLoop.test.js",
+      "command": "npx jest tests/integration/engineeringBugLoop.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-31T19:55:02.738Z",
+      "finishedAt": "2026-10-31T19:55:41.898Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/ENG-TESTES-VACUOSOS-PROVADOS-POR-MUTACAO.log",
+      "outputSha256": "456973e13bd70f3f16ce5c6799003b5136403764d049e5488f6fe0fb17d620cd"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/integration/engineeringBugLoop.test.js",
+      "sha256": "3a1bc90410a2fa92290856e6c2ae73001653068a77a6c9c6668dec041b00932d"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+  },
+  "createdAt": "2026-10-31T19:55:41.909Z",
+  "proofHash": "30ce5db85acf16fc5b960391b82a2f6bc0904e5cd3f1cbf59920987bafe9b9d5",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "OT64ElCXpEUGXsLynvUA+vHl1R63Hk8Ve39/MXOMjVDBdFsPYq0O6Rt3AUrHC1IMfvKT2BK6NVhpczjlAskkDA==",
+    "signedAt": "2026-10-31T20:02:53.519Z"
+  }
+}

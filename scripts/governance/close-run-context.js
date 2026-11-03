@@ -48,7 +48,42 @@ function arg(argv, nome, curto) {
   return i >= 0 ? argv[i + 1] : null;
 }
 
-function main(argv = process.argv.slice(2)) {
+/**
+ * Fecha o run TAMBÉM no banco.
+ *
+ * DEFEITO MEDIDO 2026-10-30: este comando escrevia apenas o PONTEIRO
+ * (`governance/.current-run.json`). Medido logo após fechar um run de manutenção:
+ * ponteiro `status=SUPERSEDED`, linha em `governance_runs` ainda `CREATED`. E a decisão única do
+ * repositório (`scripts/governance/lib/governed-run-status.js`) declara explicitamente que **o banco é a
+ * autoridade do desfecho** e que o ponteiro é sincronizado A PARTIR dele — fechar só o ponteiro inverte a
+ * autoridade e cria exatamente a divergência que o H20 descreve.
+ *
+ * Nunca falha em silêncio: sem banco devolve `{ erro }` e o chamador PUBLICА o motivo.
+ *
+ * @returns {Promise<{atualizadas?:number, erro?:string}>}
+ */
+async function fecharNoBanco(fechado, deps = null) {
+  try {
+    const { connect, getSequelize } = deps && deps.sequelize
+      ? deps.sequelize
+      : require('../../api/db/sequelize');
+    const getGovernanceRun = deps && deps.getGovernanceRun
+      ? deps.getGovernanceRun
+      : require('../../api/db/models/GovernanceRun');
+    if (!getSequelize()) await connect();
+    const Model = getGovernanceRun();
+    if (!Model) return { erro: 'modelo de run governado indisponível' };
+    const [atualizadas] = await Model.update(
+      { status: String(fechado.status) },
+      { where: { run_id: fechado.runId } },
+    );
+    return { atualizadas };
+  } catch (erro) {
+    return { erro: erro && erro.message ? erro.message : String(erro) };
+  }
+}
+
+async function main(argv = process.argv.slice(2)) {
   const dryRun = argv.includes('--dry-run');
   const status = String(arg(argv, '--status') || 'ABANDONED').toUpperCase();
   const reason = arg(argv, '--reason');
@@ -95,12 +130,21 @@ function main(argv = process.argv.slice(2)) {
   );
   if (!dryRun) {
     fs.writeFileSync(contexto, `${JSON.stringify(fechado, null, 2)}\n`, 'utf8');
+    const banco = await fecharNoBanco(fechado);
+    if (banco.erro) {
+      process.stderr.write(`[close-run] AVISO: ponteiro fechado, mas o BANCO não foi atualizado (${banco.erro}) — o banco é a autoridade do desfecho\n`);
+    } else {
+      process.stdout.write(`[close-run] banco: ${banco.atualizadas} linha(s) de governance_runs com status=${status}\n`);
+    }
   }
   return 0;
 }
 
 if (require.main === module) {
-  process.exit(main());
+  main().then((code) => { process.exitCode = code; }).catch((erro) => {
+    process.stderr.write(`[close-run] falha: ${erro && erro.message ? erro.message : erro}\n`);
+    process.exitCode = 1;
+  });
 }
 
-module.exports = { main, ESTADOS_DE_FECHAMENTO };
+module.exports = { main, fecharNoBanco, ESTADOS_DE_FECHAMENTO };

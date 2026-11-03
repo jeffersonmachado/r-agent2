@@ -28,6 +28,17 @@ const {
   identidadeCoerente,
 } = require('../../../governance/canonical-release-decision');
 
+/**
+ * Identidade COMPLETA e válida. Desde a missão 2026-10-25 §4, `clasificar` só certifica com
+ * identidade presente (runId + sourceCommit + sourceFingerprint): antes, chamada direta sem
+ * identidade devolvia `CERTIFIED_GO` com `identity: null` — há caso negativo dedicado abaixo.
+ */
+const IDENTIDADE = Object.freeze({
+  runId: 'rap-governed-20261025120000000-abc12345',
+  sourceCommit: '29372d7a3',
+  sourceFingerprint: 'a'.repeat(64),
+});
+
 describe('vocabulário canônico — fechado e versionado', () => {
   it('declara versão e exatamente 7 estados', () => {
     expect(DECISION_VERSION).toMatch(/^\d+\.\d+\.\d+$/);
@@ -194,17 +205,17 @@ describe('clasificar — precedência fail-closed a partir dos fatos', () => {
   });
 
   it('selado + certificado ⇒ CERTIFIED_GO', () => {
-    expect(clasificar({ gates: gatesOk, selado: true, certificado: true }).state).toBe(STATES.CERTIFIED_GO);
+    expect(clasificar({ gates: gatesOk, selado: true, certificado: true, identidade: IDENTIDADE }).state).toBe(STATES.CERTIFIED_GO);
   });
 
   it('publicado sem entrega verificada ⇒ ainda CERTIFIED_GO (não é entrega confirmada)', () => {
-    const r = clasificar({ gates: gatesOk, selado: true, certificado: true, publicado: true });
+    const r = clasificar({ gates: gatesOk, selado: true, certificado: true, publicado: true, identidade: IDENTIDADE });
     expect(r.state).toBe(STATES.CERTIFIED_GO);
     expect(r.reason).toBe('PUBLICADO_SEM_ENTREGA_VERIFICADA');
   });
 
   it('publicado + entrega verificada ⇒ PUBLISHED_VERIFIED', () => {
-    const r = clasificar({ gates: gatesOk, selado: true, certificado: true, publicado: true, entregaVerificada: true });
+    const r = clasificar({ gates: gatesOk, selado: true, certificado: true, publicado: true, entregaVerificada: true, identidade: IDENTIDADE });
     expect(r.state).toBe(STATES.PUBLISHED_VERIFIED);
   });
 
@@ -289,7 +300,15 @@ describe('identidadeCoerente — GO de outro candidato não vale', () => {
 });
 
 describe('clasificar — POLÍTICA EXPLÍCITA de gate (P0 corrigido 2026-10-16)', () => {
-  const base = { selado: true, certificado: true };
+  // Identidade COMPLETA e válida: desde a missão 2026-10-25 §4, `clasificar` só certifica com
+  // identidade presente (runId + sourceCommit + sourceFingerprint) — antes, chamada direta sem
+  // identidade devolvia CERTIFIED_GO com `identity: null`.
+  const IDENTIDADE = Object.freeze({
+    runId: 'rap-governed-20261025120000000-abc12345',
+    sourceCommit: '29372d7a3',
+    sourceFingerprint: 'a'.repeat(64),
+  });
+  const base = { selado: true, certificado: true, identidade: IDENTIDADE };
   const gate = (status, id = 'G1') => ({ id, status, obrigatorio: true });
   const GATES_FINAIS = () => [
     gate('PASS', 'final_governance'),

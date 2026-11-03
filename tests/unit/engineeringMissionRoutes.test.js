@@ -583,6 +583,35 @@ describe('engineering-missions routes — confirmação de finding encaminha o c
     expect(captured.args.reproduction).toBeNull();
     expect(captured.args.basis).toBe('REPRODUCED_TEST_FAILURE');
   });
+
+  /**
+   * PERDA DE POSSE NO MEIO DA OPERAÇÃO — achado da revisão adversarial de 2026-10-27.
+   *
+   * `FINDING_LEASE_LOST` é condição de CONCORRÊNCIA nomeada e fail-closed, mas não estava no mapa de
+   * `handleError`: virava **500 com log de erro** enquanto "lease de outro worker" saía 409. O cliente
+   * recebia "erro de servidor" para um conflito de estado real e ia investigar o lugar errado.
+   */
+  const depsWithConfirmError = (code) => buildDepsFactory({
+    requireAuth: asDevelopment,
+    bugFindingService: {
+      getFinding: async () => findingBase(),
+      confirmFinding: async () => { throw Object.assign(new Error(`recusa ${code}`), { code }); },
+    },
+  });
+
+  test.each([
+    ['FINDING_LEASE_LOST'],
+    ['FINDING_LEASE_HELD_BY_OTHER_WORKER'],
+    ['FINDING_LEASE_MISMATCH'],
+    ['FINDING_STATE_CONFLICT'],
+  ])('%s no boundary é 409 (conflito de estado), nunca 500', async (code) => {
+    server = await startServer(depsWithConfirmError(code));
+
+    const res = await confirm({ basis: 'REPRODUCED_TEST_FAILURE' });
+
+    expect(res.status).toBe(409);
+    expect(res.body.error).toBe(code);
+  });
 });
 
 describe('resolveAuthenticatedActorType', () => {

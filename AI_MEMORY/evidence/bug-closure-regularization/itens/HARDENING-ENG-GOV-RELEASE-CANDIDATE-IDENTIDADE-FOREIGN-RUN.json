@@ -1,0 +1,8 @@
+{
+  "id": "HARDENING-ENG-GOV-RELEASE-CANDIDATE-IDENTIDADE-FOREIGN-RUN",
+  "severity": "P0",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Criar run governado novo torna o CANDIDATO entregue um artefato de outro run",
+  "classe": "REQUER_DECISAO_HUMANA",
+  "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+}

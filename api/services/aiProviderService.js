@@ -1053,7 +1053,11 @@ async function generateAiResponse(prompt, tenantId, context = {}) {
   if (!provider) {
     const errorMsg = `Nenhum provider de IA configurado para tenant: ${tenantId}`;
     logger.error('❌ generateAiResponse', new Error(errorMsg));
-    throw new Error(errorMsg);
+    // Sem `code`, este erro caía no ramo 500 dos handlers de geração e o
+    // cenário de contrato `business-core-biz-flows-editor` reprovava por
+    // infra_error (Medido: QA Mesh mesh-2026-11-02T11-41-51-497Z). Ausência de
+    // provider é configuração do tenant → falha agregada estruturada (400).
+    throw Object.assign(new Error(errorMsg), { code: 'AI_PROVIDER_NOT_CONFIGURED' });
   }
 
   logger.debug('✅ generateAiResponse: Provider obtido, gerando resposta', {

@@ -1,0 +1,14 @@
+{
+  "id": "H21-CRM-PERSISTENCIA-X-METRICAS",
+  "severity": "P2",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "CRM grava em store in-memory por processo, mas o painel mede tabelas do banco: mutação não reflete nos números e o dado some no restart",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "COMMIT_DO_FIX",
+  "teste": "tests/unit/crmRealtimeEvents.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/H21-CRM-PERSISTENCIA-X-METRICAS.log",
+  "draft": "governance/bug-closure/proofs-drafts/H21-CRM-PERSISTENCIA-X-METRICAS.json",
+  "camposParaAssinar": 18
+}

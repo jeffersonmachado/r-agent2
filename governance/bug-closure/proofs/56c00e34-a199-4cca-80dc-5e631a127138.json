@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "56c00e34-a199-4cca-80dc-5e631a127138",
+  "defectId": "P2-1",
+  "severityBefore": "P2",
+  "severityAfter": "P2",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "fc08d682044ddb6be24f28c7ad8cfdca7b03b51e",
+  "codeFingerprint": "3f873a4f5e2d9d5ffa3bf6cc40bd8c9278012309c093787538719b4c7f06ea38",
+  "requiredTests": [
+    "tests/unit/governance/remoteProvenanceAuthority.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/remoteProvenanceAuthority.test.js",
+      "command": "npx jest tests/unit/governance/remoteProvenanceAuthority.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-31T21:44:22.040Z",
+      "finishedAt": "2026-10-31T21:44:24.023Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P2-1.log",
+      "outputSha256": "000da51b2fa1fe7fe94837e7036dd472dc238af7e07330c2271ab3c678b2499f"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/remoteProvenanceAuthority.test.js",
+      "sha256": "364239ae7045260e7f193e0cb90a81db10e9ce87c7651bd26f65e47220d47892"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-10-31T21:44:24.029Z",
+  "proofHash": "71e4a5f70371b2930c262138b1bb197f64b0ddc39b91343b27d26cac3640da0c",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "NYt4Oia8wT0q21Ct4ZrSD6fwNVJk9H05xiNTgi2XtdZNfzQNCsnMEx2UXEP5VH8EDx5Q2C+vEHEFW25J7k0fCA==",
+    "signedAt": "2026-10-31T21:49:10.506Z"
+  }
+}

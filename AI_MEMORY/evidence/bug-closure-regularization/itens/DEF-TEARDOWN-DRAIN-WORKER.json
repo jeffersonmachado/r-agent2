@@ -1,0 +1,14 @@
+{
+  "id": "DEF-TEARDOWN-DRAIN-WORKER",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "BATCH_EXIT_CODE_NONZERO: worker drenando depois do Sequelize fechar (0 testes falhados, exit=1)",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+  "teste": "tests/integration/governanceApprovalFullWorkerE2E.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/DEF-TEARDOWN-DRAIN-WORKER.log",
+  "draft": "governance/bug-closure/proofs-drafts/DEF-TEARDOWN-DRAIN-WORKER.json",
+  "camposParaAssinar": 18
+}

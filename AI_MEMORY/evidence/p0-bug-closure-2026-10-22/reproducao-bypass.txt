@@ -1,0 +1,5 @@
+01-p1-aberto: decision=DENIED allowed=false codes=P1_BLOQUEANTE_ABERTO
+02-json-editado: decision=ALLOWED allowed=true codes=
+03-so-status-legado: decision=ALLOWED allowed=true codes=
+BYPASS_REPRODUZIDO = true
+BYPASS_POR_STATUS_LEGADO = true

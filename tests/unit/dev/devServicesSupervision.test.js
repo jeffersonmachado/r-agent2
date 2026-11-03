@@ -27,12 +27,27 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { execFileSync } = require('child_process');
+const { execFileSync, spawnSync } = require('child_process');
 
 const ROOT = path.resolve(__dirname, '..', '..', '..');
 const SERVICE = path.join(ROOT, 'scripts', 'dev', 'service.sh');
 const LIB = path.join(ROOT, 'scripts', 'dev', 'lib', 'servicos-dev-state.sh');
 const SMOKE = path.join(ROOT, 'scripts', 'smoke', 'run-scheduled-production-health-smoke.sh');
+
+/**
+ * Porta EFÊMERA atribuída pelo SO (bind em 0) em vez de número fixo. As portas fixas usadas antes
+ * (39117/39118/39119) estão DENTRO do range efêmero do Linux (32768–60999), então qualquer conexão de
+ * saída da máquina pode ocupá-las: medido 2026-10-29, `EADDRINUSE` em 1 de 1122 suítes na execução
+ * completa em paralelo, com a suíte passando isolada. O teste não depende do número — ele injeta a
+ * porta detectada nos dublês — então usar a porta REAL atribuída preserva a mesma asserção.
+ */
+async function escutarEmPortaEfemera(servidor) {
+  await new Promise((resolve, reject) => {
+    servidor.once('error', reject);
+    servidor.listen(0, '127.0.0.1', resolve);
+  });
+  return servidor.address().port;
+}
 
 const serviceCode = fs
   .readFileSync(SERVICE, 'utf8')
@@ -47,15 +62,38 @@ const smokeCode = smoke
   .join('\n');
 
 /** Renderiza um template como o script faz (todos os placeholders). */
-function renderTemplate(nome, { root = ROOT, log = '/tmp/x.log' } = {}) {
+function renderTemplate(
+  nome,
+  {
+    root = ROOT,
+    log = '/tmp/x.log',
+    node = '/usr/bin/node',
+    npm = '/usr/bin/npm',
+    uvicorn = path.join(root, 'rag-service', 'venv', 'bin', 'uvicorn'),
+  } = {},
+) {
   return fs
     .readFileSync(path.join(ROOT, 'scripts', 'dev', `${nome}.service.template`), 'utf8')
     .split('{{ROOT}}').join(root)
     .split('{{SERVICE_DIR}}').join(root)
     .split('{{LOG}}').join(log)
-    .split('{{NODE}}').join('/usr/bin/node')
-    .split('{{NPM}}').join('/usr/bin/npm')
-    .split('{{UVICORN}}').join(path.join(root, 'rag-service', 'venv', 'bin', 'uvicorn'));
+    .split('{{NODE}}').join(node)
+    .split('{{NPM}}').join(npm)
+    .split('{{UVICORN}}').join(uvicorn);
+}
+
+/**
+ * Roda `systemd-analyze verify <arquivo>` devolvendo stdout+stderr SEMPRE.
+ *
+ * MEDIDO (systemd 255 e 249): o `verify` reporta `Unknown key name ... in section`
+ * no stderr com **exit 0** — então inspecionar a saída apenas no `catch` (com
+ * `execFileSync`) enxerga só metade dos diagnósticos e transforma o teste em algo
+ * que não vê defeito nenhum quando o systemd decide não falhar o processo.
+ */
+function verificarUnit(file) {
+  const r = spawnSync('systemd-analyze', ['verify', file], { encoding: 'utf8' });
+  const codigo = typeof r.status === 'number' ? r.status : 1;
+  return { codigo, saida: `${r.stdout || ''}${r.stderr || ''}` };
 }
 
 describe('supervisão generalizada dos serviços de dev', () => {
@@ -89,19 +127,74 @@ describe('supervisão generalizada dos serviços de dev', () => {
       return;
     }
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ragent2-units-'));
+    // VERIFICAÇÃO HERMÉTICA (medido 2026-10-21, run 39582527650): o template aponta para
+    // caminhos que só existem na máquina real (`/usr/bin/node`) e no venv do RAG
+    // (`rag-service/venv/bin/uvicorn`). No runner do CI eles não existem e o
+    // `systemd-analyze verify` reprova com "Command /usr/bin/node is not executable" —
+    // reprovação por AMBIENTE, não por sintaxe do unit. Custou um ciclo inteiro de
+    // diagnóstico (a saída não aparecia em lugar nenhum) e um vermelho falso treina todos a
+    // ignorar o L0. Aqui os executáveis passam a EXISTIR (stub executável), e o critério
+    // continua estrito: qualquer linha do systemd que cite o unit segue reprovando.
+    const binDir = path.join(dir, 'bin');
+    fs.mkdirSync(binDir);
+    const stub = (nome) => {
+      const alvo = path.join(binDir, nome);
+      fs.writeFileSync(alvo, '#!/bin/sh\nexit 0\n');
+      fs.chmodSync(alvo, 0o755);
+      return alvo;
+    };
+    const executaveis = { node: process.execPath, npm: stub('npm'), uvicorn: stub('uvicorn') };
+    const reprovacoes = [];
+    const saidaBruta = [];
     for (const nome of ['ragent2-api-dev', 'ragent2-rag-dev', 'ragent2-frontend-dev']) {
       const file = path.join(dir, `${nome}.service`);
-      fs.writeFileSync(file, renderTemplate(nome, { log: path.join(dir, `${nome}.log`) }));
-      let saida = '';
-      try {
-        execFileSync('systemd-analyze', ['verify', file], { stdio: 'pipe' });
-      } catch (error) {
-        saida = `${error.stdout || ''}${error.stderr || ''}`;
-      }
+      fs.writeFileSync(file, renderTemplate(nome, { log: path.join(dir, `${nome}.log`), ...executaveis }));
+      const { codigo, saida } = verificarUnit(file);
+      saidaBruta.push(`### ${nome} exit=${codigo}\n${saida || '(sem saída)'}`);
       const linhas = saida.split('\n').filter((linha) => linha.includes(`${nome}.service`));
-      expect(linhas).toEqual([]);
+      if (linhas.length > 0) reprovacoes.push({ nome, codigo, linhas });
     }
+    // DIAGNÓSTICO PERSISTENTE **antes** da asserção: se a verificação reprovar, a saída BRUTA
+    // já está em disco (o CI publica `reports/` como artefato). Antes o arquivo era escrito
+    // DEPOIS do `expect` — a reprovação abortava a função e não sobrava evidência alguma.
+    try {
+      fs.mkdirSync(path.join(__dirname, '..', '..', '..', 'reports'), { recursive: true });
+      fs.writeFileSync(
+        path.join(__dirname, '..', '..', '..', 'reports', 'dev-services-supervision-systemd.log'),
+        `${saidaBruta.join('\n')}\nsystemd-analyze: ${execFileSync('systemd-analyze', ['--version'], { encoding: 'utf8' }).split('\n')[0]}\n`,
+      );
+    } catch (_) { /* diagnóstico é best-effort: nunca muda o veredito */ }
     fs.rmSync(dir, { recursive: true, force: true });
+    expect(reprovacoes).toEqual([]);
+  });
+
+  test('a verificação de units NÃO é vacuosa: defeito real do systemd é detectado', () => {
+    // Prova de não-vacuidade do critério acima. Medido em systemd 255 e 249:
+    //   * chave desconhecida  -> `<unit>:6: Unknown key name '...', ignoring.` e exit 0;
+    //   * executável ausente  -> `<unit>: Command ... is not executable` e exit != 0.
+    // Ou seja: o exit code NÃO separa defeito de aviso — o que separa é a linha citar o unit.
+    // Este teste injeta um defeito real e exige que a MESMA checagem o detecte, para que a
+    // correção do vermelho falso (binários existentes) nunca vire um teste que passa sempre.
+    let disponivel = true;
+    try {
+      execFileSync('systemd-analyze', ['--version'], { stdio: 'ignore' });
+    } catch (_) {
+      disponivel = false;
+    }
+    if (!disponivel) return;
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ragent2-units-neg-'));
+    const file = path.join(dir, 'ragent2-api-dev.service');
+    fs.writeFileSync(
+      file,
+      renderTemplate('ragent2-api-dev', { node: process.execPath, npm: process.execPath, uvicorn: process.execPath })
+        .replace('[Service]', '[Service]\nLvalueInventado=1'),
+    );
+    // Captura stdout+stderr SEMPRE: o defeito injetado sai como aviso (exit 0).
+    const { saida } = verificarUnit(file);
+    const linhas = saida.split('\n').filter((linha) => linha.includes('ragent2-api-dev.service'));
+    fs.rmSync(dir, { recursive: true, force: true });
+    expect(linhas.length).toBeGreaterThan(0);
+    expect(linhas.join('\n')).toMatch(/Unknown key name/i);
   });
 
   test('nenhuma unit versiona segredo', () => {
@@ -286,9 +379,8 @@ describe('D5 — identidade de quem responde na porta', () => {
   });
 
   test('EXECUÇÃO: processo REAL fora da unidade => identidade NÃO comprovada (fail-closed)', async () => {
-    const porta = 39117;
     const servidor = require('http').createServer((_req, res) => res.end('ok'));
-    await new Promise((resolve) => servidor.listen(porta, '127.0.0.1', resolve));
+    const porta = await escutarEmPortaEfemera(servidor);
     try {
       const pidReal = String(process.pid);
       // 1) o PID que escuta É encontrado;
@@ -317,9 +409,8 @@ describe('D5 — identidade de quem responde na porta', () => {
   });
 
   test('identidade COMPROVADA quando o cgroup do PID é o da unidade', async () => {
-    const porta = 39118;
     const servidor = require('http').createServer((_req, res) => res.end('ok'));
-    await new Promise((resolve) => servidor.listen(porta, '127.0.0.1', resolve));
+    const porta = await escutarEmPortaEfemera(servidor);
     try {
       const cgroupReal = execFileSync(
         'bash',
@@ -428,13 +519,12 @@ describe('D6 — start exige identidade e recupera "ativa sem servir"', () => {
     expect(posFail).toBeGreaterThan(posHealth);
   });
 
-  test('PROVA FUNCIONAL: porta servida por outro processo => start FALHA (antes: "no ar")', () => {
+  test('PROVA FUNCIONAL: porta servida por outro processo => start FALHA (antes: "no ar")', async () => {
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'dev-svc-dubles-'));
     const net = require('net');
     const cgroupFalso = '/fake.slice/unidade-alheia.service';
     const servidor = net.createServer(() => {});
-    servidor.listen(39119, '127.0.0.1');
-    const portaFalsa = 39119;
+    const portaFalsa = await escutarEmPortaEfemera(servidor);
     fs.writeFileSync(
       path.join(tmp, 'ss'),
       `#!/usr/bin/env bash\nprintf 'LISTEN 0 511 127.0.0.1:${portaFalsa} 0.0.0.0:* users:(("node",pid=${process.pid},fd=1))\\n'\n`

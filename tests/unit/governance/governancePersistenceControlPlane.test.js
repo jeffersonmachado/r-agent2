@@ -23,6 +23,13 @@ function transactionApi(...args) {
   return callback({ LOCK: { UPDATE: 'UPDATE' } });
 }
 
+// P1-H: o encerramento passou a ser UPDATE CONDICIONAL (estático, com WHERE de estado) e conta
+// linhas. Os fakes precisam expor `update` estático devolvendo [1] e o run precisa do estado atual.
+const modeloDeRun = (run, afetadas = 1) => {
+  const updateEstatico = jest.fn().mockResolvedValue([afetadas]);
+  return { findOne: jest.fn().mockResolvedValue(run), update: updateEstatico, _updateEstatico: updateEstatico };
+};
+
 describe('Governance Persistence & Certification Control Plane', () => {
   beforeEach(() => {
     getSequelize.mockReturnValue({ transaction: transactionApi, constructor: { Transaction: { ISOLATION_LEVELS: { REPEATABLE_READ: 'REPEATABLE READ' } } } });
@@ -43,18 +50,23 @@ describe('Governance Persistence & Certification Control Plane', () => {
 
   test('gate obrigatório FAIL impede decisão AUTONOMOUS_READY', async () => {
     const run = { source_fingerprint: sourceFingerprint, status: 'RUNNING', policy_id: 'RAP-AGENT-CONSTITUTION', policy_version: '1.0.0', policy_fingerprint: 'a'.repeat(64), update: jest.fn() };
-    getGovernanceRun.mockReturnValue({ findOne: jest.fn().mockResolvedValue(run) });
+    const modelo = modeloDeRun(run);
+    getGovernanceRun.mockReturnValue(modelo);
     getGate.mockReturnValue({ findAll: jest.fn().mockResolvedValue([{ status: 'FAIL' }]) });
     getEvaluation.mockReturnValue({ findOne: jest.fn().mockResolvedValue({ dimensions_below_10: 0 }) });
     getGap.mockReturnValue({ findAll: jest.fn().mockResolvedValue([]) });
     getDecision.mockReturnValue({ upsert: jest.fn().mockImplementation((payload) => Promise.resolve([payload, false])) });
     await expect(calculateFinalDecision({ runId: 'run-1', sourceFingerprint })).resolves.toMatchObject({ decision: 'NO_GO', mandatoryGateFailures: 1 });
-    expect(run.update).toHaveBeenCalledWith(expect.objectContaining({ status: 'FAILED' }), expect.any(Object));
+    // P1-H: a transição terminal é feita pelo UPDATE CONDICIONAL do modelo (não pelo instance.update).
+    expect(modelo._updateEstatico).toHaveBeenCalledWith(
+      expect.objectContaining({ status: 'FAILED' }),
+      expect.objectContaining({ where: expect.objectContaining({ run_id: 'run-1' }) }),
+    );
   });
 
   test('ausência de avaliação e gates falha fechado por evidência insuficiente', async () => {
     const run = { source_fingerprint: sourceFingerprint, status: 'RUNNING', policy_id: 'RAP-AGENT-CONSTITUTION', policy_version: '1.0.0', policy_fingerprint: 'a'.repeat(64), update: jest.fn() };
-    getGovernanceRun.mockReturnValue({ findOne: jest.fn().mockResolvedValue(run) });
+    getGovernanceRun.mockReturnValue(modeloDeRun(run));
     getGate.mockReturnValue({ findAll: jest.fn().mockResolvedValue([]) });
     getEvaluation.mockReturnValue({ findOne: jest.fn().mockResolvedValue(null) });
     getGap.mockReturnValue({ findAll: jest.fn().mockResolvedValue([]) });
@@ -70,8 +82,11 @@ describe('Governance Persistence & Certification Control Plane', () => {
   // laço: NO_GO => FAILED => 78/78 below10 => SEAL_NO_GO => repetir reproduzia tudo.
   function stubRun() {
     const run = { source_fingerprint: sourceFingerprint, status: 'RUNNING', policy_id: 'RAP-AGENT-CONSTITUTION', policy_version: '1.0.0', policy_fingerprint: 'a'.repeat(64), update: jest.fn() };
-    getGovernanceRun.mockReturnValue({ findOne: jest.fn().mockResolvedValue(run) });
+    const modelo = modeloDeRun(run);
+    getGovernanceRun.mockReturnValue(modelo);
     getDecision.mockReturnValue({ upsert: jest.fn().mockImplementation((payload) => Promise.resolve([payload, false])) });
+    // `run.modelo` expõe o modelo para os testes que verificam a transição condicional.
+    run.modelo = modelo;
     return run;
   }
 
@@ -99,7 +114,7 @@ describe('Governance Persistence & Certification Control Plane', () => {
     const outcome = await calculateFinalDecision({ runId: 'run-1', sourceFingerprint, phase: 'POST_PACKAGE' });
 
     expect(outcome.decision).toBe('NO_GO');
-    expect(run.update).toHaveBeenCalledWith(expect.objectContaining({ status: 'FAILED' }), expect.any(Object));
+    expect(run.modelo._updateEstatico).toHaveBeenCalledWith(expect.objectContaining({ status: 'FAILED' }), expect.any(Object));
   });
 
   test('AUTONOMOUS_READY conclui o run em qualquer fase', async () => {
@@ -112,6 +127,6 @@ describe('Governance Persistence & Certification Control Plane', () => {
 
     expect(outcome.decision).toBe('AUTONOMOUS_READY');
     expect(outcome.runStatus).toBe('COMPLETED');
-    expect(run.update).toHaveBeenCalledWith(expect.objectContaining({ status: 'COMPLETED' }), expect.any(Object));
+    expect(run.modelo._updateEstatico).toHaveBeenCalledWith(expect.objectContaining({ status: 'COMPLETED' }), expect.any(Object));
   });
 });

@@ -1,0 +1,25 @@
+{
+  "id": "DEF-WS-AUTH-POS-LOGIN",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "WebSocket nao autentica apos o LOGIN: usuario sem tempo real ate dar F5",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "CAMPO_DO_ITEM",
+  "teste": "frontend/src/context/__tests__/WebSocketContext.loginAuth.test.jsx",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [
+    "ASSINATURA_INVALIDA"
+  ],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/DEF-WS-AUTH-POS-LOGIN.log",
+  "draft": "governance/bug-closure/proofs-drafts/DEF-WS-AUTH-POS-LOGIN.json",
+  "camposParaAssinar": 18,
+  "runId": "run-20261031140822-fdc8dcc8",
+  "identidade": {
+    "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+    "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+    "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+    "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+    "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+  },
+  "artifactSha256": "d04c922eeac875ee8c86622c10ea195dd55345a0460ef3eb90e4dacac8792b54"
+}

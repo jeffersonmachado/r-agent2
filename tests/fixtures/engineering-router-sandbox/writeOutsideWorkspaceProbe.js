@@ -16,3 +16,5 @@ try {
   console.log('WRITE_OUTSIDE_WORKSPACE_BLOCKED:' + (err && err.code));
 }
 process.exit(0);
+
+// staged combinado — nunca promover

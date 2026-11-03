@@ -592,6 +592,16 @@ const viteConfig = defineConfig(({ mode }) => {
         changeOrigin: true,
         secure: false,
       },
+      // WebSocket do realtime. O servidor WS da API escuta em `/ws`
+      // (api/services/websocketService.js: `new WebSocketServer({ path: '/ws' })`). Sem esta
+      // entrada o Vite só proxia HTTP e o upgrade nunca acontece — o navegador reporta
+      // "WebSocket desconectado" mesmo com a URL correta. Medido em 2026-10-31.
+      '^/ws': {
+        target: apiProxyTarget,
+        changeOrigin: true,
+        secure: false,
+        ws: true,
+      },
       '^/api': {
         target: apiProxyTarget,
         changeOrigin: true,

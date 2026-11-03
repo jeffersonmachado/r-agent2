@@ -17,6 +17,8 @@
 
 const engine = require('../../../engine/engineeringMission/bugFinding');
 const bugFindingService = require('./bugFindingService');
+// Lease do finding: MESMA definição usada por `confirmFinding` (aquisição + heartbeat + liberação).
+const { withFindingLeaseOwned } = bugFindingService;
 const patchApplyService = require('../engineeringRouter/patchApplyService');
 const testRunnerService = require('../engineeringRouter/testRunnerService');
 const logger = require('../../utils/logger');
@@ -67,15 +69,43 @@ function evidenceForRun(run) {
  */
 async function reproduce(findingId, {
   actor = null, tenantId = null, runner = defaultRunner, invariantResults = null, attemptNumber = null,
+  lease = null, workerInstanceId = null,
 } = {}) {
+  // EXCLUSIVIDADE (defeito medido em 2026-10-25): a tentativa inteira — inclusive a confirmação que
+  // ela dispara — roda sob o lease do finding. Sem isto, a varredura de OUTRO processo pegava o mesmo
+  // finding em REPRODUCING, rodava a própria tentativa e o devolvia a SUSPECTED no meio desta, que
+  // então falhava no CAS ao confirmar. Lease de outro worker ⇒ recusa explícita, nunca paralelismo.
+  const dono = await withFindingLeaseOwned(findingId, { lease, workerInstanceId }, async ({ lease: meuLease }) => {
+    return executarReproducao(findingId, {
+      actor, tenantId, runner, invariantResults, attemptNumber, lease: meuLease,
+    });
+  });
+  if (dono && dono.skipped) {
+    return { outcome: 'SKIPPED_LEASE_HELD', skipped: true, code: dono.code, lease: dono.lease, plan: null, finding: null };
+  }
+  return dono;
+}
+
+async function executarReproducao(findingId, {
+  actor, tenantId, runner, invariantResults, attemptNumber, lease,
+}) {
   const finding = await bugFindingService.getFinding(findingId);
   if (!finding) throw Object.assign(new Error(`finding ${findingId} não encontrado`), { code: 'not_found' });
 
   const plan = buildPlan(finding);
   const attempt = (attemptNumber || (finding.reproduction_attempts || []).length + 1);
 
+  // PROVENIÊNCIA PRESERVADA (defeito medido em 2026-10-26): gravar o plano DERIVADO como se fosse a
+  // reprodução do finding apagava o que o finding DECLAROU — `strategy`, `source` e o comando
+  // declarado sumiam na PRIMEIRA tentativa, inclusive quando quem reproduzia era outro processo (o
+  // laço global do runner). Quem declarou `DECLARED_TEST_COMMAND` continua auditável como tal; o plano
+  // entra por cima do que ele deriva (comando/expect), nunca no lugar do registro de origem.
+  const reproductionComProveniencia = plan && typeof plan === 'object'
+    ? { ...(finding.reproduction || {}), ...plan }
+    : null;
+
   if (finding.status === 'SUSPECTED' || finding.status === 'NOT_REPRODUCED') {
-    await bugFindingService.markReproducing(findingId, { actor, plan });
+    await bugFindingService.markReproducing(findingId, { actor, plan, reproduction: reproductionComProveniencia, lease });
   }
 
   // Plano inexistente ou INVARIANT: nada é executado em sandbox.
@@ -83,6 +113,7 @@ async function reproduce(findingId, {
     const evaluation = engine.evaluateReproduction({ plan, invariantResults });
     await persistAttempt(findingId, {
       plan, evaluation, attempt, actor,
+      lease,
       run: null,
       startedAt: new Date().toISOString(),
       finishedAt: new Date().toISOString(),
@@ -93,16 +124,18 @@ async function reproduce(findingId, {
         evidence: [bugFindingService.makeEvidence({ type: 'INVARIANT_EVALUATION', ref: `invariants:${findingId}`, detail: evaluation.reason, source: 'bugReproductionService' })],
         actor,
         tenantId,
+        lease,
       });
+      if (confirmed && confirmed.skipped) return { outcome: confirmed.outcome, skipped: true, plan, evaluation, finding: null };
       return { outcome: evaluation.outcome, plan, evaluation, finding: confirmed.finding };
     }
     if (evaluation.outcome === 'NOT_REPRODUCED') {
-      const result = await bugFindingService.markNotReproduced(findingId, { actor, reason: evaluation.reason, plan });
+      const result = await bugFindingService.markNotReproduced(findingId, { actor, reason: evaluation.reason, plan, reproduction: reproductionComProveniencia, lease });
       return { outcome: evaluation.outcome, plan, evaluation, finding: result.finding };
     }
     // INCONCLUSIVE: volta para SUSPECTED — a reprodução não provou nada e o finding não pode ficar
     // "preso" em REPRODUCING fingindo que uma tentativa está em curso.
-    const back = await bugFindingService.transitionFinding(findingId, 'SUSPECTED', { actor, reason: evaluation.reason, tenantId });
+    const back = await bugFindingService.transitionFinding(findingId, 'SUSPECTED', { actor, reason: evaluation.reason, tenantId, lease });
     return { outcome: evaluation.outcome, plan, evaluation, finding: back.finding };
   }
 
@@ -130,7 +163,7 @@ async function reproduce(findingId, {
     ? { outcome: 'INCONCLUSIVE', reason: `falha ao executar a reprodução: ${error.message}`, code: engine.BUG_FAILURE_CODES.REPRODUCTION_INCONCLUSIVE }
     : engine.evaluateReproduction({ plan, run });
 
-  await persistAttempt(findingId, { plan, evaluation, attempt, actor, run, startedAt, finishedAt: new Date().toISOString() });
+  await persistAttempt(findingId, { plan, evaluation, attempt, actor, run, startedAt, finishedAt: new Date().toISOString(), lease });
 
   if (evaluation.outcome === 'REPRODUCED') {
     const confirmed = await bugFindingService.confirmFinding(findingId, {
@@ -146,7 +179,11 @@ async function reproduce(findingId, {
         lastExitCode: run?.results?.[0]?.exitCode ?? null,
         confirmedAt: new Date().toISOString(),
       },
+      lease,
     });
+    if (confirmed && confirmed.skipped) {
+      return { outcome: confirmed.outcome, skipped: true, plan, evaluation, run, finding: null };
+    }
     return { outcome: evaluation.outcome, plan, evaluation, run, finding: confirmed.finding };
   }
 
@@ -155,6 +192,10 @@ async function reproduce(findingId, {
       actor,
       reason: evaluation.reason,
       plan,
+      // Mesma preservação de proveniência do caminho acima: o plano derivado NÃO substitui o registro
+      // declarado pelo finding (`strategy`/`source`/comando declarado continuam auditáveis).
+      reproduction: reproductionComProveniencia,
+      lease,
       evidence: [evidenceForRun(run)],
     });
     return { outcome: evaluation.outcome, plan, evaluation, run, finding: result.finding };
@@ -173,6 +214,7 @@ async function reproduce(findingId, {
   if (consecutiveInconclusive >= MAX_INCONCLUSIVE_REPRODUCTIONS) {
     await bugFindingService.blockFinding(findingId, {
       actor,
+      lease,
       dependency: 'BUG_REPRODUCTION_INCONCLUSIVE',
       evidence: [bugFindingService.makeEvidence({
         type: 'LOG_CORRELATION',
@@ -186,12 +228,12 @@ async function reproduce(findingId, {
     return { outcome: evaluation.outcome, plan, evaluation, run, blocked: true, code: 'BUG_REPRODUCTION_INCONCLUSIVE', finding: await bugFindingService.getFinding(findingId) };
   }
 
-  const back = await bugFindingService.transitionFinding(findingId, 'SUSPECTED', { actor, reason: evaluation.reason, tenantId });
+  const back = await bugFindingService.transitionFinding(findingId, 'SUSPECTED', { actor, reason: evaluation.reason, tenantId, lease });
   return { outcome: evaluation.outcome, plan, evaluation, run, finding: back.finding };
 }
 
 /** Persiste a tentativa (estado + evento) — a trilha de auditoria de "tentou reproduzir". */
-async function persistAttempt(findingId, { plan, evaluation, attempt, actor, run, startedAt, finishedAt }) {
+async function persistAttempt(findingId, { plan, evaluation, attempt, actor, run, startedAt, finishedAt, lease = null }) {
   const finding = await bugFindingService.getFinding(findingId);
   const record = {
     attempt,
@@ -210,7 +252,19 @@ async function persistAttempt(findingId, { plan, evaluation, attempt, actor, run
   };
   const Model = require('../../db/models/EngineeringBugFinding');
   const M = Model();
-  await M.update({ reproduction_attempts: appendAttempt(finding, record) }, { where: { id: findingId } });
+  // FENCING também na trilha de tentativas: read-modify-write de `reproduction_attempts` sem predicado
+  // deixava um worker sem posse sobrescrever a trilha do dono atual (last-write-wins silencioso).
+  const where = { id: findingId };
+  const fence = lease && lease.fence !== undefined && lease.fence !== null ? Number(lease.fence) : null;
+  if (fence !== null) where.lease_fence = fence;
+  const [afetadas] = await M.update({ reproduction_attempts: appendAttempt(finding, record) }, { where });
+  if (!afetadas) {
+    const perdido = new Error(`posse perdida ao persistir tentativa do finding ${findingId} (fence ${fence})`);
+    perdido.code = 'FINDING_LEASE_LOST';
+    perdido.detail = { findingId, fence };
+    logger.warn('[bugReproductionService] tentativa não persistida: posse perdida', perdido.detail);
+    throw perdido;
+  }
   await bugFindingService.recordEvent(findingId, 'REPRODUCTION_ATTEMPTED', record, { actor });
   return record;
 }

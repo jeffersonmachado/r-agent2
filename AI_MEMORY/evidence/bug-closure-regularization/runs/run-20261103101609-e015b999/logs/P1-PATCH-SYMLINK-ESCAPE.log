@@ -1,0 +1,20 @@
+[jest-global-setup] .env carregado (0 chave(s) aplicada(s); ambiente explícito vence)
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/engineeringRouterPatchSymlinkEscape.test.js
+  §8 isolamento adversarial — symlink no patch
+    ✓ symlink absoluto para /etc/shadow é RECUSADO (114 ms)
+    ✓ symlink relativo escapando do repositório (../../.env) é RECUSADO (103 ms)
+    ✓ modo declarado só no `index <sha>..<sha> 120000` também é RECUSADO (103 ms)
+    ✓ NÃO é falso-positivo: arquivo texto normal continua aceito (112 ms)
+    ✓ conteúdo que PARECE caminho mas é arquivo comum não é confundido com symlink (105 ms)
+    ✓ autorização explícita de contrato é o ÚNICO caminho de aceitação (auditável) (105 ms)
+    ✓ o parser expõe o modo e o alvo para auditoria (não esconde o que recusou) (106 ms)
+    ✓ CONVERSÃO de arquivo existente em symlink (old mode 100644 → new mode 120000) é RECUSADA (103 ms)
+    ✓ arquivo EXECUTÁVEL (100755) não é symlink: continua aceito (104 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       9 passed, 9 total
+Snapshots:   0 total
+Time:        1.422 s, estimated 2 s
+Ran all test suites matching /tests\/unit\/engineeringRouterPatchSymlinkEscape.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

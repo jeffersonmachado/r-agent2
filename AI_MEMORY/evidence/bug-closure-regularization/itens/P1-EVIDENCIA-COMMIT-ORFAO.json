@@ -1,0 +1,14 @@
+{
+  "id": "P1-EVIDENCIA-COMMIT-ORFAO",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Fila oficial aceitava prova com commit inexistente (3 itens citavam hash reescrito)",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+  "teste": "tests/unit/governance/hardeningQueueCommitExists.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-EVIDENCIA-COMMIT-ORFAO.log",
+  "draft": "governance/bug-closure/proofs-drafts/P1-EVIDENCIA-COMMIT-ORFAO.json",
+  "camposParaAssinar": 18
+}

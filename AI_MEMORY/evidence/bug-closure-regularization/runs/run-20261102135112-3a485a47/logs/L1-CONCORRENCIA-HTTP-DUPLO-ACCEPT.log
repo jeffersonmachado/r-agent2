@@ -1,0 +1,75 @@
+  console.error
+    [2026-11-02T13:52:10.628Z] [ERROR] [WebScraping] cheerio não instalado. Defina SCRAPING_ALLOW_DEGRADED=true para modo degradado explícito.
+
+    [0m [90m 183 |[39m       
+     [90m 184 |[39m       [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 185 |[39m       console[33m.[39merror(formatMessage([33mLOG_LEVELS[39m[33m.[39m[33mERROR[39m[33m,[39m message[33m,[39m errorData))[33m;[39m
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 186 |[39m     }
+     [90m 187 |[39m   }[33m,[39m
+     [90m 188 |[39m   [0m
+
+      at Object.error (api/utils/logger.js:185:15)
+      at Object.error (api/services/webScrapingService.js:63:12)
+      at Object.require (api/services/tenantService.js:24:28)
+      at Object.require (api/services/tenantAIService.js:13:71)
+      at Object.require (api/services/engineeringRouter/engineeringModelAvailabilityService.js:35:57)
+      at Object.require (api/services/engineeringRouter/engineeringRouterService.js:36:53)
+      at Object.require (tests/integration/engineeringRouterConcurrentRunHttp.test.js:21:34)
+
+  console.info
+    [2026-11-02T13:52:11.604Z] [INFO] [Sequelize] Conectado ao PostgreSQL com sucesso
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-02T13:52:12.269Z] [INFO] [engineeringRouterService] execução com posse de lease
+    {
+      "taskId": "e1f013b8-2cea-4444-b507-4cadfb87a12f",
+      "runnerId": "http-unknown-dd154f99-2907-41f5-926b-2201b81b3417",
+      "fence": 1,
+      "pid": 1137918
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.log
+    [2026-11-02T13:52:12.429Z] [DEBUG] [TenantService] Tenant encontrado por tenant_key
+    {
+      "identifier": "system",
+      "tenant_id": "3b7ec7e9-e773-420c-ae31-2c09884f70c9",
+      "tenant_key": "system"
+    }
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.warn
+    ⚠️  1 promise(s) pendente(s) após o teste
+
+    [0m [90m 83 |[39m   [90m// Se ainda houver promises pendentes, loga um aviso[39m
+     [90m 84 |[39m   [36mif[39m (pendingPromises[33m.[39msize [33m>[39m [35m0[39m) {
+    [31m[1m>[22m[39m[90m 85 |[39m     console[33m.[39mwarn([32m`⚠️  ${pendingPromises.size} promise(s) pendente(s) após o teste`[39m)[33m;[39m
+     [90m    |[39m             [31m[1m^[22m[39m
+     [90m 86 |[39m     pendingPromises[33m.[39mclear()[33m;[39m
+     [90m 87 |[39m   }
+     [90m 88 |[39m })[33m;[39m[0m
+
+      at Object.warn (tests/setup.js:85:13)
+
+  console.info
+    [2026-11-02T13:52:14.295Z] [INFO] [Sequelize] Conexão fechada
+
+      at Object.info (api/utils/logger.js:155:15)
+
+[jest-global-setup] .env carregado (0 chave(s) aplicada(s); ambiente explícito vence)
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/integration/engineeringRouterConcurrentRunHttp.test.js (9.112 s)
+  ER-V1-SEAL-002 — concurrent start via HTTP real (POST /engineering/tasks/:id/run)
+    ✓ duas requisições HTTP reais e simultâneas para a mesma task: só uma é aceita (202), a outra recebe 409 real (1557 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       1 passed, 1 total
+Snapshots:   0 total
+Time:        9.279 s
+Ran all test suites matching /tests\/integration\/engineeringRouterConcurrentRunHttp.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

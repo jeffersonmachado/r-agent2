@@ -139,3 +139,53 @@ parte do contrato.
   `frequency30d === 2` sobre entradas de 01-03/09/2026; a janela é móvel
   (`agora - 30d`) e venceu em 03/10/2026. Quebrado há ~11 dias sem que nenhum gate
   o executasse. Prevenção: `validate:no-date-bombs` (bloqueante no agregado).
+
+## Prontidão do Engineering Router (medido em 2026-10-22)
+
+O router **aceita missão**, mas só com o runner dedicado de pé. A prova foi feita
+executando o caminho real de ponta a ponta, não por inspeção de código:
+
+| Etapa | Resultado medido |
+|---|---|
+| `GET $ENGINEERING_RUNNER_URL/health` | `200` `{status:"ok", sandboxAvailable:true, pid:4028504}` |
+| modelos qualificados no tenant | `deepseek`/`kimi`/`qwen` = `valid`; `openai` = `error` |
+| `POST /engineering/tasks` | `201`, status `CLASSIFIED` |
+| `engineeringDecisionService.ensureRouted` | `ROUTED` — coder `deepseek:deepseek-flash`, reviewer `qwen:qwen-plus` |
+| `engineeringSandboxService.runInSandbox` | `exitCode 0`, env só do container (`HOSTNAME=ab2c355d1a64`, `HOME=/home/sandbox`) |
+
+Rotas: o mount é `/engineering/*` (não `/api/engineering/*`); exigem
+`checkClassification('DEVELOPMENT')`; login em `/api/auth/login`. Escopos válidos:
+`SMALL|MEDIUM|LARGE|REPOSITORY_WIDE`. O allowlist de comando do sandbox rejeita
+`node -e` — probes precisam ser arquivo em `tests/fixtures/engineering-router-sandbox/`.
+
+Pré-requisitos para receber missão (todos obrigatórios, nenhum implícito):
+
+```bash
+# 1) runner dedicado, com o MESMO token/URL que a API lê em tempo de chamada
+set -a && . ./.env && set +a
+ENGINEERING_RUNNER_PORT=8090 node services/engineering-runner/src/index.js
+curl -s -o /dev/null -w '%{http_code}\n' "$ENGINEERING_RUNNER_URL/health"   # 200
+
+# 2) imagem de sandbox presente (sem ela /health responde sandboxAvailable:false)
+docker image inspect r-agent2-engineering-router-sandbox:latest >/dev/null
+
+# 3) API com ENGINEERING_RUNNER_URL, ENGINEERING_RUNNER_TOKEN e
+#    ENGINEERING_ROUTER_WORKSPACE_ROOT apontando para diretório gravável
+```
+
+Produção: `scripts/docker-deploy.sh --engineering-runner-only`. Em CI/Jest local o
+runner é provido por `tests/setup/engineeringRunnerGlobalSetup.js`
+(sessão dona em `.jest-engineering-runner-<port>.session`; runner vivo de mesma
+sessão é **reutilizado**, nunca morto).
+
+Falha típica: `fetch failed` do client = runner fora do ar ou token divergente; o
+client agora loga `causa.code`/`causa.message` e lança `SANDBOX_UNAVAILABLE` — não
+confundir com erro de decisão do router.
+
+Falha típica: `NO_QUALIFIED_CODER` = nenhum modelo `valid` no tenant do router (ele
+lê `ENGINEERING_ROUTER_TENANT_ID` no load do módulo; suítes devem definir a env
+**antes** do primeiro `require`).
+
+**Não medido nesta árvore**: a mesma cadeia em produção (`rap.results.com.br`) —
+o veredito acima é `LOCAL_VERIFIED`, não `CI_VERIFIED` nem certificação de runtime
+produtivo.

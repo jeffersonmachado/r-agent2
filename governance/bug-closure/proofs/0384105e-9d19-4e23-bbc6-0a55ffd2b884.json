@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "0384105e-9d19-4e23-bbc6-0a55ffd2b884",
+  "defectId": "CI-MAIN-MODELDRIVEN-PROD-LIKE",
+  "severityBefore": "P2",
+  "severityAfter": "P2",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "7f7840aef2b83dedaf64b6aec85e0842dd7e4708",
+  "codeFingerprint": "203f3dc5115a2b7f367695b50541b80d6132aacff3e71d4a90925f6338fa2052",
+  "requiredTests": [
+    "tests/unit/governance/modelDrivenE2e.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/modelDrivenE2e.test.js",
+      "command": "npx jest tests/unit/governance/modelDrivenE2e.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-02T23:54:30.759Z",
+      "finishedAt": "2026-11-02T23:54:37.338Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102233411-b9202e36/logs/CI-MAIN-MODELDRIVEN-PROD-LIKE.log",
+      "outputSha256": "ddac47983863f5cb40ba054353fc819e52c9de271933c4cbf76fb4ff7826ad7a"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/modelDrivenE2e.test.js",
+      "sha256": "50427d46f759f53ea9811a9d8fb6ed8eb2d859d593fcb7cbdd37d52b468b5b2c"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-02T23:54:37.345Z",
+  "proofHash": "d17714f3a2270dd7f205b1616db58b263db20ced021097e5f634bd460f63bd09",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "uknjoBN4H0/jTyfaVqGpDIf5hx2K03VA28gGrfs/oCZewamiakHyNXsbwygbXqAsNRfNDLzhyOJcO0y7OujACQ==",
+    "signedAt": "2026-11-03T00:18:18.480Z"
+  }
+}

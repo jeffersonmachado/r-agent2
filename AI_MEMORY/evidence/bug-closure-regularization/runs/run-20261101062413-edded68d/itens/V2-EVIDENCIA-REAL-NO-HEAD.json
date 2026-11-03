@@ -1,0 +1,25 @@
+{
+  "id": "V2-EVIDENCIA-REAL-NO-HEAD",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Router V2: 3 gates provados no HEAD com produtores canônicos (4 falhas → 1)",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "CAMPO_DO_ITEM",
+  "teste": "tests/integration/governanceApprovalFullWorkerE2E.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [
+    "ASSINATURA_INVALIDA"
+  ],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101062413-edded68d/logs/V2-EVIDENCIA-REAL-NO-HEAD.log",
+  "draft": "governance/bug-closure/proofs-drafts/V2-EVIDENCIA-REAL-NO-HEAD.json",
+  "camposParaAssinar": 18,
+  "runId": "run-20261101062413-edded68d",
+  "identidade": {
+    "commit": "68a1da1922d793a5937fcfa9a0c4441a7d734594",
+    "sourceFingerprint": "f11b8df06b0649b60593c1dfdf19732315a805dad802c1669dfdd11de376e649",
+    "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+    "hardeningQueueFingerprint": "5e58aa7b11a8dfbe16b5a6a14167475f5502d31bf6d600cec6dbc6fd50904cf2",
+    "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+  },
+  "artifactSha256": "68413ecc213f0288c0a2f2ecd3cd1dc2532eb285d145689f7f34492d3afecb6c"
+}

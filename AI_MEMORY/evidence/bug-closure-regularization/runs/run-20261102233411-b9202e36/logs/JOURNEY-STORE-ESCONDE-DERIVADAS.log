@@ -1,0 +1,22 @@
+[jest-global-setup] .env carregado (0 chave(s) aplicada(s); ambiente explícito vence)
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS api/services/__tests__/qaWavesService.journey.test.js
+  qaWavesService journey model compatibility
+    ✓ mantem listagem de waves legada (105 ms)
+    ✓ gera arvore de jornadas com passos e status agregado (193 ms)
+    ✓ retorna status por jornada e por passo (400 ms)
+    ✓ permite filtrar replay por jornada e passo sem quebrar retorno legado (113 ms)
+    ✓ aceita replayId qa_wave_replay_* e resolve para replay real por executionId (315 ms)
+    ✓ retorna payload queued quando replay real ainda não existe (305 ms)
+    ✓ resolve replay com mesmo id somente dentro do tenant autenticado (410 ms)
+    mergeJourneyStores — jornada salva não pode esconder as derivadas
+      ✓ com jornada salva, as DERIVADAS continuam presentes (109 ms)
+      ✓ a jornada SALVA sobrepõe a derivada de mesmo id+vertical (edição do usuário ganha) (104 ms)
+      ✓ sem jornada salva o resultado é exatamente o derivado (sem mudança de comportamento) (104 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       10 passed, 10 total
+Snapshots:   0 total
+Time:        2.663 s, estimated 4 s
+Ran all test suites matching /api\/services\/__tests__\/qaWavesService.journey.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

@@ -1,0 +1,14 @@
+{
+  "id": "H11-ESCOPO-DIFERIDO",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Regressao da Fase 9: escopo diferido explicito + fixtures com evidencia de integracao",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+  "teste": "tests/unit/engineeringRouter/taskContractScope.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/H11-ESCOPO-DIFERIDO.log",
+  "draft": "governance/bug-closure/proofs-drafts/H11-ESCOPO-DIFERIDO.json",
+  "camposParaAssinar": 18
+}

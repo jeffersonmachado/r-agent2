@@ -1,0 +1,14 @@
+{
+  "id": "P1-SANDBOX-PROBE-CACHE-NEGATIVO",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "isSandboxAvailable cacheava NEGATIVO: falso SANDBOX_UNAVAILABLE sob carga",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+  "teste": "tests/unit/engineeringRouterSandboxAvailabilityCache.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-SANDBOX-PROBE-CACHE-NEGATIVO.log",
+  "draft": "governance/bug-closure/proofs-drafts/P1-SANDBOX-PROBE-CACHE-NEGATIVO.json",
+  "camposParaAssinar": 18
+}

@@ -52,13 +52,37 @@ describe('(1) o run governado registra o commit', () => {
     expect(criaRun).toContain('branch:');
   });
 
+  /**
+   * DEFEITO MEDIDO (CI 2026-10-24): este teste exigia `typeof sourceBranch === 'string'` sem
+   * considerar HEAD DESTACADO. O GitHub Actions faz checkout de `refs/pull/<n>/merge` em HEAD
+   * destacado, então `git rev-parse --abbrev-ref HEAD` devolve a string literal `HEAD` — que a
+   * implementação corretamente converte em `null` (não é branch, é ausência). O teste reprovava em
+   * TODO run de pull request e passava em qualquer clone com branch — asserção dependente de
+   * ambiente, exatamente o tipo de verde local / vermelho no CI.
+   *
+   * A regra abaixo é mais estrita que a anterior: a branch tem de ser a MESMA que o git reporta,
+   * e `null` só é aceito quando o HEAD está de fato destacado.
+   */
   it('resolveGitIdentity expõe commit, tree AND branch (fonte única do git)', () => {
+    const { execSync } = require('child_process');
     const { resolveGitIdentity } = require('../../../scripts/governance/lib/resolve-run-lineage');
     const g = resolveGitIdentity(ROOT);
     expect(g.sourceCommit).toMatch(/^[0-9a-f]{40}$/);
     expect(g.sourceTree).toMatch(/^[0-9a-f]{40}$/);
-    expect(typeof g.sourceBranch).toBe('string');
-    expect(g.sourceBranch.length).toBeGreaterThan(0);
+
+    let destacado = false;
+    try {
+      execSync('git symbolic-ref -q HEAD', { cwd: ROOT, stdio: ['ignore', 'ignore', 'ignore'] });
+    } catch (_) {
+      destacado = true;
+    }
+    if (destacado) {
+      expect(g.sourceBranch).toBeNull();
+    } else {
+      const branch = execSync('git rev-parse --abbrev-ref HEAD', { cwd: ROOT, encoding: 'utf8' }).trim();
+      expect(g.sourceBranch).toBe(branch);
+      expect(g.sourceBranch.length).toBeGreaterThan(0);
+    }
   });
 
   it('o serviço createRun PERSISTE o commit quando recebido (não descarta em silêncio)', () => {

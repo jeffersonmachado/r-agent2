@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "134e1490-1e5c-40cf-bd5a-ea785d6d1fd3",
+  "defectId": "HARDENING-ENG-GOV-RELEASE-MESH-EXECUCAO-VAZIA-AINDA-GERA-EVIDENCIA",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "a15f550e3522b48a49fb2d7cc6c948fdf2b60f01",
+  "codeFingerprint": "68b2804492d5bf2d9b5e02a86ba0dd1f8846917384d13b61d18ab7fad7dce0c4",
+  "requiredTests": [
+    "tests/unit/qa-mesh/meshZeroResultsPromotion.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/qa-mesh/meshZeroResultsPromotion.test.js",
+      "command": "npx jest tests/unit/qa-mesh/meshZeroResultsPromotion.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-02T15:08:31.291Z",
+      "finishedAt": "2026-11-02T15:08:39.694Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102145001-dd1ae10d/logs/HARDENING-ENG-GOV-RELEASE-MESH-EXECUCAO-VAZIA-AINDA-GERA-EVIDENCIA.log",
+      "outputSha256": "4be97659c937bf9597be9373752b0c3408ffb9a1cf467e590f1c1da92be1e3de"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/qa-mesh/meshZeroResultsPromotion.test.js",
+      "sha256": "d65e4c2b45f0e8cd99485fd0b31ea15eff2c7a3945402204b2715628041665ce"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-02T15:08:39.701Z",
+  "proofHash": "ae225c8d252c4edd58589e14ee7afd4c0d05b2037db1407286ea0f8c2869ecef",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "weeGmoOJgK26XKQkKQ2zGw1fosb0y68cL30ntzQJk5N6XGvB0b+YfIyrr/xUYALvFMQSFxKpFAbgZQiryZ3NDw==",
+    "signedAt": "2026-11-02T16:22:47.047Z"
+  }
+}

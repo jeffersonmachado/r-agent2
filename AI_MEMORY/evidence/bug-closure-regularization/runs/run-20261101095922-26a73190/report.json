@@ -1,0 +1,98 @@
+{
+  "schemaVersion": 2,
+  "kind": "bug-closure-regularization",
+  "generatedAt": "2026-11-01T09:59:41.266Z",
+  "authoritative": false,
+  "runId": "run-20261101095922-26a73190",
+  "identidade": {
+    "commit": "c92fa9432b5a8645cd77f8c9ea57839f1f3f56c4",
+    "sourceFingerprint": "ba0673e3cf2795172599b93da74b6d875c8d0f36c7fa569b0953fd34c7154bed",
+    "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+    "hardeningQueueFingerprint": "d5abac8c627872211360917eba7d3b1fac318aaf311a2e2a15445599151ce27c",
+    "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+  },
+  "escopo": {
+    "tipo": "PARCIAL",
+    "filtroSeveridade": "ALL",
+    "limite": 0,
+    "esperadoNoEscopo": 2,
+    "processados": 2,
+    "completoNoEscopo": false,
+    "cobreInventario": false
+  },
+  "resumo": {
+    "commit": "c92fa9432b5a8645cd77f8c9ea57839f1f3f56c4",
+    "fingerprint": "ba0673e3cf2795172599b93da74b6d875c8d0f36c7fa569b0953fd34c7154bed",
+    "runId": "run-20261101095922-26a73190",
+    "total": 2,
+    "porClasse": {
+      "AGUARDA_ASSINATURA_E_ANCORA": 2
+    },
+    "porSeveridade": {
+      "AGUARDA_ASSINATURA_E_ANCORA:P3": 2
+    },
+    "filaAlterada": false,
+    "assinatura": "PENDENTE — este script não assina e não altera a fila"
+  },
+  "resultados": [
+    {
+      "id": "MISSAO-B3-REUSO-PROVENIENCIA",
+      "severity": "P3",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "B3: reuso de lotes — verificado, NAO e defeito (rigor por desenho)",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+      "teste": "tests/unit/governance/releaseSuiteRunner.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101095922-26a73190/logs/MISSAO-B3-REUSO-PROVENIENCIA.log",
+      "draft": "governance/bug-closure/proofs-drafts/MISSAO-B3-REUSO-PROVENIENCIA.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261101095922-26a73190",
+      "identidade": {
+        "commit": "c92fa9432b5a8645cd77f8c9ea57839f1f3f56c4",
+        "sourceFingerprint": "ba0673e3cf2795172599b93da74b6d875c8d0f36c7fa569b0953fd34c7154bed",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "d5abac8c627872211360917eba7d3b1fac318aaf311a2e2a15445599151ce27c",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "6a9bb6b567e7433a4d7292a146e26d4745e0fb38381532b9f5333d9979354a24"
+    },
+    {
+      "id": "MISSAO-B4-REVISAO-INDEPENDENTE",
+      "severity": "P3",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "B4: revisao independente — verificado, NAO e defeito (rigor maximo)",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+      "teste": "tests/unit/engineeringMission/reviewIndependenceProof.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101095922-26a73190/logs/MISSAO-B4-REVISAO-INDEPENDENTE.log",
+      "draft": "governance/bug-closure/proofs-drafts/MISSAO-B4-REVISAO-INDEPENDENTE.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261101095922-26a73190",
+      "identidade": {
+        "commit": "c92fa9432b5a8645cd77f8c9ea57839f1f3f56c4",
+        "sourceFingerprint": "ba0673e3cf2795172599b93da74b6d875c8d0f36c7fa569b0953fd34c7154bed",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "d5abac8c627872211360917eba7d3b1fac318aaf311a2e2a15445599151ce27c",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "eaae5146f3353b380cdcc94abbfe6c2b1840f411f9065454aaeb2c6d553b331c"
+    }
+  ],
+  "coberturaIntegral": {
+    "motivo": "escopo/lista/inventário não conferem",
+    "inventoryDigest": "d5abac8c627872211360917eba7d3b1fac318aaf311a2e2a15445599151ce27c"
+  },
+  "execucao": {
+    "status": "COMPLETED",
+    "completo": false,
+    "completedAt": "2026-11-01T09:59:35.154Z"
+  }
+}

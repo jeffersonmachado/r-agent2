@@ -1,0 +1,52 @@
+{
+  "artifactType": "readiness-decisions",
+  "artifactVersion": 1,
+  "_doc": "As TRES decisoes de prontidao formalmente separadas (missao L-1 FINAL §5). Cada uma declara escopo, dono, validadores canonicos e classes de risco que aceita. Este arquivo NAO cria caminho paralelo de certificacao: os validadores apontados sao os scripts canonicos do repositorio. O gate `validate-engineer-supervised-readiness` le este arquivo e reprova se algum validador citado nao existir.",
+  "decisions": [
+    {
+      "id": "ENGINEER_SUPERVISED_READINESS",
+      "scope": "cadeia do Engenheiro (Router V1/V2, Engineering Mission, bug loop) em execucao supervisionada",
+      "owner": "dono da plataforma + auditoria externa",
+      "authority": "HUMAN_SIGNATURE_OBLIGATORY",
+      "validators": [
+        "scripts/governance/validate-engineer-supervised-readiness.js",
+        "scripts/governance/validate-engineering-router-v1.js",
+        "scripts/governance/validate-bug-closure-status.js",
+        "scripts/governance/validate-hardening-queue.js"
+      ],
+      "acceptsRiskClasses": ["ACCEPTED_RISK", "NOT_APPLICABLE_WITH_EVIDENCE", "RESOLVED_VERIFIED"],
+      "blockingRiskCategories": [],
+      "notes": "Nao exige que a plataforma inteira esteja pronta. Exige que a cadeia do Engenheiro seja executavel, supervisionada, rastreavel e sem risco nao dispensavel."
+    },
+    {
+      "id": "PLATFORM_PRODUCTION_READINESS",
+      "scope": "plataforma inteira pronta para operacao: dados, isolamento multi-tenant, integracoes, RAG, QA Mesh",
+      "owner": "dono da plataforma",
+      "authority": "HUMAN_SIGNATURE_OBLIGATORY",
+      "validators": [
+        "scripts/governance/validate-release-governance.js",
+        "scripts/governance/validate-qa-governance.js",
+        "scripts/governance/validate-replay-governance.js",
+        "scripts/governance/run-governance-enforcement.js"
+      ],
+      "acceptsRiskClasses": ["ACCEPTED_RISK", "RESOLVED_VERIFIED"],
+      "blockingRiskCategories": ["TENANT_ISOLATION_VIOLATION", "DATA_LEAK", "DATA_CORRUPTION"],
+      "notes": "Gate agregado pertence a ESTA decisao — nao a L-1. Falta de identidade de run bloqueia aqui."
+    },
+    {
+      "id": "RELEASE_CERTIFICATION_READINESS",
+      "scope": "selagem, empacotamento, cadeia criptografica, dist/ e publicacao",
+      "owner": "dono do release",
+      "authority": "HUMAN_SIGNATURE_OBLIGATORY",
+      "validators": [
+        "scripts/governance/seal-release.sh",
+        "scripts/governance/validate-dist-cleanliness.js",
+        "scripts/governance/verify-release-artifact-identity.js",
+        "scripts/governance/validate-release-dag.js"
+      ],
+      "acceptsRiskClasses": ["ACCEPTED_RISK", "RESOLVED_VERIFIED"],
+      "blockingRiskCategories": ["UNAUTHORIZED_PUBLICATION", "EVIDENCE_MANIPULATION"],
+      "notes": "Higiene de dist/, recibo stale do verifier e divergencia de cadeia pos-certificacao pertencem a ESTA decisao."
+    }
+  ]
+}

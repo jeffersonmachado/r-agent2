@@ -1,0 +1,19 @@
+== L0 (tests/unit, --maxWorkers=4) ==
+Test Suites: 1 skipped, 1087 passed, 1087 of 1088 total
+Tests:       2 skipped, 9218 passed, 9220 total
+Time:        481.668 s
+
+== L1 1a tentativa (falha de limpeza de banco) ==
+FAIL tests/integration/engineeringBugLoopNaturalPathE2E.test.js (7.811 s)
+FAIL tests/integration/engineeringBugLoopNaturalPathE2E.test.js (7.811 s)
+Test Suites: 1 failed, 40 passed, 41 total
+Tests:       1 failed, 225 passed, 226 total
+
+== L1 isolada da suite que falhou ==
+PASS tests/integration/engineeringBugLoopNaturalPathE2E.test.js (84.775 s)
+Tests:       1 passed, 1 total
+
+== L1 2a tentativa (aceita) ==
+Test Suites: 41 passed, 41 total
+Tests:       226 passed, 226 total
+Time:        633.045 s

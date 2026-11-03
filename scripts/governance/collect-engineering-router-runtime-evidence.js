@@ -173,9 +173,24 @@ function extrairJsonDoJest(raw) {
  * que o processo Jest em si saia com exitCode 0 (achado real: "no tests matched" sai com
  * exitCode 0 por padrão).
  */
+/**
+ * Roda o ARQUIVO inteiro de teste e extrai o resultado do teste-ALVO do JSON do Jest.
+ *
+ * DEFEITO MEDIDO (2026-10-20, L-1): a versão anterior rodava
+ * `jest <arquivo> --testNamePattern <id>`, ou seja, executava SÓ o teste nomeado. Isso quebrava
+ * silênciosamente qualquer teste que dependa de estado produzido por OUTRO teste do mesmo arquivo:
+ * em árvore limpa, `EXACT_PATCH_PROMOTION` falhava com `result.promoted === false` e
+ * `PROVIDER_MODEL_FAILURE_REROUTE` terminava em `READY_FOR_PROMOTION` (nunca GREEN), enquanto a
+ * MESMA suíte executada inteira (como o gate L1 faz) passava 221/221. Consequência: a certificação
+ * de runtime era dependente de sobra de execuções anteriores — o oposto de reprodutível.
+ *
+ * Regra agora: executa-se o mesmo que o gate de L1 executa (o arquivo), e o veredito do item vem do
+ * status do teste-alvo em `assertionResults` + o exit code real do processo. Teste-alvo ausente,
+ * renomeado ou skipado continua FALHANDO (nunca "passa por omissão").
+ */
 function runTargetedTest(testPath, testId) {
   const startedAt = new Date().toISOString();
-  const args = ['jest', '--config', 'jest.config.cjs', testPath, '--testNamePattern', testId, '--json'];
+  const args = ['jest', '--config', 'jest.config.cjs', testPath, '--json'];
   let raw = '';
   let processExitCode = 0;
   let stderrTail = '';
@@ -189,7 +204,9 @@ function runTargetedTest(testPath, testId) {
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'pipe'],
       maxBuffer: 50 * 1024 * 1024,
-      timeout: 120000,
+      // Arquivo inteiro pode exceder o antigo limite de 120s (medido: 148s no arquivo de
+      // promoção sob carga) — timeout maior evita classificar lentidão como crash.
+      timeout: 600000,
       // Ambiente explícito e completo: o `.env` já foi carregado acima (loadEnvFile) e o filho
       // precisa do MESMO ambiente do coletor — sem isto o veredito depende de quem invoca.
       env: process.env,
@@ -204,7 +221,7 @@ function runTargetedTest(testPath, testId) {
     // jogada fora. Mesmo tratamento dado aos lotes em `run-release-suites.js` (stdoutTail/stderrTail).
     stderrTail = (err.stderr || '').split('\n').map((line) => line.trimEnd()).filter(Boolean).slice(-15).join('\n');
     if (err.signal) terminationDetail = `morto por sinal ${err.signal}`;
-    else if (err.code === 'ETIMEDOUT') terminationDetail = 'timeout do execFileSync (120000ms)';
+    else if (err.code === 'ETIMEDOUT') terminationDetail = 'timeout do execFileSync (600000ms)';
   }
 
   let parsed = extrairJsonDoJest(raw);
@@ -232,21 +249,38 @@ function runTargetedTest(testPath, testId) {
     }
   }
 
-  const numPassedTests = parsed.numPassedTests || 0;
-  const numFailedTests = parsed.numFailedTests || 0;
-  const numPendingTests = parsed.numPendingTests || 0;
+  // O veredito do ITEM é do teste-alvo (não do arquivo inteiro): o arquivo tem outros testes, e um
+  // deles falhando por motivo alheio não pode ser confundido com prova do requirement — mas também
+  // não pode ser ignorado: o exit code real do processo continua sendo exigido abaixo.
+  const alvo = (parsed.testResults || [])
+    .flatMap((suite) => suite.assertionResults || [])
+    .find((assertion) => {
+      const nome = String(assertion.fullName || assertion.title || '');
+      try {
+        return new RegExp(testId).test(nome);
+      } catch (_) {
+        return nome.includes(testId);
+      }
+    });
+
+  const alvoStatus = alvo ? String(alvo.status) : null;
+  const numPassedTests = alvoStatus === 'passed' ? 1 : 0;
+  const numFailedTests = alvoStatus === 'failed' ? 1 : 0;
+  const numPendingTests = alvoStatus && ['pending', 'skipped', 'todo', 'disabled'].includes(alvoStatus) ? 1 : 0;
 
   // Achado real: "no tests matched" sai com processExitCode 0 e numPassedTests 0 — sem esta
   // checagem explícita, um teste removido/renomeado seria certificado como provado.
   const pass = processExitCode === 0 && numPassedTests >= 1 && numFailedTests === 0;
 
   let reason;
-  if (numPassedTests === 0 && numFailedTests === 0 && numPendingTests === 0) {
+  if (!alvo) {
     reason = `nenhum teste casou com o pattern "${testId}" em ${testPath} — removido, renomeado ou nunca existiu`;
-  } else if (numPendingTests > 0 && numPassedTests === 0) {
-    reason = `todos os testes que casaram com "${testId}" estão skip/pending — nenhuma prova real de comportamento`;
+  } else if (numPendingTests > 0) {
+    reason = `o teste-alvo "${testId}" está skip/pending — nenhuma prova real de comportamento`;
   } else if (numFailedTests > 0) {
-    reason = `${numFailedTests} teste(s) que casaram com "${testId}" falharam`;
+    reason = `o teste-alvo "${testId}" falhou`;
+  } else if (processExitCode !== 0) {
+    reason = `o teste-alvo passou, mas o ARQUIVO ${testPath} saiu com exit ${processExitCode} (outro teste do mesmo arquivo falhou)`;
   }
 
   return {

@@ -27,14 +27,76 @@ on:
 env:
   NODE_VERSION_LTS: '20'
 
+# IMAGEM DE RUNNER FIXA (política do repositório desde 2026-10-26): `ubuntu-latest` passou a resolver
+# para ubuntu-26.04 e quebra a validação por AMBIENTE, não por código — `npx playwright install
+# --with-deps chromium` morre com "Playwright does not support chromium on ubuntu26.04-x64" e o systemd
+# do 26.04 mudou a redação de diagnósticos que suítes nossas asseveram. Medido no run 40303567233/40303874392
+# (dev-branch-ci). Imagem fixa até que Playwright e as asserções de mensagem suportem 26.04.
 jobs:
   jest:
     name: "Jest (npm test: unit + flow + rpa)"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+
+    # ERREXIT + PIPEFAIL (mesma classe do D1 da Fase 3): o shell PADRÃO do runner tem `-e` mas NÃO
+    # tem `pipefail` — num pipeline o status é o do último elemento, então um comando que reprova
+    # seguido de `| tail`/`| head`/`>> arquivo` deixa o passo VERDE. Passo que TOLERA falha precisa
+    # dizer `|| true` explicitamente (é o caso dos dumps de log com `if: failure()`).
+    defaults:
+      run:
+        shell: bash --noprofile --norc -eo pipefail {0}
+
+    # BANCO REAL NO JOB DE UNIT/FLOW/RPA (medido 2026-10-28, run 40726692268): `npm test` inclui
+    # `tests/unit/benchmarks/benchmarkChangeProposal.test.js`, que exercita a autoridade de propostas
+    # contra PostgreSQL de verdade e deliberadamente NÃO aceita banco falso. Sem serviço aqui, os 9
+    # testes morriam em `Não foi possível conectar ao PostgreSQL após 1 tentativas` — vermelho por
+    # AMBIENTE, não por código (os mesmos 9 passam 9/9 contra o Postgres local). Enquanto o job não
+    # tinha banco, o gate de unit não media esses testes: media a ausência do banco.
+    services:
+      postgres:
+        # pgvector/pgvector inclui a extensão vector exigida pelas migrations de RAG
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ci
+      REDIS_URL: redis://localhost:6379
 
     steps:
-      - name: Checkout
+      # HISTÓRICO COMPLETO É REQUISITO DE TESTE, não conveniência (medido 2026-10-28).
+      # O default do actions/checkout é `fetch-depth: 1` (clone raso) e isso reprova a suíte por
+      # AMBIENTE, não por código:
+      #   · `tests/unit/governance/bugClosureBypassDefense.test.js` materializa módulos da BASELINE
+      #     com `git show 0023634244ad...:governance/bug-closure/defect-states.js` — commit que não
+      #     existe num clone raso (`fatal: path ... exists on disk, but not in <sha>`). Reproduzido
+      #     em clone `--depth 1` (92 testes vermelhos) e verde depois de `git fetch --unshallow`.
+      #   · as suítes de missão resolvem a linha principal como `refs/remotes/origin/main`
+      #     (`resolveRefCommit`, missionSourceService) — ref que também não existe no clone raso,
+      #     produzindo `não foi possível resolver o commit de origem "main"`.
+      # Custo: o clone completo deste repositório (~7 mil arquivos). É o preço de um gate que
+      # consegue medir; a alternativa era continuar vermelho por ambiente.
+      - name: Checkout (histórico completo)
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -53,6 +115,44 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # IDENTIDADE GIT (medido 2026-10-28, run 40735242329): `releaseTagPolicyBlock` exercita
+      # `create-release-tag.sh` em repositórios reais e faz `git commit`; sem `user.name`/`user.email`
+      # o git sai 128 e o teste lê "erro de git" onde deveria ler o código de política (3). Os três
+      # cenários reprovavam por isso. Mesmo passo do `dev-branch-ci`.
+      - name: Identidade git (commits reais nos cenários de teste)
+        run: |
+          git config --global user.email "ci-runner@r-agent2.invalid"
+          git config --global user.name "RAP CI Runner"
+          git config --get user.email
+
+      # IMAGEM DO EXECUTION SANDBOX (mesma causa medida em 2026-10-21 no dev-branch-ci, run
+      # 39593921911, e de novo aqui em 2026-10-28, run 40730595851): sem a imagem
+      # `r-agent2-engineering-router-sandbox:latest`, `engineeringRouterExecutionSandboxSecurity`
+      # reprova com `docker run` exit 125 (8 testes). A suíte RECUSA pular de propósito ("ambiente
+      # sem Docker não pode alegar SANDBOX_RUNTIME=PASS"), então a correção é CONSTRUIR a imagem: o
+      # runner do GitHub tem Docker e a prova de isolamento passa a ser executada de verdade
+      # (non-root, sem rede, sem socket, FS read-only). Mesmo passo do `dev-branch-ci`.
+      - name: Construir a imagem do Execution Sandbox
+        run: docker build -t r-agent2-engineering-router-sandbox:latest engineering-router-sandbox
+
+      # AMBIENTE CANÔNICO ANTES DA SUÍTE (medido 2026-10-28, runs 40728206519 / 40729073198 /
+      # 40735242329). `jest tests/unit` NÃO é autossuficiente num checkout limpo e cada ausência
+      # aparece como um vermelho diferente:
+      #   · sem banco            → `Não foi possível conectar ao PostgreSQL` (9 testes);
+      #   · banco sem migrations → `relation "mcp_connections" does not exist` (17 testes);
+      #   · sem artefatos        → `ENOENT reports/benchmark-sufficiency-report.json`
+      #                            (`readinessCertificationSeparation`, `convergenceFixpoint`);
+      #   · sem `.env`/`api/data`→ `workspaceStateSeeding` (3 testes) e o sandbox devolve
+      #                            `exitCode: null` em `engineeringRouterSafeEnvironment`.
+      # `ci:bootstrap` é o produtor CANÔNICO do ambiente (`.env` com ENCRYPTION_KEY/tokens válidos,
+      # seed sintético, índices, artefatos exigidos pelos gates) — nada é fabricado — e é o mesmo
+      # passo do `dev-branch-ci`. `db:migrate` roda em seguida, como lá.
+      - name: Bootstrap canônico do ambiente de CI
+        run: npm run ci:bootstrap
+
+      - name: Run migrations (schema completo no banco efêmero)
+        run: npm run db:migrate
+
       - name: Run official Jest suite (npm test)
         run: npm test
         env:
@@ -60,8 +160,22 @@ jobs:
 
   jest-integration:
     name: "Jest Integration (tests/integration + tests/tenant c/ Postgres real)"
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
+    runs-on: ubuntu-24.04
+    # TIMEOUT MEDIDO, NÃO ESTIMADO (2026-10-28): com `timeout-minutes: 15` o job morreu como
+    # `cancelled` em 15m17s / 15m18s em TODOS os runs (40729073198, 40730595851, 40734125941), sem
+    # publicar um único `Tests:` — um gate que não chega ao veredito não mede nada. A suíte inteira
+    # de `tests/integration` + `tests/tenant` é maior que a do L0b (só o subconjunto `engineering`
+    # mede 2030 s), então 90 min com margem; se ainda não couber, o próximo passo é SHARD
+    # (`jest --shard`), não voltar a um timeout que estrangula.
+    timeout-minutes: 90
+
+    # ERREXIT + PIPEFAIL (mesma classe do D1 da Fase 3): o shell PADRÃO do runner tem `-e` mas NÃO
+    # tem `pipefail` — num pipeline o status é o do último elemento, então um comando que reprova
+    # seguido de `| tail`/`| head`/`>> arquivo` deixa o passo VERDE. Passo que TOLERA falha precisa
+    # dizer `|| true` explicitamente (é o caso dos dumps de log com `if: failure()`).
+    defaults:
+      run:
+        shell: bash --noprofile --norc -eo pipefail {0}
 
     services:
       postgres:
@@ -94,8 +208,22 @@ jobs:
       REDIS_URL: redis://localhost:6379
 
     steps:
-      - name: Checkout
+      # HISTÓRICO COMPLETO É REQUISITO DE TESTE, não conveniência (medido 2026-10-28).
+      # O default do actions/checkout é `fetch-depth: 1` (clone raso) e isso reprova a suíte por
+      # AMBIENTE, não por código:
+      #   · `tests/unit/governance/bugClosureBypassDefense.test.js` materializa módulos da BASELINE
+      #     com `git show 0023634244ad...:governance/bug-closure/defect-states.js` — commit que não
+      #     existe num clone raso (`fatal: path ... exists on disk, but not in <sha>`). Reproduzido
+      #     em clone `--depth 1` (92 testes vermelhos) e verde depois de `git fetch --unshallow`.
+      #   · as suítes de missão resolvem a linha principal como `refs/remotes/origin/main`
+      #     (`resolveRefCommit`, missionSourceService) — ref que também não existe no clone raso,
+      #     produzindo `não foi possível resolver o commit de origem "main"`.
+      # Custo: o clone completo deste repositório (~7 mil arquivos). É o preço de um gate que
+      # consegue medir; a alternativa era continuar vermelho por ambiente.
+      - name: Checkout (histórico completo)
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -111,17 +239,84 @@ jobs:
           cp -r vendor/whatsapp-qr-bridge ../packages/whatsapp-qr-bridge
           npm --prefix ../packages/whatsapp-qr-bridge ci --omit=dev --no-audit --no-fund
 
+      # LINHA PRINCIPAL LOCAL (medido 2026-10-28, run 40741496599): `missionSourceStaleReplanFullRouterE2E`
+      # resolve a fonte pelo branch `main` do repositório (`git rev-parse main`) e falhava com
+      # `fatal: ambiguous argument 'main'`. O `actions/checkout` deixa só a ref do evento; o teste
+      # assume um repositório com linha principal — que é o que o `dev-branch-ci` materializa antes
+      # das suítes. Nada é inventado: `main` aponta para o commit REAL de `origin/main`.
+      - name: Materializar a linha principal (origin/main)
+        run: |
+          git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
+          git branch --force main refs/remotes/origin/main
+          git rev-parse --short main
+
       - name: Install dependencies
         run: npm ci
+
+      # Mesmos pré-requisitos de ambiente do job `jest` (identidade git, imagem do sandbox e
+      # bootstrap canônico) — sem eles as suítes de integração do Engineering Router reprovam por
+      # ausência de infraestrutura, exatamente como foi medido no job de unit (runs 40728206519,
+      # 40729073198, 40730595851, 40735242329).
+      - name: Identidade git (commits reais nos cenários de teste)
+        run: |
+          git config --global user.email "ci-runner@r-agent2.invalid"
+          git config --global user.name "RAP CI Runner"
+          git config --get user.email
+
+      - name: Construir a imagem do Execution Sandbox
+        run: docker build -t r-agent2-engineering-router-sandbox:latest engineering-router-sandbox
+
+      - name: Bootstrap canônico do ambiente de CI
+        run: npm run ci:bootstrap
 
       - name: Run migrations (schema completo no banco efêmero)
         run: npm run db:migrate
 
-      - name: Run integration + tenant suites
-        # --forceExit: as suítes sobem o servidor completo (workers, sequelize,
-        # redis, websocket); no runner (Node 20) o processo principal do Jest
-        # não encerra após o "20 passed" (handles de infra). forceExit encerra
-        # APÓS os resultados — não mascara falhas de teste (exit code preservado).
-        run: npx jest tests/integration tests/tenant --bail=0 --forceExit
+      # SERVIÇO RAG (medido 2026-10-28, run 40746356670): com tudo o mais verde, sobraram
+      # `missionSourceStaleReplanFullRouterE2E` e `governanceApprovalFullWorkerE2E` — as duas
+      # PASSAM localmente (78 s e 94 s) e aqui terminavam em ~3 s com `BLOCKED`, com
+      # `[RAGService] Falha de conexão com o rag-service` no log. Não é flake: é o mesmo defeito
+      # que o `dev-branch-ci` já documentou no L0b ("causa única: ECONNREFUSED 127.0.0.1:8001") —
+      # o Router consulta o plano de conhecimento e falha FECHADO quando o serviço não existe.
+      # A correção não é pular a suíte: é subir o serviço REAL do repositório (imagem oficial,
+      # token efêmero por execução, nunca versionado).
+      - name: Construir a imagem do serviço RAG
+        run: docker build -t r-agent2-rag-service:ci rag-service
+
+      - name: Subir o serviço RAG em 127.0.0.1:8001
+        run: |
+          RAG_TOKEN="$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")"
+          echo "RAG_INTERNAL_TOKEN=$RAG_TOKEN" >> "$GITHUB_ENV"
+          docker run -d --name ci-rag --network host             -e HOST=0.0.0.0             -e PORT=8001             -e RAG_ENVIRONMENT=development             -e RAG_INTERNAL_TOKEN="$RAG_TOKEN"             -e DATABASE_URL="$DATABASE_URL"             -e HF_HUB_OFFLINE=1             -e TRANSFORMERS_OFFLINE=1             r-agent2-rag-service:ci
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:8001/health >/dev/null 2>&1; then
+              echo "RAG pronto em 127.0.0.1:8001 (try $i)"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "RAG não respondeu em /health após 300s"
+          docker logs ci-rag | tail -60
+          exit 1
+
+      # BASE DEDICADA DA MATRIZ DE ISOLAMENTO (medido 2026-10-28, run 40737265748): a suíte
+      # `crmTenantIsolation.postgres` exige um banco próprio (`CRM_PG_TEST_URL`, default
+      # 127.0.0.1:55432 na máquina de dev) e falhava com `ECONNREFUSED 127.0.0.1:55432` — 22 testes
+      # vermelhos por indisponibilidade de banco. Ela roda as migrations sozinha, então basta existir
+      # o banco; usar o MESMO serviço efêmero evita subir outro Postgres.
+      - name: Base dedicada da matriz de isolamento (crm_p0_test)
+        run: |
+          node -e "const {Client}=require('pg');(async()=>{const c=new Client({connectionString:process.env.DATABASE_URL});await c.connect();const r=await c.query(\"SELECT 1 FROM pg_database WHERE datname='crm_p0_test'\");if(r.rowCount===0){await c.query('CREATE DATABASE crm_p0_test');console.log('crm_p0_test criado');}else{console.log('crm_p0_test já existe');}await c.end();})().catch((e)=>{console.error(e.message);process.exit(1);});"
+
+      # FORMATO DE EXECUÇÃO CANÔNICO (medido 2026-10-28, run 40737265748): `npx jest
+      # tests/integration tests/tenant` com o paralelismo default deixou 5 suítes / 26 testes
+      # vermelhos — todas da família que `config/canonical-release-suites.json` declara EXCLUSIVA
+      # (worker GLOBAL do laço de bugs e banco de missões compartilhados). O executor lê o manifesto
+      # e roda em LOTES SERIAIS: as suítes exclusivas ficam sozinhas no lote, o resto divide lote.
+      # Nenhuma asserção muda — muda o formato de execução, que é o que o manifesto exige.
+      - name: Run integration + tenant suites (lotes canônicos)
+        run: node scripts/ci/run-integration-suites.js
         env:
           CI: true
+          CRM_PG_TEST_URL: postgresql://postgres:postgres@localhost:5432/crm_p0_test
+          CRM_PG_REQUIRED: '1'

@@ -1,0 +1,25 @@
+{
+  "id": "AUDITORIA-FASE-B-TESTE-MUTAVA-EVIDENCIA-GOVERNADA",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Teste de unidade regravava artefato governado e derrubava a integridade temporal",
+  "classe": "ESTRUTURA_INCOMPLETA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+  "teste": "tests/unit/audit/auditEntrypointArtifact.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [
+    "ASSINATURA_INVALIDA"
+  ],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/AUDITORIA-FASE-B-TESTE-MUTAVA-EVIDENCIA-GOVERNADA.log",
+  "draft": null,
+  "camposParaAssinar": 18,
+  "runId": "run-20261031140642-3b9307e2",
+  "identidade": {
+    "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+    "sourceFingerprint": "d5b817b10d978637f79b36835b6603040b0e584f063abfa725bf437fe3e973c2",
+    "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+    "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+    "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+  },
+  "artifactSha256": "e97a84b636bb476867b0b09103f459d2c6a1dbcbb28865c682429910836dde6f"
+}

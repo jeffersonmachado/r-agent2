@@ -304,7 +304,14 @@ test.describe('Support Agent Operations Wave', () => {
   const baseUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
 
   test('cenário 1: agente visualiza lista de tickets e abre ticket', async ({ page }) => {
-    await navigateToSupport(page, baseUrl);
+    // PRÉ-CONDIÇÃO EXPLÍCITA (defeito medido 2026-10-29, run 40946909310): `SupportTicketList` só
+    // renderiza o contêiner `ticket-list` quando há pelo menos um chamado visível — com a fila vazia
+    // ele renderiza o vazio `Nenhum chamado disponível` (SupportTicketList.jsx:187). A asserção de
+    // visibilidade vinha ANTES do guard de contagem, então numa execução com fila limpa o teste
+    // estourava em timeout de 10 s e o `PRECONDITION_FAILED` era INALCANÇÁVEL: o vermelho falava de
+    // locator em vez de pré-condição. Garantir o chamado primeiro (o MESMO helper do cenário 2) torna
+    // a pré-condição real e mantém a asserção intacta.
+    await ensureOperationalSupportTicket(page, baseUrl);
 
     // Verifica página de suporte
     await expect(page.getByTestId('support-page')).toBeVisible({ timeout: 10000 });

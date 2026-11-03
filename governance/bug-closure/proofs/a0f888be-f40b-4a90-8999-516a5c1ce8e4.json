@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "a0f888be-f40b-4a90-8999-516a5c1ce8e4",
+  "defectId": "FECHAMENTOS-SEM-SUITE-DE-REGRESSAO",
+  "severityBefore": "P2",
+  "severityAfter": "P2",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "a15f550e3522b48a49fb2d7cc6c948fdf2b60f01",
+  "codeFingerprint": "68b2804492d5bf2d9b5e02a86ba0dd1f8846917384d13b61d18ab7fad7dce0c4",
+  "requiredTests": [
+    "tests/unit/governance/closureRequiresSuite.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/closureRequiresSuite.test.js",
+      "command": "npx jest tests/unit/governance/closureRequiresSuite.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-02T15:27:40.566Z",
+      "finishedAt": "2026-11-02T15:27:44.295Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102145001-dd1ae10d/logs/FECHAMENTOS-SEM-SUITE-DE-REGRESSAO.log",
+      "outputSha256": "60096d0c17eb1d2b406fe92942514135af009027b1cb72e2b1d3e5e3bf1d77f7"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/closureRequiresSuite.test.js",
+      "sha256": "be1b76ad97cfa259fb97b77fa2c4710dcd550c3d2b8c23b55d1973a65683de06"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-02T15:27:44.301Z",
+  "proofHash": "e307d116773b6a6f5c47440164ee776b2df07b6ebc32030738b6a236c4f72785",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "P3P3h4KZb2ana9sGUkTtrGgT1KHdPExtiOV/cdPvY4iPHYsMl3fnkrEBYDcp+DS3LOAlY1/jWlzTH/9GYQ3pCA==",
+    "signedAt": "2026-11-02T16:22:29.433Z"
+  }
+}

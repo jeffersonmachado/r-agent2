@@ -1,0 +1,85 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "4ec12128-b405-42ca-acf2-69f0b361ce54",
+  "defectId": "P0-CRM-UPSERT-TRANSFERE-PROPRIEDADE-ENTRE-TENANTS",
+  "severityBefore": "P0",
+  "severityAfter": "P0",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "68a1da1922d793a5937fcfa9a0c4441a7d734594",
+  "codeFingerprint": "05ceb9b066e95a3c94affb0c3b960c5570ba3c4e4df42f81e4dbf214bc2b4ee2",
+  "requiredTests": [
+    "tests/integration/crmTenantIsolation.postgres.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/integration/crmTenantIsolation.postgres.test.js",
+      "command": "npx jest tests/integration/crmTenantIsolation.postgres.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-01T05:50:49.244Z",
+      "finishedAt": "2026-11-01T05:50:54.299Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101054919-b0aedfae/logs/P0-CRM-UPSERT-TRANSFERE-PROPRIEDADE-ENTRE-TENANTS.log",
+      "outputSha256": "53fedab76ad4ccfd1473f8666921542f48cd8cfa6acdf360b06e201d82771b8c"
+    }
+  ],
+  "negativeEvidence": [
+    {
+      "targetFile": "api/services/crm/crmRecordStore.js",
+      "control": "criação volta a usar upsert com PK só `id` (tenant B sobrescreve e transfere registro de A)",
+      "mutatedFromSha256": "1f86b1fb189344c8d18e505c5f47abedbc2d177ad38ad36beb90771f8b66cdd8",
+      "mutatedToSha256": "a80e659633dc1fee11e53806e62ae6acd186635f39420d101bad575981f8e85e",
+      "testPath": "tests/integration/crmTenantIsolation.postgres.test.js",
+      "command": "npx jest tests/integration/crmTenantIsolation.postgres.test.js --bail=1 --ci",
+      "baseline": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-CRM-UPSERT-TRANSFERE-PROPRIEDADE-ENTRE-TENANTS-baseline-8fafefe5.log",
+        "logSha256": "588bd2613d6c6208273b85c8191e9cdee942bcc18e28018b0ca6f25823ecdb9f"
+      },
+      "mutated": {
+        "exitCode": 1,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-CRM-UPSERT-TRANSFERE-PROPRIEDADE-ENTRE-TENANTS-mutado-8fafefe5.log",
+        "logSha256": "448d1b94306c49b3475f4e89dc2bc88c71a90367a275c742660acf92b28c96e9"
+      },
+      "restored": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-CRM-UPSERT-TRANSFERE-PROPRIEDADE-ENTRE-TENANTS-restaurado-8fafefe5.log",
+        "logSha256": "9e4950e5b217e2cb2b12ca236fa421c1e64f803e3fa5a88a499ed14d0022a921"
+      },
+      "capturedAt": "2026-11-01T05:13:06.909Z"
+    }
+  ],
+  "artifactHashes": [
+    {
+      "path": "tests/integration/crmTenantIsolation.postgres.test.js",
+      "sha256": "b45a7d71d8dbe1e12ee60218db9d589b0d65509c5e83d79c53c619b5468e918f"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": {
+    "channel": "VSCODE_AGENT",
+    "by": "platform-owner:jeffersonmachado",
+    "at": "2026-11-01T06:22:05.168613Z",
+    "ref": "session:e92510ac-0f54-41c6-bb85-90f42042999c",
+    "agentSession": "e92510ac-0f54-41c6-bb85-90f42042999c"
+  },
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-01T05:50:54.305Z",
+  "proofHash": "745a379930c9cf58f1bfa41c15d4229da6ab5078243eead4864b2673c2def0d2",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "2w1fjA67XHey2yGFeg+SiCpwJC76PIBih4KzKTEU4nHpdAvc+3AujRUcwsVJpSfObyF1+IQaZwFoOmtb2edqDw==",
+    "signedAt": "2026-11-01T06:22:20.158Z"
+  }
+}

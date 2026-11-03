@@ -1,0 +1,14 @@
+{
+  "id": "P1-MERGE-MISSAO-PERDA-DE-ATUALIZACAO",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "mergeMissionJson (JSONB acumulativo) perdia atualizacao em escrita concorrente",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+  "teste": "tests/integration/engineeringMissionMergeConcurrency.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-MERGE-MISSAO-PERDA-DE-ATUALIZACAO.log",
+  "draft": "governance/bug-closure/proofs-drafts/P1-MERGE-MISSAO-PERDA-DE-ATUALIZACAO.json",
+  "camposParaAssinar": 18
+}

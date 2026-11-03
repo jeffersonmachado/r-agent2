@@ -1,0 +1,27 @@
+{
+  "id": "HARDENING-ENG-GOV-RELEASE-P0-7",
+  "severity": "P0",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Protecao da branch main (gate executavel; bloqueio externo comprovado)",
+  "classe": "AGUARDA_INSUMOS_HUMANOS",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+  "teste": "tests/unit/governance/branchProtectionApplyPayload.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [
+    "EVIDENCIA_NEGATIVA_AUSENTE",
+    "APROVACAO_HUMANA_AUSENTE",
+    "ASSINATURA_INVALIDA"
+  ],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-P0-7.log",
+  "draft": "governance/bug-closure/proofs-drafts/HARDENING-ENG-GOV-RELEASE-P0-7.json",
+  "camposParaAssinar": 18,
+  "runId": "run-20261101033054-af53064a",
+  "identidade": {
+    "commit": "3441bcacac223f381adfbc749bff054c58fdf358",
+    "sourceFingerprint": "610692fa9b2b9ba7ea763e58595b391001b2c0636e486582e7f13c58fae7b5e2",
+    "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+    "hardeningQueueFingerprint": "3aab5e1761217f6bd507cd32b2460efe227d00231a94bd7fce86e6793a6a9f3b",
+    "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+  },
+  "artifactSha256": "062265c3e060405f775abb8bd0e797852e14bb19db7debc2397498c50dbbfdc8"
+}

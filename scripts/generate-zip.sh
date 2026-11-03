@@ -11,6 +11,15 @@ PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PROJECT_NAME="$(basename "$PROJECT_DIR")"
 SCRIPT_DIR="$PROJECT_DIR/scripts"
 source "$SCRIPT_DIR/release-payload-blocklist.sh"
+# RAIZ CANÔNICA DO PAYLOAD — o ZIP tem a raiz INTERNA fixa `r-agent2/`, NÃO o
+# basename do checkout. Todo o pipeline de release (two-pass, verify-payload,
+# final-consistency-gate, envelope) referencia essa raiz canônica; empacotar de
+# um checkout com outro nome (worktree de auditoria) produzia o ZIP com raiz
+# `er-fixci/` e quebrava o passo "Saneando payload" com
+# `zip error: Nothing to do!` — medido em 2026-11-03 no PASS 4b do two-pass.
+PACKAGE_ROOT_NAME="${PACKAGE_ROOT_NAME:-r-agent2}"
+RELEASE_PAYLOAD_ROOT_BASENAME="$PACKAGE_ROOT_NAME"
+export RELEASE_PAYLOAD_ROOT_BASENAME
 TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
 DEFAULT_OUTPUT_DIR="$PROJECT_DIR/dist"
 DEFAULT_ZIP_NAME="${PROJECT_NAME}-${TIMESTAMP}.zip"
@@ -41,7 +50,19 @@ REQUIRED_PROOF_ENTRIES=(
   'governance/cleanup-proof.json'
 )
 
-REQUIRED_PROOF_REGEX='^(r-agent2/)?(qa/(smoke/?|smoke/prod-like/?|smoke-evidence\.json|l0[1-5]-.*-evidence\.json|smoke/prod-like/qa-waves-operational-prod-like-smoke\.json|enterprise/(human-handoff-full-validation|human-handoff-screenshots|pbx-voice-flow-prod-like|pbx-asr-transcript|pbx-tts-prompts|pbx-recordings-metadata|omnichannel-unified-replay|omnichannel-crm-mutations|digital-twin-snapshots)\.json|qa-waves-enterprise-governance\.json)|governance/(evidence-manifest|final-proof-report|package-validation-report|final-readiness-report|proof-signature|cleanup-proof)\.json)$'
+# Isenção dos PROVAS OBRIGATÓRIAS do padrão proibido acima.
+#
+# O prefixo de raiz era `r-agent2/` FIXO. Empacotando de um checkout com outro
+# nome (worktree de auditoria), o ZIP entra com `er-fixci/qa/smoke/prod-like/...`
+# e a isenção NÃO casava — a própria prova obrigatória era reprovada por
+# `(^|/)qa/smoke/`, o ZIP era apagado e o release abortava. Medido em
+# 2026-11-02 ao empacotar `/opt/results/ria/er-fixci`:
+#   Erro: padrao proibido detectado no ZIP ((^|/)qa/smoke/):
+#   er-fixci/qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json
+# A raiz é declarada pelo empacotador (RELEASE_PAYLOAD_ROOT_BASENAME) e a forma
+# histórica `r-agent2/` segue aceita.
+REQUIRED_PROOF_ROOT_PREFIX="${RELEASE_PAYLOAD_ROOT_BASENAME//[^A-Za-z0-9._-]/}"
+REQUIRED_PROOF_REGEX="^(${REQUIRED_PROOF_ROOT_PREFIX}/|r-agent2/)?(qa/(smoke/?|smoke/prod-like/?|smoke-evidence\.json|l0[1-5]-.*-evidence\.json|smoke/prod-like/qa-waves-operational-prod-like-smoke\.json|enterprise/(human-handoff-full-validation|human-handoff-screenshots|pbx-voice-flow-prod-like|pbx-asr-transcript|pbx-tts-prompts|pbx-recordings-metadata|omnichannel-unified-replay|omnichannel-crm-mutations|digital-twin-snapshots)\.json|qa-waves-enterprise-governance\.json)|governance/(evidence-manifest|final-proof-report|package-validation-report|final-readiness-report|proof-signature|cleanup-proof)\.json)$"
 
 OUTPUT_DIR="$DEFAULT_OUTPUT_DIR"
 ZIP_NAME="$DEFAULT_ZIP_NAME"
@@ -89,10 +110,10 @@ ensure_zip_extension() {
 to_project_pattern() {
   local pattern="$1"
   local cleaned="${pattern#./}"
-  if [[ "$cleaned" == "$PROJECT_NAME/"* ]]; then
+  if [[ "$cleaned" == "$PACKAGE_ROOT_NAME/"* ]]; then
     echo "$cleaned"
   else
-    echo "${PROJECT_NAME}/${cleaned}"
+    echo "${PACKAGE_ROOT_NAME}/${cleaned}"
   fi
 }
 
@@ -157,13 +178,13 @@ if [[ -f "$ZIP_FILE" ]]; then
 fi
 
 STAGE_ROOT="$(mktemp -d -t r-agent2-zip-stage-XXXXXX)"
-STAGE_DIR="$STAGE_ROOT/$PROJECT_NAME"
+STAGE_DIR="$STAGE_ROOT/$PACKAGE_ROOT_NAME"
 cleanup() {
   rm -rf "$STAGE_ROOT"
 }
 trap cleanup EXIT
 
-echo -e "${YELLOW}Gerando ZIP deterministico de ${PROJECT_NAME}...${NC}"
+echo -e "${YELLOW}Gerando ZIP deterministico de ${PACKAGE_ROOT_NAME} (checkout: ${PROJECT_NAME})...${NC}"
 echo "Saida: $ZIP_FILE"
 
 RSYNC_EXCLUDES=(
@@ -350,7 +371,7 @@ release_payload_remove_forbidden_from_tree "$STAGE_DIR"
 
 (
   cd "$STAGE_ROOT"
-  ZIP_CMD=(zip -qry "$ZIP_FILE" "$PROJECT_NAME")
+  ZIP_CMD=(zip -qry "$ZIP_FILE" "$PACKAGE_ROOT_NAME")
   if [[ ${#CUSTOM_INCLUDES[@]} -gt 0 ]]; then
     ZIP_CMD+=(-i "${CUSTOM_INCLUDES[@]}")
   fi

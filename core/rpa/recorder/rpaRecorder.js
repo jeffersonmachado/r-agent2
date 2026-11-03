@@ -5,7 +5,17 @@
  * O seed descreve O QUE foi feito, não COMO foi executado.
  */
 
-const { chromium } = require('playwright');
+/**
+ * Playwright é carregado TARDIO. Medição (2026-10-25, `require('api/server')` frio = 4.678 ms /
+ * 7.204 módulos): `playwright` sozinho custa ~990 ms e entrava no boot da API por esta cadeia —
+ * `api/server` → rpaService → rpaTestRunner → actionExecutor. Quem sobe a API para servir HTTP não
+ * precisa do browser; quem executa RPA continua recebendo o MESMO objeto no primeiro uso.
+ */
+let chromiumCarregado = null;
+function obterChromium() {
+  if (!chromiumCarregado) chromiumCarregado = require('playwright').chromium;
+  return chromiumCarregado;
+}
 const { ActionRecorder } = require('../actionRecorder');
 const { getModeConfig } = require('../rpaConfig');
 const { ReplaySystem } = require('../replaySystem');
@@ -36,7 +46,7 @@ class RpaRecorder {
    * Inicializa browser e página para gravação.
    */
   async init() {
-    this.browser = await chromium.launch({
+    this.browser = await obterChromium().launch({
       headless: this.modeConfig.headless,
       slowMo: this.modeConfig.actionDelayMs,
     });

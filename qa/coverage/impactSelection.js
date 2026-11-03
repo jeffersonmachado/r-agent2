@@ -176,10 +176,15 @@ function selectValidation({
 
   const changed = [...new Set(changedFiles.map(normalizar))].sort();
   if (changed.length === 0) {
+    // CONTRATO UNIFORME (medido 2026-10-21 no CI): este ramo não devolvia `changedFiles` e o
+    // chamador (`run-impact-validation`) quebrava em `selecao.changedFiles.length` — um crash
+    // que NÃO gravava relatório e deixava o artefato ausente. Toda seleção declara os arquivos
+    // considerados, inclusive quando são zero.
     return {
       level: NIVEIS.L3,
       escalate: true,
       escalateReason: 'NO_CHANGED_FILES',
+      changedFiles: [],
       tests: [],
       journeys: [],
       meshScenarios: [],

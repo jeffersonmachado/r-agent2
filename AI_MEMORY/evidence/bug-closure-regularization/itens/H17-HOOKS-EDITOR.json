@@ -1,0 +1,14 @@
+{
+  "id": "H17-HOOKS-EDITOR",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Editor: quebra das Rules of Hooks no seletor de modelos (achado da jornada browser)",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "CAMPO_DO_ITEM",
+  "teste": "frontend/src/components/FlowTemplateSelector.test.jsx",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/H17-HOOKS-EDITOR.log",
+  "draft": "governance/bug-closure/proofs-drafts/H17-HOOKS-EDITOR.json",
+  "camposParaAssinar": 18
+}

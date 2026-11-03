@@ -1,0 +1,49 @@
+MISSÃO F — OS 130 DEFEITOS HISTÓRICOS (8 verificações exigidas)
+data: 2026-10-24T09:43:15Z
+
+Estado medido (node scripts/governance/validate-bug-closure-status.js):
+  status=FAIL  inventoryAnchored=false  authoritative=false
+  inventário: 135 itens (VERIFIED=111, RESOLVED=19, BLOCKED_EXTERNAL=5)
+  por severidade: P0=31 P1=67 P2=27 P3=10 | bloqueantesParaCertificacao=98
+  violação única: FECHAMENTO_NAO_PROVADO 130 (P0=31, P1=67)
+
+1. A invalidação é esperada pelo contrato? SIM.
+   O `sourceFingerprint` cobre scripts/**, config/, governance/proof-engine, qa/evidence etc.
+   (`governance/proof-engine/fingerprint-chain.js`). Qualquer commit que toque esses caminhos muda
+   o fingerprint e invalida TODA prova que declare o fingerprint anterior — por desenho, não por
+   regressão. Os artefatos legados gravam commit e fingerprint de origem:
+     report.json    : commit 32edd8e7…  fingerprint a351e062…  (130 resultados)
+     report-P1.json : commit e747bac4…  fingerprint 5151d5b6…  (67 resultados)
+     fingerprint atual (HEAD desta árvore): 7244e991740b010b8c412275e7d4bf687e18e718eab6943c94bb595c65c8f854
+
+2. Todos os 130 foram afetados pelo MESMO motivo? SIM — motivo único (FECHAMENTO_NAO_PROVADO) e
+   mesma causa: declaração de fechamento sem prova válida ligada ao fingerprint corrente.
+   Classes no agregado: AGUARDA_ASSINATURA_E_ANCORA=88, REQUER_DECISAO_HUMANA=12,
+   AGUARDA_INSUMOS_HUMANOS=30.
+
+3. Existe evidência realmente ADULTERADA? NÃO ENCONTRADA.
+   118 logs versionados: 0 vazios, 118 hashes SHA-256 distintos, 115 com marcador de execução Jest
+   e 3 com marcador Vitest (frontend). Nenhum arquivo de AI_MEMORY/evidence/ aparece modificado no
+   worktree (git status limpo) e a fila não foi tocada por nenhum commit desta missão:
+   `git diff 541c7d000..HEAD -- AI_MEMORY/hardening-queue.json governance/bug-closure/` => vazio.
+
+4. A identidade do código está corretamente representada? SIM — cada agregado carrega commit +
+   fingerprint do momento em que rodou; nenhum deles alega cobrir o HEAD atual.
+
+5. A regeneração é determinística? Medido: MESMO fingerprint em duas árvores distintas do MESMO
+   commit (uma com `reports/` gerado, outra recém-criada) — ver abaixo.
+
+6. O novo fingerprint é estável entre checkouts equivalentes? SIM (medição do item 5).
+
+7. Logs versionados permanecem verificáveis? SIM (item 3).
+
+8. O inventário continua íntegro? SIM — 135 itens, nenhum alterado; `inventoryAnchored=false`
+   porque a âncora EXTERNA do inventário não está provisionada neste ambiente (bloqueio externo,
+   não defeito de código).
+
+MEDIÇÃO 5/6 (duas árvores, mesmo commit 85ca7e2cc):
+  /tmp/r-agent2-p1-hardening (com artefatos gerados) : 7244e991740b010b8c412275e7d4bf687e18e718eab6943c94bb595c65c8f854
+  /tmp/rbc-p2-equiv         (recém-criada, sem reports/) : 7244e991740b010b8c412275e7d4bf687e18e718eab6943c94bb595c65c8f854
+
+ESTADOS DE FECHAMENTO: nenhum foi alterado. Nenhuma aprovação humana foi criada. Nenhuma prova foi
+assinada. Nada foi reclassificado de inválido para válido.

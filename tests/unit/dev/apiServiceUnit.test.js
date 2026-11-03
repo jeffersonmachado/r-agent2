@@ -22,7 +22,7 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { execFileSync } = require('child_process');
+const { execFileSync, spawnSync } = require('child_process');
 
 const ROOT = path.resolve(__dirname, '..', '..', '..');
 const TEMPLATE = path.join(ROOT, 'scripts', 'dev', 'ragent2-api-dev.service.template');
@@ -153,13 +153,16 @@ describe('supervisão da API dev — a queda por terminal deixa de ser possível
     }
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ragent2-unit-'));
     const file = path.join(dir, 'ragent2-api-dev.service');
-    fs.writeFileSync(file, renderTemplate({ log: path.join(dir, 'api.log') }));
-    let saida = '';
-    try {
-      execFileSync('systemd-analyze', ['verify', file], { stdio: 'pipe' });
-    } catch (error) {
-      saida = `${error.stdout || ''}${error.stderr || ''}`;
-    }
+    // HERMÉTICO (medido no CI, run 39590856414): o template substitui `{{NODE}}` por
+    // `/usr/bin/node`, que NÃO existe no runner do GitHub — o systemd-analyze responde
+    // "ragent2-api-dev.service: Command /usr/bin/node is not executable" e reprovava a
+    // verificação por AMBIENTE, não por sintaxe. Renderizando com um executável que existe
+    // (o próprio node do processo), o critério continua estrito (nenhuma linha pode citar a
+    // unit) e passa a medir o que o teste diz medir: seção/chave inválida.
+    fs.writeFileSync(file, renderTemplate({ node: process.execPath, log: path.join(dir, 'api.log') }));
+    // stdout+stderr SEMPRE: avisos com exit 0 (Unknown key name) só aparecem assim.
+    const r = spawnSync('systemd-analyze', ['verify', file], { encoding: 'utf8' });
+    const saida = `${r.stdout || ''}${r.stderr || ''}`;
     // Só interessa o veredito sobre ESTA unit: outros arquivos do host têm avisos
     // próprios (teamviewerd, anydesk…) que não são da nossa conta.
     const linhasDaUnit = saida.split('\n').filter((linha) => linha.includes('ragent2-api-dev.service'));

@@ -1,0 +1,85 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "60bb177c-9bd0-4678-8d77-4574e02f9804",
+  "defectId": "P0-4",
+  "severityBefore": "P0",
+  "severityAfter": "P0",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "f4122cc89d078ead01a16658a2e0a21fd50af83f",
+  "codeFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
+  "requiredTests": [
+    "tests/unit/securityIntel/waiverService.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/securityIntel/waiverService.test.js",
+      "command": "npx jest tests/unit/securityIntel/waiverService.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-01T05:00:23.587Z",
+      "finishedAt": "2026-11-01T05:00:29.083Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101045911-1945195a/logs/P0-4.log",
+      "outputSha256": "fa475a55155c0bb34502b78240e137be0c598efb2ff0480167cc09967cfab400"
+    }
+  ],
+  "negativeEvidence": [
+    {
+      "targetFile": "api/services/securityIntel/waiverService.js",
+      "control": "aprovação de waiver deixa de exigir aprovador identificado (segregação de funções quebrada)",
+      "mutatedFromSha256": "b9590b6e856c601cb0974012ffd99a10803453cdeb4f8148d52b224cf4677ce2",
+      "mutatedToSha256": "84af9cd6a34aa87324c197737a853e9e3ccc14301504dc21570970760f13c11b",
+      "testPath": "tests/unit/securityIntel/waiverService.test.js",
+      "command": "npx jest tests/unit/securityIntel/waiverService.test.js --bail=1 --ci",
+      "baseline": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-4-baseline-ced43e5f.log",
+        "logSha256": "cf028b056e7b05ab3433a8e57d664217062fec54cb5498b96fe81c946b5546a2"
+      },
+      "mutated": {
+        "exitCode": 1,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-4-mutado-ced43e5f.log",
+        "logSha256": "9cc5c502043fa2eb7be7cfd2467e627e334d806d9f7c6568d456b625adb11f31"
+      },
+      "restored": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-4-restaurado-ced43e5f.log",
+        "logSha256": "76a4addcb0335f4552a575a680639e1f072a45adb282bfbe7c9548a03f26fb53"
+      },
+      "capturedAt": "2026-11-01T04:52:35.992Z"
+    }
+  ],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/securityIntel/waiverService.test.js",
+      "sha256": "d5688ad33e90dfacd86f3a8cbcb097a5713f7e6eff6c457546a2d5fc7171b971"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": {
+    "channel": "VSCODE_AGENT",
+    "by": "platform-owner:jeffersonmachado",
+    "at": "2026-11-01T05:01:52.486971Z",
+    "ref": "session:e92510ac-0f54-41c6-bb85-90f42042999c",
+    "agentSession": "e92510ac-0f54-41c6-bb85-90f42042999c"
+  },
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-01T05:00:29.091Z",
+  "proofHash": "fd857f3d2b40461d1a797b2774aa54413eb131ace4eaa15ffbf1022115671a36",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "uGsOKr0jd16s72M41rKIsXvPlOlogzDWxtrgIGunVlC9MIerOBoUkkmhRWUPUlo1lGZTLJrGJynAhOFHPlEzBA==",
+    "signedAt": "2026-11-01T05:01:54.290Z"
+  }
+}

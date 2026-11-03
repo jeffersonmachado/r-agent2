@@ -1,0 +1,25 @@
+{
+  "id": "PROMPT-P1F-STREAM-ISOLAMENTO",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "useLroStream isola cursor/historico/reconexao por operacao",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "CAMPO_DO_ITEM",
+  "teste": "frontend/src/shared/useLroStream.test.jsx",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [
+    "ASSINATURA_INVALIDA"
+  ],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/PROMPT-P1F-STREAM-ISOLAMENTO.log",
+  "draft": "governance/bug-closure/proofs-drafts/PROMPT-P1F-STREAM-ISOLAMENTO.json",
+  "camposParaAssinar": 18,
+  "runId": "run-20261031211712-ddaf7ab3",
+  "identidade": {
+    "commit": "fc08d682044ddb6be24f28c7ad8cfdca7b03b51e",
+    "sourceFingerprint": "3f873a4f5e2d9d5ffa3bf6cc40bd8c9278012309c093787538719b4c7f06ea38",
+    "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+    "hardeningQueueFingerprint": "9ef22af5831cff1e8e2a5fe1268c4fbb54dd78d287638a8263bf67d3cf095635",
+    "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+  },
+  "artifactSha256": "20247e19c1657eccfca1d6cb10feb39ad66a11f10706d01d0d894802d4bb334d"
+}

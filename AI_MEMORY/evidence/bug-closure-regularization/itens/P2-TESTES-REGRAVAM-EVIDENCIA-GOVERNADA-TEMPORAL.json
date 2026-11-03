@@ -1,0 +1,14 @@
+{
+  "id": "P2-TESTES-REGRAVAM-EVIDENCIA-GOVERNADA-TEMPORAL",
+  "severity": "P2",
+  "estadoPersistido": "RESOLVED",
+  "titulo": "Suites e validadores regravam relatorios governados e invalidam a coerencia temporal do run",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+  "teste": "tests/unit/governance/governedArtifactPreservation.test.js",
+  "transicao": "RESOLVED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/P2-TESTES-REGRAVAM-EVIDENCIA-GOVERNADA-TEMPORAL.log",
+  "draft": "governance/bug-closure/proofs-drafts/P2-TESTES-REGRAVAM-EVIDENCIA-GOVERNADA-TEMPORAL.json",
+  "camposParaAssinar": 18
+}

@@ -1,10 +1,12 @@
 /**
  * Helpers para construção de URL de WebSocket no frontend.
  *
- * Regras:
- * - Se VITE_API_BASE_URL estiver definido, usa URL absoluta com ws/wss.
- * - Em DEV com Vite, usa ws://localhost:<VITE_API_DEV_PORT>/ws.
- * - Em produção, usa mesmo host com prefixo detectado.
+ * Regras (ordem de precedência):
+ * 1. VITE_API_BASE_URL definido → URL absoluta com ws/wss.
+ * 2. Prefixo de deployment = `BASE_URL` do build (Vite `base`, alimentado por VITE_BASE_PATH).
+ *    É a ÚNICA fonte de verdade: o primeiro segmento do pathname é ROTA, não prefixo.
+ * 3. VITE_API_DEV_PORT definido → fala direto com a API nesse host/porta (sem proxy).
+ * 4. Caso contrário → mesmo host, `/ws` (em dev o Vite proxia o upgrade; em produção o Apache).
  */
 
 function detectBasePathFromLocation(locationObj) {
@@ -45,6 +47,14 @@ function isViteDevRuntime(locationObj) {
       && !port.includes('8086'));
 }
 
+function normalizarBaseDeBuild(valor) {
+  if (valor === undefined || valor === null) return null;
+  const texto = String(valor).trim();
+  if (!texto) return null;
+  const comBarras = texto.startsWith('/') ? texto : `/${texto}`;
+  return comBarras.endsWith('/') ? comBarras : `${comBarras}/`;
+}
+
 export function buildWebSocketUrl(options = {}) {
   const runtimeLocation =
     Object.prototype.hasOwnProperty.call(options, 'location')
@@ -59,8 +69,19 @@ export function buildWebSocketUrl(options = {}) {
     return `${wsBase}/ws`;
   }
 
-  if (isViteDevRuntime(runtimeLocation)) {
-    const devPort = Number(runtimeEnv.VITE_API_DEV_PORT || 3000);
+  // `BASE_URL` vem do build (Vite `base`). Servido na raiz ele é '/', e então o caminho do WS é
+  // `/ws` — nunca `<rota>/ws` (era o defeito: `/dev/qa-waves` → `ws://host/dev/ws`).
+  const baseDeBuild = normalizarBaseDeBuild(runtimeEnv.BASE_URL);
+
+  if (baseDeBuild) {
+    if (!runtimeLocation) return baseDeBuild === '/' ? '/ws' : `${baseDeBuild}ws`;
+    const protocolo = runtimeLocation.protocol === 'https:' ? 'wss:' : 'ws:';
+    const caminho = baseDeBuild === '/' ? '/ws' : `${baseDeBuild}ws`;
+    return `${protocolo}//${runtimeLocation.host}${caminho}`;
+  }
+
+  if (runtimeEnv.VITE_API_DEV_PORT) {
+    const devPort = Number(runtimeEnv.VITE_API_DEV_PORT);
     return `ws://localhost:${devPort}/ws`;
   }
 
@@ -68,6 +89,7 @@ export function buildWebSocketUrl(options = {}) {
     return '/ws';
   }
 
+  // Sem BASE_URL no env (runtime antigo/teste): mantém a heurística histórica de prefixo.
   const basePath = detectBasePathFromLocation(runtimeLocation);
   const protocol = runtimeLocation.protocol === 'https:' ? 'wss:' : 'ws:';
   const wsPath = `${basePath}/ws`.replace('//', '/');

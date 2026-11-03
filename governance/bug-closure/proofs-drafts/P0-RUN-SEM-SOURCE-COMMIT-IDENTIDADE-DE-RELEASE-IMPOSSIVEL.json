@@ -1,0 +1,79 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "17daecfa-285c-4654-8ff3-3c878c48b0bc",
+  "defectId": "P0-RUN-SEM-SOURCE-COMMIT-IDENTIDADE-DE-RELEASE-IMPOSSIVEL",
+  "severityBefore": "P0",
+  "severityAfter": "P0",
+  "fromState": "RESOLVED",
+  "toState": "RESOLVED",
+  "evaluatedCommit": "c43614969fa7e5eafcf680b4028097b25143cd94",
+  "codeFingerprint": "330ad47b88702d47d7e21c625a1e77f0b4c8570f55d13be8e8dbc2fc64212ad6",
+  "requiredTests": [
+    "tests/unit/governance/runIdentityCommit.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/runIdentityCommit.test.js",
+      "command": "npx jest tests/unit/governance/runIdentityCommit.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-03T10:19:10.298Z",
+      "finishedAt": "2026-11-03T10:19:14.652Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103101609-e015b999/logs/P0-RUN-SEM-SOURCE-COMMIT-IDENTIDADE-DE-RELEASE-IMPOSSIVEL.log",
+      "outputSha256": "ccf631a4347a9f6e1c1276ccc5e4eee34c5ef2b72c58f9faa51899b6b7a3e36f"
+    }
+  ],
+  "negativeEvidence": [
+    {
+      "targetFile": "scripts/governance/create-governed-run.js",
+      "control": "run governado volta a nascer sem gitCommit (identidade de release IMPOSSIVEL para sempre)",
+      "mutatedFromSha256": "81e3ff06cb51ff74d7e28a8effdbc213ae96b00cc7baa72b5650038c72072b97",
+      "mutatedToSha256": "28e47d6cfd47b91f15da3f6e9b3d25025a5327fc03ab9431821e265ba4d6e6a8",
+      "testPath": "tests/unit/governance/runIdentityCommit.test.js",
+      "command": "npx jest tests/unit/governance/runIdentityCommit.test.js --bail=1 --ci",
+      "baseline": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-RUN-SEM-SOURCE-COMMIT-IDENTIDADE-DE-RELEASE-IMPOSSIVEL-baseline-72969031.log",
+        "logSha256": "c02357da78bfd7037d02cdf6b4f9a3de0807df511aeb6126d12cceeb9024badf"
+      },
+      "mutated": {
+        "exitCode": 1,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-RUN-SEM-SOURCE-COMMIT-IDENTIDADE-DE-RELEASE-IMPOSSIVEL-mutado-72969031.log",
+        "logSha256": "a6b2af591f26302667b664c785094238c0bb56270d7c6809af0e43636281cb3c"
+      },
+      "restored": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-RUN-SEM-SOURCE-COMMIT-IDENTIDADE-DE-RELEASE-IMPOSSIVEL-restaurado-72969031.log",
+        "logSha256": "8e461190f691827eecf53449806ce56562bd785f47417e854190325f4c03c4f9"
+      },
+      "capturedAt": "2026-11-02T16:04:59.685Z"
+    }
+  ],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/runIdentityCommit.test.js",
+      "sha256": "91239f2cdfcc98ab8e42b07b739334da5abc7af6505898cb71995f5816297a68"
+    }
+  ],
+  "actor": {
+    "id": "owner@results.invalid",
+    "kind": "humano"
+  },
+  "humanAuthorization": {
+    "channel": "VSCODE_AGENT",
+    "by": "platform-owner:jeffersonmachado",
+    "at": "2026-11-03T11:10:47.699Z",
+    "ref": "session:e92510ac-0f54-41c6-bb85-90f42042999c",
+    "agentSession": "e92510ac-0f54-41c6-bb85-90f42042999c"
+  },
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-03T10:19:14.663Z",
+  "proofHash": "a3ec7ba8924505f9d895d2b8361eae1c1bde862e70cbc9eceac240c604ba899d"
+}

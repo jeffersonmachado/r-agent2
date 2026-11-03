@@ -1,6 +1,6 @@
 import React from 'react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, waitFor, within, cleanup } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QaWavesPage } from './QaWavesPage';
 import { fetchJson } from '../api/client';
@@ -169,8 +169,47 @@ function mockFetchJson(url, init) {
     return Promise.resolve({ items: [] });
   }
 
+  // Painel de operações longas (LRO) montado na página: lista vazia por padrão nos testes daqui.
+  // O painel é coberto por `components/lro/LroOperationsPanel.test.jsx`.
+  if (String(url).startsWith('/api/lro')) {
+    return Promise.resolve({ items: [] });
+  }
+
   throw new Error(`Unexpected fetchJson call: ${url}`);
 }
+
+// REGRESSÃO MEDIDA 2026-10-30 (cold load real de /dev/qa-waves): `/api/qa-waves/executions`
+// deu TIMEOUT enquanto as outras três chamadas respondiam 200; com `Promise.all` a página
+// ficava em "0 Cenários / 0% / sem domínio" e o usuário via uma tela vazia como se não
+// houvesse dado. O contrato agora é: o que chegou é aplicado; o que falhou é anunciado.
+describe('pages/QaWavesPage — falha parcial não pode apagar o que já chegou', () => {
+  // Sem cleanup explícito o painel do render ANTERIOR sobrevive no DOM e a asserção escopada
+  // encontra os botões do teste passado — foi assim que a 2ª variante passou nas DUAS versões
+  // do código quando rodada no conjunto (medido 2026-10-30; isolada, ela discriminava).
+  afterEach(() => cleanup());
+
+  it('mantém os domínios quando /executions falha, e anuncia a falha', async () => {
+    fetchJson.mockImplementation((url, init) => {
+      if (url.startsWith('/api/qa-waves/executions')) {
+        return Promise.reject(Object.assign(new Error('Request timeout'), { code: 'TIMEOUT' }));
+      }
+      return mockFetchJson(url, init);
+    });
+
+    render(<QaWavesPage />);
+
+    // Asserção ESCOPADA no painel de domínios: é o que fica vazio quando o `Promise.all`
+    // descarta as respostas boas. `Fitness` solto na página casaria outros botões e o teste
+    // passaria nas DUAS versões (medido: a primeira versão destes testes não discriminava).
+    const nav = await screen.findByRole('navigation', { name: /Verticais/i });
+    await waitFor(() => {
+      expect(within(nav).getAllByRole('button').length).toBeGreaterThan(0);
+    });
+    expect(within(nav).getByRole('button', { name: /Fitness/i })).toBeInTheDocument();
+    expect(testDoubles.showToast).toHaveBeenCalled();
+  });
+
+});
 
 describe('pages/QaWavesPage', () => {
   beforeEach(() => {

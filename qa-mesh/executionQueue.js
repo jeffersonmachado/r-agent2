@@ -115,17 +115,69 @@ function getAllExecutions(limit = 20, options = {}) {
     .slice(0, limit);
 }
 
-function getActiveExecution() {
+/** Chave de tenant de um registro. `null` agrupa execuções sem tenant declarado. */
+function tenantKeyOf(record) {
+  const bruto = record && record.payload ? record.payload.tenantId : null;
+  if (bruto === null || bruto === undefined || bruto === '') return null;
+  return String(bruto);
+}
+
+/**
+ * Execução ativa (running/queued).
+ *
+ * DEFEITO CORRIGIDO (2026-10-30, LRO Fase 0 — docs/architecture/lro-qa-waves.md §3.1): sem filtro de
+ * tenant esta função fazia a onda em execução do tenant A bloquear o `enqueue` do tenant B com
+ * `EXECUTION_ALREADY_RUNNING` — indisponibilidade CRUZADA entre clientes, sem relação entre os
+ * payloads. A exclusão mútua passou a ser POR TENANT; sem argumento o comportamento antigo (global)
+ * é preservado para leitores de diagnóstico.
+ *
+ * @param {string|null|undefined} tenantId `undefined` = varredura global (compatibilidade)
+ */
+function getActiveExecution(tenantId) {
+  const escopo = tenantId === undefined ? undefined : (tenantId === null || tenantId === '' ? null : String(tenantId));
   for (const record of executions.values()) {
-    if (record.status === 'running' || record.status === 'queued') {
-      return record;
-    }
+    if (record.status !== 'running' && record.status !== 'queued') continue;
+    if (escopo === undefined) return record;
+    if (tenantKeyOf(record) === escopo) return record;
   }
   return null;
 }
 
+/**
+ * Desfecho terminal de uma execução — FAIL-CLOSED (P1-G).
+ *
+ * Antes: `status: summary.goNoGo === 'NO_GO' ? 'failed' : 'completed'` + `progress: 100`. Ou seja,
+ * AUSÊNCIA de resumo/goNoGo virava sucesso com 100%: runner que devolve `undefined`, `SKIPPED`,
+ * `NOT_EXECUTED` ou `UNKNOWN` era contabilizado como execução concluída (e contaminava cobertura e
+ * certificação agregada). Só `GO` explícito conclui; `NO_GO` falha; todo o resto é falha com motivo
+ * e progresso DESCONHECIDO (nunca 100%).
+ *
+ * @param {object|undefined} resultado
+ * @returns {{status:'completed'|'failed', progress:number|null, goNoGo:string|null, motivo:string|null, summary:object|null, results:Array, historyPath:string|null, evidenceDir:string|null}}
+ */
+function desfechoTerminal(resultado) {
+  const summary = (resultado && typeof resultado === 'object' && resultado.summary) || null;
+  const goNoGo = summary && typeof summary === 'object' ? (summary.goNoGo || null) : null;
+  const base = {
+    goNoGo,
+    summary,
+    results: (resultado && resultado.results) || [],
+    historyPath: (resultado && resultado.historyPath) || null,
+    evidenceDir: (resultado && resultado.evidenceDir) || null,
+  };
+  if (goNoGo === 'GO') return { ...base, status: 'completed', progress: 100, motivo: null };
+  if (goNoGo === 'NO_GO') return { ...base, status: 'failed', progress: 100, motivo: 'NO_GO' };
+  return {
+    ...base,
+    status: 'failed',
+    progress: null, // desconhecido: não se presume 100%
+    motivo: goNoGo ? `GONOGO_INVALIDO:${goNoGo}` : 'SEM_SUMMARY',
+  };
+}
+
 function enqueueExecution(kind, payload, runner) {
-  const active = getActiveExecution();
+  const tenantIdBruto = payload && payload.tenantId != null ? payload.tenantId : null;
+  const active = getActiveExecution(tenantIdBruto === '' ? null : tenantIdBruto);
   if (active) {
     const err = new Error(
       `Já existe uma execução em andamento (${active.executionId}). Aguarde a conclusão antes de iniciar uma nova onda.`
@@ -141,18 +193,20 @@ function enqueueExecution(kind, payload, runner) {
       updateExecution(record.executionId, { status: 'running', startedAt: nowIso() });
       appendLog(record.executionId, 'EXECUTION_STARTED', 'info', { kind });
       const result = await runner(record.executionId);
+      const desfecho = desfechoTerminal(result);
       updateExecution(record.executionId, {
-        status: result?.summary?.goNoGo === 'NO_GO' ? 'failed' : 'completed',
+        status: desfecho.status,
         finishedAt: nowIso(),
-        progress: 100,
-        summary: result?.summary || null,
-        results: result?.results || [],
-        historyPath: result?.historyPath || null,
-        evidenceDir: result?.evidenceDir || null,
+        progress: desfecho.progress,
+        summary: desfecho.summary,
+        results: desfecho.results,
+        historyPath: desfecho.historyPath,
+        evidenceDir: desfecho.evidenceDir,
+        ...(desfecho.motivo ? { outcomeReason: desfecho.motivo } : {}),
       });
-      appendLog(record.executionId, 'EXECUTION_FINISHED', 'success', {
-        goNoGo: result?.summary?.goNoGo || null,
-      });
+      appendLog(record.executionId, 'EXECUTION_FINISHED',
+        desfecho.status === 'completed' ? 'success' : 'error',
+        { goNoGo: desfecho.goNoGo, motivo: desfecho.motivo });
     } catch (error) {
       updateExecution(record.executionId, {
         status: 'failed',
@@ -194,6 +248,7 @@ function clearExecutions(options = null) {
 }
 
 module.exports = {
+  desfechoTerminal,
   appendLog,
   updateExecution,
   getExecution,

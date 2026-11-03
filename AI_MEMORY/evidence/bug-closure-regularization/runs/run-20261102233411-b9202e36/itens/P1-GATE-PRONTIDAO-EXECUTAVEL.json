@@ -1,0 +1,25 @@
+{
+  "id": "P1-GATE-PRONTIDAO-EXECUTAVEL",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Veredito ENGINEER_SUPERVISED_READY_GO vivia em prosa; agora e gate executavel",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+  "teste": "tests/unit/governance/engineerSupervisedReadinessGate.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [
+    "ASSINATURA_INVALIDA"
+  ],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102233411-b9202e36/logs/P1-GATE-PRONTIDAO-EXECUTAVEL.log",
+  "draft": "governance/bug-closure/proofs-drafts/P1-GATE-PRONTIDAO-EXECUTAVEL.json",
+  "camposParaAssinar": 18,
+  "runId": "run-20261102233411-b9202e36",
+  "identidade": {
+    "commit": "7f7840aef2b83dedaf64b6aec85e0842dd7e4708",
+    "sourceFingerprint": "203f3dc5115a2b7f367695b50541b80d6132aacff3e71d4a90925f6338fa2052",
+    "inventoryFingerprint": "39003d9ea50ba5df64c09cac080101b8cfe1011e0128cbf74c0f5c426d38ce8c",
+    "hardeningQueueFingerprint": "a01931cdc59a8260e1c700678335cd5eb4d14eae2dea5541f7e363956109da14",
+    "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+  },
+  "artifactSha256": "e7f59afb367b36ea467ab462ad9b16acc71b3929ae16c5b42af9910ea0fcaee7"
+}

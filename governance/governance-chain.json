@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-10-17T07:21:48.569Z",
-  "artifact": "r-agent2-20261017-040050.zip",
-  "gitCommit": "8bfbb61bd92c1b871a5121f309dda6aad2cb6d9f",
+  "generatedAt": "2026-11-03T10:08:29.766Z",
+  "artifact": "r-agent2-20261103-064958.zip",
+  "gitCommit": "d3c3d1451e096fef28bb9125b78e6fe30edf94a0",
   "chainLength": 10,
-  "chainRoot": "99e1de118ee4f399b36a2fb0235e46bc509dad9e5ce385883476504739eb688f",
+  "chainRoot": "a913ad59586996236a5b5bc65a5d3694c0645b19f8930bd21c544e5b2e77c967",
   "completeChain": true,
   "missingLayers": [],
   "valid": true,
@@ -11,10 +11,10 @@
   "certification": {
     "state": "CERTIFICADA",
     "origem": "governance/sign-governance.js:preSign",
-    "checkedAt": "2026-10-17T07:21:48.569Z",
-    "certifiedAt": "2026-10-17T07:21:48.569Z",
-    "chainRoot": "99e1de118ee4f399b36a2fb0235e46bc509dad9e5ce385883476504739eb688f",
-    "computedRoot": "99e1de118ee4f399b36a2fb0235e46bc509dad9e5ce385883476504739eb688f",
+    "checkedAt": "2026-11-03T10:08:29.766Z",
+    "certifiedAt": "2026-11-03T10:08:29.766Z",
+    "chainRoot": "a913ad59586996236a5b5bc65a5d3694c0645b19f8930bd21c544e5b2e77c967",
+    "computedRoot": "a913ad59586996236a5b5bc65a5d3694c0645b19f8930bd21c544e5b2e77c967",
     "checkedLinks": 10,
     "divergencias": []
   },
@@ -23,31 +23,31 @@
       "index": 0,
       "id": "package",
       "label": "Release ZIP",
-      "path": "dist/release/r-agent2-20261017-040050.zip",
+      "path": "dist/r-agent2-20261103-064958.zip",
       "existe": true,
       "exists": true,
       "classe": "CANONICO",
       "escritor": "scripts/release-package.sh (empacotamento)",
       "imutavelPosSelo": true,
-      "hash": "3349df645e3ae6ef5e7be7229a8cf4749003b532c810781c80ffa3485c6597b1",
+      "hash": "02d87b6dccdf2d3fd3964849f49af7921869a6a4e155d931c655fc992abb248b",
       "previousHash": "0000000000000000000000000000000000000000000000000000000000000000",
-      "cumulativeHash": "aaa5f051a56864d4d1961d670d28eb09d5212fa4da9e905684f21d887be4af87",
-      "timestamp": "2026-10-17T07:21:48.558Z"
+      "cumulativeHash": "b0dc240e00168b09e8dab92f9118c7907831611abd3d28ac2edfd1b698644188",
+      "timestamp": "2026-11-03T10:08:29.763Z"
     },
     {
       "index": 1,
       "id": "sidecar_manifest",
       "label": "Release Manifest Sidecar",
-      "path": "dist/release/r-agent2-20261017-040050.manifest.json",
+      "path": "dist/r-agent2-20261103-064958.manifest.json",
       "existe": true,
       "exists": true,
       "classe": "CANONICO",
       "escritor": "scripts/release-package.sh (manifesto sidecar)",
       "imutavelPosSelo": true,
-      "hash": "be05c63ad0f1046417b5091835e9e43dba7c53a970405c34cf6cc0d93b931546",
-      "previousHash": "3349df645e3ae6ef5e7be7229a8cf4749003b532c810781c80ffa3485c6597b1",
-      "cumulativeHash": "a6f62a75c9c2d469fc66e23216535bebfae7455b9c09b9e02b6a7ec8ddf86a13",
-      "timestamp": "2026-10-17T07:21:48.558Z"
+      "hash": "0ae6d1755c9271b01283c5a0cc14d0aaad2001a35e09b4b6465713fa36b9abb2",
+      "previousHash": "02d87b6dccdf2d3fd3964849f49af7921869a6a4e155d931c655fc992abb248b",
+      "cumulativeHash": "1eb74830a3baa5fe8ec1f0e4f1b5cb33cb474e80af259a48ce22304d012e48e6",
+      "timestamp": "2026-11-03T10:08:29.763Z"
     },
     {
       "index": 2,
@@ -59,10 +59,10 @@
       "classe": "DERIVADO",
       "escritor": "governance/package-validator.js + tools/system",
       "imutavelPosSelo": false,
-      "hash": "93f273001f7f68d074ccefc57ef68af1b936ed4024e934b0f611cb88782ef78b",
-      "previousHash": "be05c63ad0f1046417b5091835e9e43dba7c53a970405c34cf6cc0d93b931546",
-      "cumulativeHash": "35fd2bedbacb28d39fbc88af88708c628141ab633bd8f29a0da6ae3f8591cf4e",
-      "timestamp": "2026-10-17T07:21:48.568Z"
+      "hash": "48ac8bdfe543cfe679263891021a9920bf57a59eac3fbb1251dfbeb9ae8145f0",
+      "previousHash": "0ae6d1755c9271b01283c5a0cc14d0aaad2001a35e09b4b6465713fa36b9abb2",
+      "cumulativeHash": "0b063c7658ad9eab2217c73af6ffc0b1f43240b5540d4889445c4e6d2d010dde",
+      "timestamp": "2026-11-03T10:08:29.765Z"
     },
     {
       "index": 3,
@@ -74,10 +74,10 @@
       "classe": "DERIVADO",
       "escritor": "governance/circular-projection.js + system:go-no-go",
       "imutavelPosSelo": false,
-      "hash": "91d496840c004b48135551cb02763f813cfe590bfa1d65b279d1568717bc5483",
-      "previousHash": "93f273001f7f68d074ccefc57ef68af1b936ed4024e934b0f611cb88782ef78b",
-      "cumulativeHash": "b5e59f1c9f0401cbfb7f97898d5e609c4b9e4382ef3ad8b5f0732cf257be7521",
-      "timestamp": "2026-10-17T07:21:48.568Z"
+      "hash": "cd775326287b16cb24b9bd33d765c9aa3af382ff0d39a3225c8ef150264b1d87",
+      "previousHash": "48ac8bdfe543cfe679263891021a9920bf57a59eac3fbb1251dfbeb9ae8145f0",
+      "cumulativeHash": "79e32ff76f15f7b037b6c08c1b8e49bdb133a5f0ad7fd4523dffcd9e6d7cff53",
+      "timestamp": "2026-11-03T10:08:29.765Z"
     },
     {
       "index": 4,
@@ -89,10 +89,10 @@
       "classe": "DERIVADO",
       "escritor": "governance/circular-projection.js + system:go-no-go",
       "imutavelPosSelo": false,
-      "hash": "0850c8cb352a6344893b5d846b46ce4e4f5564a0ce5938ddf4a614ff59d3ad62",
-      "previousHash": "91d496840c004b48135551cb02763f813cfe590bfa1d65b279d1568717bc5483",
-      "cumulativeHash": "88e7c8078811f0ad87acd90f2ffd04849ecb98774268d37d9cce9697e9bcacbe",
-      "timestamp": "2026-10-17T07:21:48.568Z"
+      "hash": "6ce41497692aca55594cf4c08c49cb78145d10d158ef65b204db93ec6003d051",
+      "previousHash": "cd775326287b16cb24b9bd33d765c9aa3af382ff0d39a3225c8ef150264b1d87",
+      "cumulativeHash": "aa4a448d717fd84d8ce5af1dfbd024c1675276bed240026171a9feef0858f3d6",
+      "timestamp": "2026-11-03T10:08:29.765Z"
     },
     {
       "index": 5,
@@ -104,10 +104,10 @@
       "classe": "DERIVADO",
       "escritor": "governance/governance-consistency-engine.js",
       "imutavelPosSelo": false,
-      "hash": "552f773381ce089c3a362c55c70d27c89ae3ba45a734be70e8d2dcb41e9ffb2f",
-      "previousHash": "0850c8cb352a6344893b5d846b46ce4e4f5564a0ce5938ddf4a614ff59d3ad62",
-      "cumulativeHash": "c9e8643dea67a246499e7a13b92dd92ec91207297e8c817c0a75fb151679a8eb",
-      "timestamp": "2026-10-17T07:21:48.568Z"
+      "hash": "56633a4a9374986742e4d27500459a01c9329c2687dcea11bdbec23f0def1c01",
+      "previousHash": "6ce41497692aca55594cf4c08c49cb78145d10d158ef65b204db93ec6003d051",
+      "cumulativeHash": "732677f4c21292e35641f4c8bc99668c11446fb05c68b82d22b625405a3789da",
+      "timestamp": "2026-11-03T10:08:29.765Z"
     },
     {
       "index": 6,
@@ -119,10 +119,10 @@
       "classe": "DERIVADO",
       "escritor": "governance/governance-consistency-engine.js",
       "imutavelPosSelo": false,
-      "hash": "f4a95d82b1b05a3c5fd2632b22d25327c826198b6b3d1cb24f18ba284c7686d2",
-      "previousHash": "552f773381ce089c3a362c55c70d27c89ae3ba45a734be70e8d2dcb41e9ffb2f",
-      "cumulativeHash": "69bf211a16e58d1e2490617152a456f63f74ef7a4e79f112e562348573fd985d",
-      "timestamp": "2026-10-17T07:21:48.568Z"
+      "hash": "adf8f759275d4be358bf674599ff0d238b5158b30b22bd6b8ed8dd0e4880682a",
+      "previousHash": "56633a4a9374986742e4d27500459a01c9329c2687dcea11bdbec23f0def1c01",
+      "cumulativeHash": "fc8369a9dd4228d1dee3757671810abb122aa91ffcca85f1891cb34dfe91c53d",
+      "timestamp": "2026-11-03T10:08:29.765Z"
     },
     {
       "index": 7,
@@ -134,10 +134,10 @@
       "classe": "DERIVADO",
       "escritor": "governance/materialize-proof-artifacts.js",
       "imutavelPosSelo": false,
-      "hash": "01c7143850726ab489b3bca3fd4797e3e93bfd4e46249a8a651d67dc95f698d2",
-      "previousHash": "f4a95d82b1b05a3c5fd2632b22d25327c826198b6b3d1cb24f18ba284c7686d2",
-      "cumulativeHash": "f776ce3539e15b24da32418a2b88850aeb491d274e448670cda285043a45c833",
-      "timestamp": "2026-10-17T07:21:48.568Z"
+      "hash": "cad0faeccfbc483ca3b7b6a19cb4628a5ff91f7f52ced904736d4f887815f379",
+      "previousHash": "adf8f759275d4be358bf674599ff0d238b5158b30b22bd6b8ed8dd0e4880682a",
+      "cumulativeHash": "b129c129a1ddb4835d608e6205c1f91089534f915c88c83d7652dc41c8d7d22c",
+      "timestamp": "2026-11-03T10:08:29.765Z"
     },
     {
       "index": 8,
@@ -150,9 +150,9 @@
       "escritor": "versionado em git (fonte)",
       "imutavelPosSelo": true,
       "hash": "97a734d3c969542a4fc7868090d90c48c2bde7d53bdeade52d71cbf34ee84459",
-      "previousHash": "01c7143850726ab489b3bca3fd4797e3e93bfd4e46249a8a651d67dc95f698d2",
-      "cumulativeHash": "93b7d8690e7cd2f8e11988815489d4103f1556d70d5962bd3221eb461cc5d0da",
-      "timestamp": "2026-10-17T07:21:48.569Z"
+      "previousHash": "cad0faeccfbc483ca3b7b6a19cb4628a5ff91f7f52ced904736d4f887815f379",
+      "cumulativeHash": "805540b74ce626c2f26b7a6aed2e290102de3250b93c5996bbfdc7d2a5e9ae04",
+      "timestamp": "2026-11-03T10:08:29.766Z"
     },
     {
       "index": 9,
@@ -164,10 +164,10 @@
       "classe": "DERIVADO",
       "escritor": "governance/package-validator.js",
       "imutavelPosSelo": false,
-      "hash": "d611eba511ef6c2d4157b11b761da83ce6132a91b9e3ee1d01473e6255d40456",
+      "hash": "144914bcb57a4e7f2de5dc28a2513f6db23c3adf8a6aaa1477d39afee2165dcf",
       "previousHash": "97a734d3c969542a4fc7868090d90c48c2bde7d53bdeade52d71cbf34ee84459",
-      "cumulativeHash": "99e1de118ee4f399b36a2fb0235e46bc509dad9e5ce385883476504739eb688f",
-      "timestamp": "2026-10-17T07:21:48.569Z"
+      "cumulativeHash": "a913ad59586996236a5b5bc65a5d3694c0645b19f8930bd21c544e5b2e77c967",
+      "timestamp": "2026-11-03T10:08:29.766Z"
     }
   ]
 }

@@ -18,6 +18,8 @@ function createRouteRegistry(routers) {
     { router: routers.webScrapingRouter },
     { router: routers.qaRouter },
     { router: routers.qaWavesRouter },
+    // Long-Running Operations (LRO): eventos duráveis (SSE com Last-Event-ID) + comandos REST.
+    { router: routers.lroRouter },
     { router: routers.qaMeshRouter },
     { router: routers.engineeringRouterRouter },
     // Engineering Mission Compiler / enriquecimento (DEVELOPMENT). Router fora

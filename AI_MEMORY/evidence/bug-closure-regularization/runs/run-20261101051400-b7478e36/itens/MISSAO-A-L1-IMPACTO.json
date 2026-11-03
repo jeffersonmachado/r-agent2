@@ -1,0 +1,25 @@
+{
+  "id": "MISSAO-A-L1-IMPACTO",
+  "severity": "P3",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "L1: seleção de validação por impacto (grafo de imports + fail-closed)",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "CAMPO_DO_ITEM",
+  "teste": "tests/unit/coverage/impactGraph.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [
+    "ASSINATURA_INVALIDA"
+  ],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101051400-b7478e36/logs/MISSAO-A-L1-IMPACTO.log",
+  "draft": "governance/bug-closure/proofs-drafts/MISSAO-A-L1-IMPACTO.json",
+  "camposParaAssinar": 18,
+  "runId": "run-20261101051400-b7478e36",
+  "identidade": {
+    "commit": "66159b64dcdfd0c7fdabfb70628395370c1f42b8",
+    "sourceFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
+    "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+    "hardeningQueueFingerprint": "4ff67e1567aae758fcf4df936325d6f7e57ceea0803b2dfa43bb3fad2ac4c6ca",
+    "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+  },
+  "artifactSha256": "87314042c7aa1f03479f800db746ee2bec45b809cd9df94ddb54b6d8d9ec91a9"
+}

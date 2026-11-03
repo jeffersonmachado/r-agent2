@@ -1,0 +1,14 @@
+{
+  "id": "MISSAO-B9-CI-GITHUB-ACTIONS",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "B9: CI do GitHub bloqueado por budget — release-governance.yml nao protege publicacao",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+  "teste": "tests/unit/governance/devBranchCiGate.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/MISSAO-B9-CI-GITHUB-ACTIONS.log",
+  "draft": "governance/bug-closure/proofs-drafts/MISSAO-B9-CI-GITHUB-ACTIONS.json",
+  "camposParaAssinar": 18
+}

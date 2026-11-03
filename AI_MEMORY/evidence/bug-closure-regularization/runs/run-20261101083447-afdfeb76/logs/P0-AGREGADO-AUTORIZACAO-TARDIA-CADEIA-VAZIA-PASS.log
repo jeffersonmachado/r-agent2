@@ -1,0 +1,27 @@
+[jest-global-setup] .env carregado (0 chave(s) aplicada(s); ambiente explícito vence)
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/governance/governanceEnforcementOrder.test.js
+  P0 agregado — nenhum executor roda antes da autorização
+    ✓ identidade incompleta: ZERO chamadas de executor (228 ms)
+    ✓ SHA inválido: ZERO chamadas (201 ms)
+    ✓ runId ausente: ZERO chamadas (215 ms)
+    ✓ autorização negada: ZERO chamadas de executor (238 ms)
+    ✓ executor não autorizado nunca é invocado, mesmo com cadeia válida (261 ms)
+  P0 agregado — cadeia vazia e escopo inválido nunca dão PASS
+    ✓ cadeia vazia ⇒ BLOCKED, sem executar (253 ms)
+    ✓ cadeia sem passo obrigatório ⇒ BLOCKED (204 ms)
+    ✓ passo duplicado na cadeia ⇒ BLOCKED (238 ms)
+    ✓ validarEscopo é determinístico (104 ms)
+  P0 agregado — decisão exige execução real e evidência
+    ✓ todos os passos verdes com digest ⇒ PASS (333 ms)
+    ✓ exit code não zero ⇒ FAIL e fail-fast (328 ms)
+    ✓ passo sem digest de saída ⇒ FAIL (evidência ausente) (338 ms)
+    ✓ cadeia truncada (executor para antes) ⇒ FAIL (386 ms)
+    ✓ etapas registradas na ordem canônica (336 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       14 passed, 14 total
+Snapshots:   0 total
+Time:        4.276 s, estimated 7 s
+Ran all test suites matching /tests\/unit\/governance\/governanceEnforcementOrder.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

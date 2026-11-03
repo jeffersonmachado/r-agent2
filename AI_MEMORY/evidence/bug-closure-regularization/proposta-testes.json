@@ -1,0 +1,2902 @@
+{
+  "kind": "bug-closure-test-proposals",
+  "generatedAt": "2026-10-22T18:28:07.289Z",
+  "authoritative": false,
+  "aviso": "Proposta por sobreposição de tokens. NÃO é prova de relação causal: confirme manualmente em config/bug-closure-test-map.json antes de gerar prova.",
+  "total": 51,
+  "porConfianca": {
+    "SOBREPOSICAO_DE_TOKENS_NAO_CONFIRMADA": 51
+  },
+  "propostas": [
+    {
+      "id": "HARDENING-ENG-GOV-RELEASE-CANDIDATE-IDENTIDADE-FOREIGN-RUN",
+      "severity": "P0",
+      "titulo": "Criar run governado novo torna o CANDIDATO entregue um artefato de outro run",
+      "tokensDoDefeito": [
+        "candidate",
+        "identidade",
+        "foreign",
+        "criar",
+        "governado",
+        "novo",
+        "torna",
+        "candidato",
+        "entregue",
+        "artefato",
+        "outro"
+      ],
+      "candidatos": [
+        {
+          "teste": "tests/unit/governance/releaseArtifactIdentity.test.js",
+          "pontos": 8,
+          "tokens": [
+            "candidate",
+            "identidade",
+            "foreign",
+            "novo",
+            "candidato",
+            "entregue",
+            "artefato",
+            "outro"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/unit/governance/releaseHygiene.test.js",
+          "pontos": 7,
+          "tokens": [
+            "candidate",
+            "foreign",
+            "governado",
+            "novo",
+            "candidato",
+            "artefato",
+            "outro"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/unit/governance/assertCanonicalReleaseDecision.test.js",
+          "pontos": 6,
+          "tokens": [
+            "identidade",
+            "governado",
+            "novo",
+            "candidato",
+            "artefato",
+            "outro"
+          ],
+          "citacaoDoId": false
+        }
+      ],
+      "evidenciaDeclarada": "RESOLVIDO por ciclo completo e provado: (1) selo V2 21/21 dentro do run R3 rap-governed-20261016144931085-033e1239 (apos corrigir o defeito do handshake ambiguo, commit a5449d15e); (2) candidato r-agent2-20261016-130247 selado (exit 1 intencional/DEFERRED); (3) validate:release-artifact-identity -> PASS RELEASE_ARTIFACT_IDENTITY_VERIFIED (a violacao FOREIGN_RUN_ARTIFACT original deixou de existir,",
+      "confianca": "SOBREPOSICAO_DE_TOKENS_NAO_CONFIRMADA"
+    },
+    {
+      "id": "HARDENING-ENG-GOV-RELEASE-EVIDENCIA-DENTRO-DO-RUN",
+      "severity": "P0",
+      "titulo": "Evidencia runtime so vale se produzida DENTRO da janela de um run governado aberto",
+      "tokensDoDefeito": [
+        "evidencia",
+        "dentro",
+        "evidencia",
+        "runtime",
+        "vale",
+        "produzida",
+        "dentro",
+        "janela",
+        "governado",
+        "aberto"
+      ],
+      "candidatos": [
+        {
+          "teste": "tests/unit/governance/bugClosureBypassDefense.test.js",
+          "pontos": 7,
+          "tokens": [
+            "evidencia",
+            "dentro",
+            "vale",
+            "janela",
+            "aberto"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/integration/governanceApprovalFullWorkerE2E.test.js",
+          "pontos": 6,
+          "tokens": [
+            "dentro",
+            "runtime",
+            "produzida",
+            "janela",
+            "aberto"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/unit/benchmarks/benchmarkResearchHonesty.test.js",
+          "pontos": 6,
+          "tokens": [
+            "evidencia",
+            "runtime",
+            "vale",
+            "janela",
+            "governado"
+          ],
+          "citacaoDoId": false
+        }
+      ],
+      "evidenciaDeclarada": "OPERADO e VERIFICADO em 2026-10-16: (1) `node scripts/governance/create-governed-run.js` criou o run rap-governed-20261016125224166-7833cff3; (2) o preflight novo (`npm run validate:wave-same-run`) disparou no fluxo real com 3x WAVE_EVIDENCE_FOREIGN_RUN e o remedio — prova bidirecional do gate; (3) as 3 waves foram regeneradas DENTRO do run e carimbadas pelo passo canonico `node scripts/governance",
+      "confianca": "SOBREPOSICAO_DE_TOKENS_NAO_CONFIRMADA"
+    },
+    {
+      "id": "HARDENING-ENG-GOV-RELEASE-P0-2",
+      "severity": "P0",
+      "titulo": "Cadeia criptografica reconstruida e assinada a cada ciclo (selo imutavel)",
+      "tokensDoDefeito": [
+        "cadeia",
+        "criptografica",
+        "reconstruida",
+        "assinada",
+        "cada",
+        "ciclo",
+        "selo",
+        "imutavel"
+      ],
+      "candidatos": [
+        {
+          "teste": "tests/unit/governance/bugClosureBypassDefense.test.js",
+          "pontos": 6,
+          "tokens": [
+            "cadeia",
+            "criptografica",
+            "assinada",
+            "cada",
+            "ciclo",
+            "selo"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/unit/governance/governanceChainContract.test.js",
+          "pontos": 5,
+          "tokens": [
+            "cadeia",
+            "cada",
+            "ciclo",
+            "selo",
+            "imutavel"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/unit/audit/auditEntrypointArtifact.test.js",
+          "pontos": 4,
+          "tokens": [
+            "cadeia",
+            "criptografica",
+            "cada",
+            "ciclo"
+          ],
+          "citacaoDoId": false
+        }
+      ],
+      "evidenciaDeclarada": "Causa raiz medida: consolidate/system:go-no-go reescrevem evidence-manifest, final-proof-report, final-readiness-report, package-validation-report e proof-signature DEPOIS da cadeia existir; nada reconstruia. Agora a fase certify reconstroi+assina a cadeia (sign-governance.js com .env) e propaga a atestacao, com validate-governance-chain BLOQUEANTE. Prova E2E: status=PASS links=10 stored=f05ed75aa",
+      "confianca": "SOBREPOSICAO_DE_TOKENS_NAO_CONFIRMADA"
+    },
+    {
+      "id": "HARDENING-ENG-GOV-RELEASE-P0-3",
+      "severity": "P0",
+      "titulo": "Certificar ANTES de publicar (ordem de fase do selo)",
+      "tokensDoDefeito": [
+        "certificar",
+        "antes",
+        "publicar",
+        "ordem",
+        "fase",
+        "selo"
+      ],
+      "candidatos": [
+        {
+          "teste": "tests/unit/governance/sealPhaseOrder.test.js",
+          "pontos": 6,
+          "tokens": [
+            "certificar",
+            "antes",
+            "publicar",
+            "ordem",
+            "fase",
+            "selo"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/unit/governance/governanceChainAppearance.test.js",
+          "pontos": 5,
+          "tokens": [
+            "certificar",
+            "antes",
+            "ordem",
+            "fase",
+            "selo"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/unit/governance/discoveredBlockerGuards.test.js",
+          "pontos": 4,
+          "tokens": [
+            "antes",
+            "ordem",
+            "fase",
+            "selo"
+          ],
+          "citacaoDoId": false
+        }
+      ],
+      "evidenciaDeclarada": "Fases reordenadas para prepare->candidate->final->consolidate->certify->publish->verify-delivery, com dispatch_phase. Antes, a tag podia ser publicada antes dos gates (3 ciclos abortados na sessao anterior, com a tag ja publicada). Prova: sealPhaseOrder.test.js 6/6 + regressao de 111 testes PASS.",
+      "confianca": "SOBREPOSICAO_DE_TOKENS_NAO_CONFIRMADA"
+    },
+    {
+      "id": "HARDENING-ENG-GOV-RELEASE-P0-4",
+      "severity": "P0",
+      "titulo": "Autoridade unica de decisao de release (fim da comparacao por substring)",
+      "tokensDoDefeito": [
+        "autoridade",
+        "unica",
+        "decisao",
+        "comparacao",
+        "substring"
+      ],
+      "candidatos": [
+        {
+          "teste": "tests/unit/governance/evidenceTtl.test.js",
+          "pontos": 3,
+          "tokens": [
+            "autoridade",
+            "unica",
+            "decisao"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/unit/dbReindexBloated.test.js",
+          "pontos": 2,
+          "tokens": [
+            "decisao",
+            "comparacao"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/unit/engineeringBugFindingEngine.test.js",
+          "pontos": 2,
+          "tokens": [
+            "autoridade",
+            "decisao"
+          ],
+          "citacaoDoId": false
+        }
+      ],
+      "evidenciaDeclarada": "governance/canonical-release-decision.js: vocabulario versionado (1.0.0), 7 estados, FINAL_GO_STATES=[CERTIFIED_GO,PUBLISHED_VERIFIED], literal desconhecido => PRE_PACKAGE_PASS (fail-closed), identidade por runId/sourceCommit/sourceFingerprint/releaseId. Consumidores migrados (validate-self-proving, releaseClosureService) e assertiva BLOQUEANTE na fase certify do selo. Prova: 27/27 + 7/7 testes, e",
+      "confianca": "SOBREPOSICAO_DE_TOKENS_NAO_CONFIRMADA"
+    },
+    {
+      "id": "HARDENING-ENG-GOV-RELEASE-P0-5",
+      "severity": "P0",
+      "titulo": "Eliminar falsos verdes de cobertura (L1) e fazer a malha REALMENTE executar",
+      "tokensDoDefeito": [
+        "eliminar",
+        "falsos",
+        "verdes",
+        "cobertura",
+        "fazer",
+        "malha",
+        "realmente",
+        "executar"
+      ],
+      "candidatos": [
+        {
+          "teste": "tests/integration/engineeringBugLoopNaturalPathE2E.test.js",
+          "pontos": 3,
+          "tokens": [
+            "fazer",
+            "realmente",
+            "executar"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/unit/benchmarks/benchmarkResearchHonesty.test.js",
+          "pontos": 3,
+          "tokens": [
+            "cobertura",
+            "fazer",
+            "executar"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/unit/engineeringMissionSpecFreshness.test.js",
+          "pontos": 3,
+          "tokens": [
+            "cobertura",
+            "fazer",
+            "executar"
+          ],
+          "citacaoDoId": false
+        }
+      ],
+      "evidenciaDeclarada": "camadaTransitiva so marca arquivo de producao como classificado se houver teste dependente (collectDependents reverse>0). Quantificado no repo real: 187 de 2127 arquivos (8.8%) eram falsamente cobertos. run-impact-validation ganhou EXIT {GREEN,RED,ESCALATE,INFRA,NOT_EXECUTED}, checagem de integridade de grafo/fingerprint e o bloco de malha que EXECUTA qa-mesh/meshRunner (antes: nao executava e ain",
+      "confianca": "SOBREPOSICAO_DE_TOKENS_NAO_CONFIRMADA"
+    },
+    {
+      "id": "HARDENING-ENG-GOV-RELEASE-P0-6",
+      "severity": "P0",
+      "titulo": "Reuso de lote do runner autoritativo nao pode mascarar exit code divergente",
+      "tokensDoDefeito": [
+        "reuso",
+        "lote",
+        "runner",
+        "autoritativo",
+        "pode",
+        "mascarar",
+        "exit",
+        "code",
+        "divergente"
+      ],
+      "candidatos": [
+        {
+          "teste": "tests/unit/governance/releaseSuiteRunner.test.js",
+          "pontos": 7,
+          "tokens": [
+            "reuso",
+            "lote",
+            "runner",
+            "autoritativo",
+            "pode",
+            "exit",
+            "code"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/integration/engineeringBugLoop.test.js",
+          "pontos": 6,
+          "tokens": [
+            "lote",
+            "runner",
+            "autoritativo",
+            "pode",
+            "exit",
+            "code"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/integration/engineeringBugLoopNaturalPathE2E.test.js",
+          "pontos": 6,
+          "tokens": [
+            "lote",
+            "runner",
+            "autoritativo",
+            "pode",
+            "exit",
+            "code"
+          ],
+          "citacaoDoId": false
+        }
+      ],
+      "evidenciaDeclarada": "avaliarReusoDeLote recusa reuso quando meta.exitCode!==0 (ORIGINAL_EXIT_CODE_NONZERO) ou resultExitCode!==0 (RESULT_REPORT_NOT_SUCCESS); o ramo de reuso passa a carregar o exitCode REAL; isenção de reused===true removida de collectBatchExitCodeViolations. Prova: suite do runner 42/42 + provado nos dois sentidos (reuso com falha => violacao).",
+      "confianca": "SOBREPOSICAO_DE_TOKENS_NAO_CONFIRMADA"
+    },
+    {
+      "id": "L1-CONCORRENCIA-HTTP-DUPLO-ACCEPT",
+      "severity": "P0",
+      "titulo": "POST /engineering/tasks/:id/run aceitava duas execucoes concorrentes (202,202)",
+      "tokensDoDefeito": [
+        "concorrencia",
+        "http",
+        "duplo",
+        "accept",
+        "post",
+        "engineering",
+        "tasks",
+        "aceitava",
+        "duas",
+        "execucoes",
+        "concorrentes"
+      ],
+      "candidatos": [
+        {
+          "teste": "tests/integration/engineeringTaskConcurrencyAndRestart.test.js",
+          "pontos": 7,
+          "tokens": [
+            "http",
+            "accept",
+            "post",
+            "engineering",
+            "tasks",
+            "duas",
+            "concorrentes"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/integration/engineeringRouterConcurrentRunHttp.test.js",
+          "pontos": 6,
+          "tokens": [
+            "http",
+            "accept",
+            "post",
+            "engineering",
+            "tasks",
+            "duas"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/integration/engineeringBugLoop.test.js",
+          "pontos": 5,
+          "tokens": [
+            "post",
+            "engineering",
+            "tasks",
+            "duas",
+            "concorrentes"
+          ],
+          "citacaoDoId": false
+        }
+      ],
+      "evidenciaDeclarada": "tests/integration/engineeringRouterConcurrentRunHttp.test.js 10/10 execucoes exit 0 apos o fix; ANTES: no lote completo reproduziu [202,202] (duas execucoes aceitas, nenhum 409). Regressao = a propria suite de concorrencia.",
+      "confianca": "SOBREPOSICAO_DE_TOKENS_NAO_CONFIRMADA"
+    },
+    {
+      "id": "L1-WORKTREE-MUTILACAO-RECORRENTE",
+      "severity": "P0",
+      "titulo": "Worktree mutilado 3x (testes removidos + guardas apagadas): prevencao executavel",
+      "tokensDoDefeito": [
+        "worktree",
+        "mutilacao",
+        "recorrente",
+        "worktree",
+        "mutilado",
+        "testes",
+        "removidos",
+        "guardas",
+        "apagadas",
+        "prevencao",
+        "executavel"
+      ],
+      "candidatos": [
+        {
+          "teste": "tests/unit/governance/worktreeIntegrity.test.js",
+          "pontos": 8,
+          "tokens": [
+            "worktree",
+            "recorrente",
+            "mutilado",
+            "testes",
+            "removidos",
+            "guardas",
+            "apagadas"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/unit/engineeringRouterTestRemovalPolicy.test.js",
+          "pontos": 5,
+          "tokens": [
+            "worktree",
+            "recorrente",
+            "testes",
+            "removidos"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/integration/engineeringBugAutonomousLoopE2E.test.js",
+          "pontos": 3,
+          "tokens": [
+            "worktree",
+            "testes"
+          ],
+          "citacaoDoId": false
+        }
+      ],
+      "evidenciaDeclarada": "governance/worktree-integrity.js + scripts/governance/validate-worktree-integrity.js + tests/unit/governance/worktreeIntegrity.test.js (11 casos) + tests/unit/engineeringRouterTestRemovalPolicy.test.js (6 casos) + tests/unit/engineeringRouterPatchValidator.test.js (35 casos); PROVA REAL: o patch da mutilacao de 2026-10-20 (62 arquivos, +856/-5565, 35 blocos it/describe removidos) foi reaplicado em",
+      "confianca": "SOBREPOSICAO_DE_TOKENS_NAO_CONFIRMADA"
+    },
+    {
+      "id": "MISSAO-B1-CADEIA-CRIPTOGRAFICA",
+      "severity": "P0",
+      "titulo": "B1: cadeia criptografica existia mas NENHUM gate a recalculava",
+      "tokensDoDefeito": [
+        "cadeia",
+        "criptografica",
+        "cadeia",
+        "criptografica",
+        "existia",
+        "nenhum",
+        "recalculava"
+      ],
+      "candidatos": [
+        {
+          "teste": "tests/unit/governance/bugClosureBypassDefense.test.js",
+          "pontos": 6,
+          "tokens": [
+            "cadeia",
+            "criptografica",
+            "existia",
+            "nenhum"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/unit/audit/auditEntrypointArtifact.test.js",
+          "pontos": 5,
+          "tokens": [
+            "cadeia",
+            "criptografica",
+            "nenhum"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/unit/governance/bugClosureFirst.test.js",
+          "pontos": 5,
+          "tokens": [
+            "cadeia",
+            "criptografica",
+            "nenhum"
+          ],
+          "citacaoDoId": false
+        }
+      ],
+      "evidenciaDeclarada": "scripts/governance/validate-governance-chain.js + reports/governance-chain-report.json — recálculo real executado: status=FAIL links=10 stored=d1f60719634d… recomputado=ed55cd3edd97…, 9 divergências nomeadas (evidence_manifest/final_proof_report/final_readiness/proof_signature/package_validation = hash_mismatch; consistency/cross_report/blocker_engine = cumulative_hash_broken; chain_root = chain_r",
+      "confianca": "SOBREPOSICAO_DE_TOKENS_NAO_CONFIRMADA"
+    },
+    {
+      "id": "P0-AVALIADOR-CONFIAVA-EM-CAMPO-VALID-GRAVADO",
+      "severity": "P0",
+      "titulo": "Avaliador canonico confiava no campo chain.valid GRAVADO em vez de recalcular a cadeia",
+      "tokensDoDefeito": [
+        "avaliador",
+        "confiava",
+        "campo",
+        "valid",
+        "gravado",
+        "avaliador",
+        "canonico",
+        "confiava",
+        "campo",
+        "chain",
+        "valid",
+        "gravado",
+        "recalcular",
+        "cadeia"
+      ],
+      "candidatos": [
+        {
+          "teste": "tests/unit/governance/assertCanonicalReleaseDecision.test.js",
+          "pontos": 10,
+          "tokens": [
+            "avaliador",
+            "campo",
+            "valid",
+            "gravado",
+            "chain",
+            "cadeia"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/unit/governance/governanceChainAppearance.test.js",
+          "pontos": 9,
+          "tokens": [
+            "campo",
+            "valid",
+            "gravado",
+            "canonico",
+            "chain",
+            "cadeia"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/unit/governance/bugLoopEvidenceBinding.test.js",
+          "pontos": 8,
+          "tokens": [
+            "avaliador",
+            "campo",
+            "valid",
+            "gravado"
+          ],
+          "citacaoDoId": false
+        }
+      ],
+      "evidenciaDeclarada": "scripts/governance/assert-canonical-release-decision.js (verificarCadeiaPadrao) + teste com valid:true e hashes que nao fecham",
+      "confianca": "SOBREPOSICAO_DE_TOKENS_NAO_CONFIRMADA"
+    },
+    {
+      "id": "P0-ESTADO-E-VEREDITO-PODEM-DISCORDAR",
+      "severity": "P0",
+      "titulo": "state=CERTIFIED_GO coexistindo com veredito nao-ok (consumidor que le state via GO falso)",
+      "tokensDoDefeito": [
+        "estado",
+        "veredito",
+        "podem",
+        "discordar",
+        "state",
+        "certified",
+        "coexistindo",
+        "veredito",
+        "consumidor",
+        "state"
+      ],
+      "candidatos": [
+        {
+          "teste": "tests/unit/governance/assertCanonicalReleaseDecision.test.js",
+          "pontos": 8,
+          "tokens": [
+            "estado",
+            "veredito",
+            "podem",
+            "discordar",
+            "state",
+            "certified"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/integration/evoOfficialContractEvidence.test.js",
+          "pontos": 7,
+          "tokens": [
+            "estado",
+            "veredito",
+            "podem",
+            "state",
+            "certified"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/unit/governance/governanceChainAppearance.test.js",
+          "pontos": 7,
+          "tokens": [
+            "estado",
+            "veredito",
+            "podem",
+            "state",
+            "certified"
+          ],
+          "citacaoDoId": false
+        }
+      ],
+      "evidenciaDeclarada": "scripts/governance/assert-canonical-release-decision.js (gate de identidade + invariante estadoConcordaComVeredito)",
+      "confianca": "SOBREPOSICAO_DE_TOKENS_NAO_CONFIRMADA"
+    },
+    {
+      "id": "P0-FILAS-ISOLAMENTO-TENANT",
+      "severity": "P0",
+      "titulo": "Exclusao forcada de fila fechava tickets de OUTRO tenant com o mesmo nome",
+      "tokensDoDefeito": [
+        "filas",
+        "isolamento",
+        "tenant",
+        "exclusao",
+        "forcada",
+        "fila",
+        "fechava",
+        "tickets",
+        "outro",
+        "tenant",
+        "mesmo",
+        "nome"
+      ],
+      "candidatos": [
+        {
+          "teste": "tests/unit/queueTenantIsolation.test.js",
+          "pontos": 10,
+          "tokens": [
+            "filas",
+            "isolamento",
+            "tenant",
+            "fila",
+            "fechava",
+            "tickets",
+            "outro",
+            "mesmo",
+            "nome"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/tenant/saasSecurity.test.js",
+          "pontos": 7,
+          "tokens": [
+            "tenant",
+            "isolamento",
+            "tickets",
+            "outro"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "frontend/src/pages/InboxPage.test.jsx",
+          "pontos": 7,
+          "tokens": [
+            "tenant",
+            "fila",
+            "tickets",
+            "outro",
+            "mesmo",
+            "nome"
+          ],
+          "citacaoDoId": false
+        }
+      ],
+      "evidenciaDeclarada": "tests/unit/queueTenantIsolation.test.js (5 casos: stats por tenant, force do tenant A nao fecha B, sem force recusa com ticket ativo, fila vazia para o tenant, getQueueInfo escopado)",
+      "confianca": "SOBREPOSICAO_DE_TOKENS_NAO_CONFIRMADA"
+    },
+    {
+      "id": "P0-FILAS-ROLLBACK-DESTRUTIVO",
+      "severity": "P0",
+      "titulo": "Rollback de criacao de fila fechava tickets ativos (force=true) inclusive em fila preexistente",
+      "tokensDoDefeito": [
+        "filas",
+        "rollback",
+        "destrutivo",
+        "rollback",
+        "criacao",
+        "fila",
+        "fechava",
+        "tickets",
+        "ativos",
+        "force",
+        "true",
+        "inclusive",
+        "fila",
+        "preexistente"
+      ],
+      "candidatos": [
+        {
+          "teste": "tests/unit/queueCreatePersistBeforeResponse.test.js",
+          "pontos": 11,
+          "tokens": [
+            "filas",
+            "rollback",
+            "criacao",
+            "fila",
+            "tickets",
+            "ativos",
+            "force",
+            "true",
+            "preexistente"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/unit/queueTenantIsolation.test.js",
+          "pontos": 7,
+          "tokens": [
+            "filas",
+            "fila",
+            "fechava",
+            "tickets",
+            "force",
+            "true"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/unit/cognitiveCorePipeline.test.js",
+          "pontos": 6,
+          "tokens": [
+            "rollback",
+            "fila",
+            "tickets",
+            "true"
+          ],
+          "citacaoDoId": false
+        }
+      ],
+      "evidenciaDeclarada": "tests/unit/queueCreatePersistBeforeResponse.test.js (caso P0 com helpers reais: fila preexistente + ticket ativo permanece open, deleteQueue nunca chamado) + 157/157 em npx jest queue",
+      "confianca": "SOBREPOSICAO_DE_TOKENS_NAO_CONFIRMADA"
+    },
+    {
+      "id": "P0-IDENTIDADE-AUSENTE-E-ACEITA-COMO-COERENTE",
+      "severity": "P0",
+      "titulo": "Identidade ausente era tratada como identidade coerente (aprovava sem runId/commit/fingerprint)",
+      "tokensDoDefeito": [
+        "identidade",
+        "ausente",
+        "aceita",
+        "como",
+        "coerente",
+        "identidade",
+        "ausente",
+        "tratada",
+        "como",
+        "identidade",
+        "coerente",
+        "aprovava",
+        "runid",
+        "commit",
+        "fingerprint"
+      ],
+      "candidatos": [
+        {
+          "teste": "tests/unit/governance/canonicalReleaseDecision.test.js",
+          "pontos": 13,
+          "tokens": [
+            "identidade",
+            "ausente",
+            "aceita",
+            "como",
+            "coerente",
+            "runid",
+            "commit",
+            "fingerprint"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/unit/governance/assertCanonicalReleaseDecision.test.js",
+          "pontos": 12,
+          "tokens": [
+            "identidade",
+            "ausente",
+            "como",
+            "coerente",
+            "runid",
+            "commit",
+            "fingerprint"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/unit/governance/releaseSuiteRunner.test.js",
+          "pontos": 12,
+          "tokens": [
+            "identidade",
+            "ausente",
+            "aceita",
+            "como",
+            "tratada",
+            "runid",
+            "commit",
+            "fingerprint"
+          ],
+          "citacaoDoId": false
+        }
+      ],
+      "evidenciaDeclarada": "governance/canonical-release-decision.js (identidadeCoerente/validarIdentidade) + tests/unit/governance/*",
+      "confianca": "SOBREPOSICAO_DE_TOKENS_NAO_CONFIRMADA"
+    },
+    {
+      "id": "CI-ADAPTADOR-IA-NAO-VERSIONADO",
+      "severity": "P1",
+      "titulo": "Gates de IA exigiam arquivo que nao existia em NENHUM commit (so no disco do desenvolvedor)",
+      "tokensDoDefeito": [
+        "adaptador",
+        "versionado",
+        "gates",
+        "exigiam",
+        "arquivo",
+        "existia",
+        "nenhum",
+        "commit",
+        "disco",
+        "desenvolvedor"
+      ],
+      "candidatos": [
+        {
+          "teste": "tests/unit/governance/aiGovernanceRequiredFilesTracked.test.js",
+          "pontos": 9,
+          "tokens": [
+            "adaptador",
+            "versionado",
+            "gates",
+            "exigiam",
+            "arquivo",
+            "existia",
+            "nenhum",
+            "commit",
+            "disco"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/unit/governance/bugClosureBypassDefense.test.js",
+          "pontos": 6,
+          "tokens": [
+            "versionado",
+            "arquivo",
+            "existia",
+            "nenhum",
+            "commit",
+            "disco"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/unit/benchmarks/benchmarkResearchHonesty.test.js",
+          "pontos": 5,
+          "tokens": [
+            "versionado",
+            "gates",
+            "arquivo",
+            "nenhum",
+            "disco"
+          ],
+          "citacaoDoId": false
+        }
+      ],
+      "evidenciaDeclarada": "Medido em clone limpo do commit 382f83b37 (`npm run ci:clean-checkout`): `validate-ai-memory` FAIL `required_file_missing: .github/copilot-instructions.md` e `validate-agent-adherence` FAIL `agent_instruction_missing: .github/copilot-instructions.md`. Em QUALQUER checkout (CI, runner efemero, outra pessoa) os dois gates bloqueantes reprovavam; na maquina do operador passavam porque o arquivo estav",
+      "confianca": "SOBREPOSICAO_DE_TOKENS_NAO_CONFIRMADA"
+    },
+    {
+      "id": "CI-CHECKOUT-LIMPO-HARNESS",
+      "severity": "P1",
+      "titulo": "Instalacao limpa nunca era testada: todo diagnostico de CI dependia do estado da maquina do desenvolvedor",
+      "tokensDoDefeito": [
+        "checkout",
+        "limpo",
+        "harness",
+        "instalacao",
+        "limpa",
+        "nunca",
+        "testada",
+        "todo",
+        "diagnostico",
+        "dependia",
+        "estado",
+        "maquina",
+        "desenvolvedor"
+      ],
+      "candidatos": [
+        {
+          "teste": "tests/integration/bugWorkerFullBootE2E.test.js",
+          "pontos": 5,
+          "tokens": [
+            "limpo",
+            "limpa",
+            "nunca",
+            "todo",
+            "estado"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/unit/engineeringModelAvailabilityService.test.js",
+          "pontos": 5,
+          "tokens": [
+            "limpo",
+            "nunca",
+            "testada",
+            "todo",
+            "estado"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/unit/engineeringRouterExecutionSandboxSecurity.test.js",
+          "pontos": 5,
+          "tokens": [
+            "checkout",
+            "limpo",
+            "nunca",
+            "todo",
+            "estado"
+          ],
+          "citacaoDoId": false
+        }
+      ],
+      "evidenciaDeclarada": "Novo `npm run ci:clean-checkout` (`scripts/ci/clean-checkout-verify.js`): clona o commit exato em diretorio temporario, recusa residuo (`git status --ignored`), provisiona Postgres/Redis/RAG/Engineering Runner/containers PROPRIOS do run, executa `ci:bootstrap`, o produtor prod-like real e o gate versionado, grava evidencia com identidade de run e SHA-256 por log, e destroi tudo. MEDICAO FINAL (run",
+      "confianca": "SOBREPOSICAO_DE_TOKENS_NAO_CONFIRMADA"
+    },
+    {
+      "id": "CI-RUNNER-COMPARTILHADO-ENTRE-ARVORES",
+      "severity": "P1",
+      "titulo": "Engineering Runner de porta fixa era reutilizado por outra arvore: a prova de sandbox media o codigo do vizinho",
+      "tokensDoDefeito": [
+        "runner",
+        "compartilhado",
+        "entre",
+        "arvores",
+        "engineering",
+        "runner",
+        "porta",
+        "fixa",
+        "reutilizado",
+        "outra",
+        "arvore",
+        "prova",
+        "sandbox",
+        "media",
+        "codigo",
+        "vizinho"
+      ],
+      "candidatos": [
+        {
+          "teste": "tests/unit/governance/releaseSuiteRunner.test.js",
+          "pontos": 10,
+          "tokens": [
+            "runner",
+            "entre",
+            "engineering",
+            "porta",
+            "fixa",
+            "reutilizado",
+            "outra",
+            "prova",
+            "sandbox"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/integration/engineeringBugAutonomousLoopE2E.test.js",
+          "pontos": 9,
+          "tokens": [
+            "runner",
+            "compartilhado",
+            "entre",
+            "engineering",
+            "porta",
+            "outra",
+            "prova",
+            "sandbox"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/integration/governanceApprovalFullWorkerE2E.test.js",
+          "pontos": 9,
+          "tokens": [
+            "runner",
+            "compartilhado",
+            "entre",
+            "engineering",
+            "fixa",
+            "prova",
+            "sandbox",
+            "media"
+          ],
+          "citacaoDoId": false
+        }
+      ],
+      "evidenciaDeclarada": "Medido em 2026-10-21 no clone do harness: `[engineering-runner-jest] runner REUTILIZADO: pid=4134758 porta=8097 sessaoDona=4134676` — o clone reutilizou um runner de OUTRA arvore do mesmo host. Com porta fixa, dois checkouts compartilham o processo e a suite de isolamento de sandbox deixa de provar o commit em analise. Correcao: o harness escolhe porta livre por run (`ENGINEERING_RUNNER_TEST_PORT`",
+      "confianca": "SOBREPOSICAO_DE_TOKENS_NAO_CONFIRMADA"
+    },
+    {
+      "id": "DEF-WS-AUTH-POS-LOGIN",
+      "severity": "P1",
+      "titulo": "WebSocket nao autentica apos o LOGIN: usuario sem tempo real ate dar F5",
+      "tokensDoDefeito": [
+        "auth",
+        "login",
+        "websocket",
+        "autentica",
+        "apos",
+        "login",
+        "usuario",
+        "tempo",
+        "real"
+      ],
+      "candidatos": [
+        {
+          "teste": "tests/endpoints/auth.test.js",
+          "pontos": 7,
+          "tokens": [
+            "auth",
+            "login",
+            "autentica",
+            "tempo",
+            "real"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/rpa/login.test.js",
+          "pontos": 7,
+          "tokens": [
+            "login",
+            "auth",
+            "tempo",
+            "real"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "frontend/src/context/__tests__/WebSocketContext.loginAuth.test.jsx",
+          "pontos": 7,
+          "tokens": [
+            "auth",
+            "login",
+            "websocket",
+            "autentica",
+            "tempo",
+            "real"
+          ],
+          "citacaoDoId": false
+        }
+      ],
+      "evidenciaDeclarada": "frontend/src/context/__tests__/WebSocketContext.loginAuth.test.jsx (5 testes) + browser real + servidor (Broadcast 0 -> 1 cliente)",
+      "confianca": "SOBREPOSICAO_DE_TOKENS_NAO_CONFIRMADA"
+    },
+    {
+      "id": "FASE6-NOVO-CANDIDATO-POR-MUDANCA-DE-FINGERPRINT",
+      "severity": "P1",
+      "titulo": "Fix da FASE 6 mudou o sourceFingerprint: falta gerar novo candidato e nova certificacao preservando o anterior como historico",
+      "tokensDoDefeito": [
+        "fase6",
+        "novo",
+        "candidato",
+        "mudanca",
+        "fingerprint",
+        "fase",
+        "mudou",
+        "sourcefingerprint",
+        "falta",
+        "gerar",
+        "novo",
+        "candidato",
+        "nova",
+        "certificacao",
+        "preservando",
+        "anterior",
+        "como",
+        "historico"
+      ],
+      "candidatos": [
+        {
+          "teste": "tests/unit/governance/releaseArtifactIdentity.test.js",
+          "pontos": 9,
+          "tokens": [
+            "novo",
+            "candidato",
+            "fingerprint",
+            "fase",
+            "sourcefingerprint",
+            "anterior",
+            "como"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/unit/governance/assertCanonicalReleaseDecision.test.js",
+          "pontos": 8,
+          "tokens": [
+            "novo",
+            "candidato",
+            "fingerprint",
+            "sourcefingerprint",
+            "falta",
+            "como"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/unit/governance/canonicalReleaseDecision.test.js",
+          "pontos": 8,
+          "tokens": [
+            "candidato",
+            "fingerprint",
+            "sourcefingerprint",
+            "falta",
+            "nova",
+            "anterior",
+            "como"
+          ],
+          "citacaoDoId": false
+        }
+      ],
+      "evidenciaDeclarada": "dist/candidate/r-agent2-20261017-040050.candidate.zip + dist/release/r-agent2-20261017-040050.{zip,manifest.json,payload.zip,delivered.identity.json} + governance/governance-chain.json (root 99e1de118ee4f399…) + reports/governance-chain-report.json + dist/archive/r-agent2-20261016-133323{,.payload,.candidate}/ (historico preservado)",
+      "confianca": "SOBREPOSICAO_DE_TOKENS_NAO_CONFIRMADA"
+    },
+    {
+      "id": "H17-HOOKS-EDITOR",
+      "severity": "P1",
+      "titulo": "Editor: quebra das Rules of Hooks no seletor de modelos (achado da jornada browser)",
+      "tokensDoDefeito": [
+        "hooks",
+        "editor",
+        "editor",
+        "quebra",
+        "rules",
+        "hooks",
+        "seletor",
+        "modelos",
+        "achado",
+        "jornada",
+        "browser"
+      ],
+      "candidatos": [
+        {
+          "teste": "frontend/src/components/FlowTemplateSelector.test.jsx",
+          "pontos": 10,
+          "tokens": [
+            "hooks",
+            "editor",
+            "quebra",
+            "rules",
+            "seletor",
+            "modelos",
+            "jornada",
+            "browser"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "frontend/src/pages/FlowEditorPage.test.jsx",
+          "pontos": 5,
+          "tokens": [
+            "hooks",
+            "editor",
+            "quebra"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/unit/benchmark/benchmarkResearchSemantics.test.js",
+          "pontos": 4,
+          "tokens": [
+            "quebra",
+            "rules",
+            "achado",
+            "jornada"
+          ],
+          "citacaoDoId": false
+        }
+      ],
+      "evidenciaDeclarada": "DEFEITO REAL achado pela jornada funcional no browser: /editor com 2 erros de console + 3 pageerror (\"Rendered more hooks than during the previous render\" em FlowTemplateSelector) e o botao \"Novo\" nao abria o seletor — a acao de criar fluxo sumia. Causa: useMemo das tags DEPOIS dos returns antecipados de selectedTemplate/loading/error; na 1a render (loading=true) o hook nao rodava e na seguinte ro",
+      "confianca": "SOBREPOSICAO_DE_TOKENS_NAO_CONFIRMADA"
+    },
+    {
+      "id": "HARDENING-ENG-GOV-RELEASE-HANDSHAKE-AMBIGUO",
+      "severity": "P1",
+      "titulo": "Harness aceitava LOG JSON do produto como handshake do worker de lease (selo V2 abortado)",
+      "tokensDoDefeito": [
+        "handshake",
+        "ambiguo",
+        "harness",
+        "aceitava",
+        "json",
+        "produto",
+        "como",
+        "handshake",
+        "worker",
+        "lease",
+        "selo",
+        "abortado"
+      ],
+      "candidatos": [
+        {
+          "teste": "tests/unit/governance/taskLeaseHandshakeParsing.test.js",
+          "pontos": 10,
+          "tokens": [
+            "handshake",
+            "harness",
+            "aceitava",
+            "json",
+            "produto",
+            "como",
+            "worker",
+            "lease",
+            "selo"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/integration/engineeringMissionCrashRecoveryE2E.test.js",
+          "pontos": 6,
+          "tokens": [
+            "handshake",
+            "json",
+            "como",
+            "worker",
+            "lease"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/integration/missionSourceStaleReplanE2E.test.js",
+          "pontos": 6,
+          "tokens": [
+            "harness",
+            "json",
+            "produto",
+            "como",
+            "worker",
+            "lease"
+          ],
+          "citacaoDoId": false
+        }
+      ],
+      "evidenciaDeclarada": "DEFEITO MEDIDO: selo V2 abortou num passo OBRIGATORIO com `[FAIL] FENCE_AVANCOU — antes=undefined depois=2` (passo REAL_TASK_RECOVERY, exit=1), enquanto o mesmo passo passava ISOLADO (`status=GO checks=16`). Causa raiz: `scripts/governance/verify-real-task-recovery.js` aceitava como handshake qualquer linha JSON com `state` string (`if (!parsed || typeof parsed.state !== \"string\") continue;`), e o",
+      "confianca": "SOBREPOSICAO_DE_TOKENS_NAO_CONFIRMADA"
+    },
+    {
+      "id": "HARDENING-ENG-GOV-RELEASE-P1-11",
+      "severity": "P1",
+      "titulo": "TTL/frescor de evidencia: autoridade unica com 5 regras e vinculacao por run",
+      "tokensDoDefeito": [
+        "frescor",
+        "evidencia",
+        "autoridade",
+        "unica",
+        "regras",
+        "vinculacao"
+      ],
+      "candidatos": [
+        {
+          "teste": "tests/unit/governance/evidenceTtl.test.js",
+          "pontos": 5,
+          "tokens": [
+            "frescor",
+            "evidencia",
+            "autoridade",
+            "unica",
+            "regras"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/unit/benchmarkSampleSufficiency.engine.test.js",
+          "pontos": 3,
+          "tokens": [
+            "frescor",
+            "unica",
+            "regras"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/integration/engineeringBugLoop.test.js",
+          "pontos": 2,
+          "tokens": [
+            "autoridade",
+            "regras"
+          ],
+          "citacaoDoId": false
+        }
+      ],
+      "evidenciaDeclarada": "DEFEITO REPRODUZIDO: TTL era Number(env) || 7d; com \"Infinity\"/\"1e999\" o limiar virava Infinity e idade > Infinity e sempre falso => nenhuma evidencia vencia (fail-open de L1). governance/evidence-ttl.js rejeita TTL ausente/nao-finito/nao-positivo, timestamp ausente/invalido/futuro (idade negativa nao e frescor), evidencia expirada, evidencia que expira DURANTE o processamento e evidencia de outro",
+      "confianca": "SOBREPOSICAO_DE_TOKENS_NAO_CONFIRMADA"
+    },
+    {
+      "id": "L1-L2-JORNADA-SUPERVISIONADA-MEDIDA",
+      "severity": "P1",
+      "titulo": "L2 (jornada supervisionada 8/8) e L1 (40 suites/221 testes) medidos em isolamento",
+      "tokensDoDefeito": [
+        "jornada",
+        "supervisionada",
+        "medida",
+        "jornada",
+        "supervisionada",
+        "suites",
+        "testes",
+        "medidos",
+        "isolamento"
+      ],
+      "candidatos": [
+        {
+          "teste": "tests/unit/askAiKnowledgeScope.test.js",
+          "pontos": 4,
+          "tokens": [
+            "jornada",
+            "testes",
+            "isolamento"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/unit/dev/apiServiceUnit.test.js",
+          "pontos": 4,
+          "tokens": [
+            "supervisionada",
+            "medida",
+            "testes"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/unit/finalGovernanceGates.test.js",
+          "pontos": 4,
+          "tokens": [
+            "jornada",
+            "testes",
+            "isolamento"
+          ],
+          "citacaoDoId": false
+        }
+      ],
+      "evidenciaDeclarada": "tests/integration/engineeringMissionFullE2E.test.js 8/8 (missao -> enriquecimento -> AWAITING_APPROVAL -> execucao BLOQUEADA antes da aprovacao -> aprovacao libera versao exata -> task aderente -> loop real do Router ate GREEN em 73,6s -> relatorio de auditoria -> TEST 48); L1 tests/integration/engineering + contracts 40 suites/221 testes exit 0; L0 no worktree principal 5a26cab7c: 256 suites/2782",
+      "confianca": "SOBREPOSICAO_DE_TOKENS_NAO_CONFIRMADA"
+    },
+    {
+      "id": "L1-RUNTIME-EVIDENCE-NAO-REPRODUZIVEL",
+      "severity": "P1",
+      "titulo": "Coleta da evidencia de runtime restringia o Jest a um teste e dependia de sobra de execucoes anteriores",
+      "tokensDoDefeito": [
+        "runtime",
+        "evidence",
+        "reproduzivel",
+        "coleta",
+        "evidencia",
+        "runtime",
+        "restringia",
+        "jest",
+        "dependia",
+        "sobra",
+        "execucoes",
+        "anteriores"
+      ],
+      "candidatos": [
+        {
+          "teste": "tests/integration/engineeringBugAutonomousLoopE2E.test.js",
+          "pontos": 5,
+          "tokens": [
+            "runtime",
+            "evidence",
+            "jest",
+            "anteriores"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/runtime/businessRbacDeniedAssertion.test.js",
+          "pontos": 5,
+          "tokens": [
+            "runtime",
+            "jest"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/runtime/rpaReliabilitySmoke.test.js",
+          "pontos": 5,
+          "tokens": [
+            "runtime",
+            "jest"
+          ],
+          "citacaoDoId": false
+        }
+      ],
+      "evidenciaDeclarada": "scripts/governance/collect-engineering-router-runtime-evidence.js (executa o ARQUIVO inteiro e extrai o teste-alvo de assertionResults); medicao: em arvore limpa EXACT_PATCH_PROMOTION dava promoted=false e PROVIDER_MODEL_FAILURE_REROUTE terminava READY_FOR_PROMOTION, enquanto a suíte inteira passava 221/221",
+      "confianca": "SOBREPOSICAO_DE_TOKENS_NAO_CONFIRMADA"
+    },
+    {
+      "id": "P1-5",
+      "severity": "P1",
+      "titulo": "Degradacao da busca hibrida do RAG deixa de ser assimetrica",
+      "tokensDoDefeito": [
+        "degradacao",
+        "busca",
+        "hibrida",
+        "deixa",
+        "assimetrica"
+      ],
+      "candidatos": [
+        {
+          "teste": "tests/unit/askAiSemanticMultiTurn.test.js",
+          "pontos": 2,
+          "tokens": [
+            "busca",
+            "deixa"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/unit/benchmark/benchmarkResearchZeroFindings.test.js",
+          "pontos": 2,
+          "tokens": [
+            "busca",
+            "deixa"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/unit/benchmark/benchmarkSourceInspection.test.js",
+          "pontos": 2,
+          "tokens": [
+            "busca",
+            "deixa"
+          ],
+          "citacaoDoId": false
+        }
+      ],
+      "evidenciaDeclarada": "rag-service/services/hybrid_search.py + rag-service 156 passed VERIFICADO: rag-service/tests/test_hybrid_search.py exit=0 em arvore limpa (2f35742d23c7).",
+      "confianca": "SOBREPOSICAO_DE_TOKENS_NAO_CONFIRMADA"
+    },
+    {
+      "id": "P1-6",
+      "severity": "P1",
+      "titulo": "DSN do Postgres resolvido e provas de isolamento realmente EXECUTAM",
+      "tokensDoDefeito": [
+        "postgres",
+        "resolvido",
+        "provas",
+        "isolamento",
+        "realmente",
+        "executam"
+      ],
+      "candidatos": [
+        {
+          "teste": "tests/integration/crmTenantIsolation.postgres.test.js",
+          "pontos": 3,
+          "tokens": [
+            "postgres",
+            "isolamento"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/integration/engineeringBugAutonomousLoopE2E.test.js",
+          "pontos": 3,
+          "tokens": [
+            "postgres",
+            "provas",
+            "isolamento"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/integration/evoSyncIntegration.test.js",
+          "pontos": 3,
+          "tokens": [
+            "postgres",
+            "isolamento",
+            "realmente"
+          ],
+          "citacaoDoId": false
+        }
+      ],
+      "evidenciaDeclarada": "rag-service/config/settings.py (AliasChoices) + 156 passed / 0 skipped (antes: isolamento 100% SKIPPED) VERIFICADO: rag-service/tests/test_hybrid_isolation_real_db.py exit=0 em arvore limpa (2f35742d23c7).",
+      "confianca": "SOBREPOSICAO_DE_TOKENS_NAO_CONFIRMADA"
+    },
+    {
+      "id": "P1-BRANCHES-MISSAO-RESIDUO",
+      "severity": "P1",
+      "titulo": "Refs engineering/missions/* acumulavam sem poda (3017 residuais degradam medicao)",
+      "tokensDoDefeito": [
+        "branches",
+        "residuo",
+        "refs",
+        "engineering",
+        "missions",
+        "acumulavam",
+        "poda",
+        "3017",
+        "residuais",
+        "degradam",
+        "medicao"
+      ],
+      "candidatos": [
+        {
+          "teste": "tests/unit/governance/pruneEngineeringMissionBranches.test.js",
+          "pontos": 5,
+          "tokens": [
+            "branches",
+            "engineering",
+            "missions",
+            "poda",
+            "residuais"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/integration/engineeringBugAutonomousLoopE2E.test.js",
+          "pontos": 4,
+          "tokens": [
+            "refs",
+            "engineering",
+            "missions",
+            "residuais"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/integration/engineeringMissionSourceE2E.test.js",
+          "pontos": 4,
+          "tokens": [
+            "branches",
+            "refs",
+            "engineering",
+            "missions"
+          ],
+          "citacaoDoId": false
+        }
+      ],
+      "evidenciaDeclarada": "DRY-RUN: branches=3017, candidatas=3007 (2738 orfas + 269 fixtures de teste), mantidas=10 (missoes de usuario vivas) | APLICACAO APROVADA (2026-10-21): node --env-file-if-exists=.env scripts/prune-engineering-mission-branches.js --apply --json reports/branch-prune-report.json -> status=PASS, applied=true, removidas=3007, falhas=0 | ANTES/DEPOIS medido: 3017 -> 10 refs engineering/missions/* (as 10",
+      "confianca": "SOBREPOSICAO_DE_TOKENS_NAO_CONFIRMADA"
+    },
+    {
+      "id": "P1-CI-SEM-INTEGRACAO",
+      "severity": "P1",
+      "titulo": "Gate/CI do branch de desenvolvimento nao rodava NENHUMA suite de integracao",
+      "tokensDoDefeito": [
+        "integracao",
+        "branch",
+        "desenvolvimento",
+        "rodava",
+        "nenhuma",
+        "suite",
+        "integracao"
+      ],
+      "candidatos": [
+        {
+          "teste": "tests/unit/ciGateL0Determinism.test.js",
+          "pontos": 4,
+          "tokens": [
+            "integracao",
+            "branch",
+            "suite"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/unit/governance/devBranchGatePhaseContract.test.js",
+          "pontos": 4,
+          "tokens": [
+            "branch",
+            "desenvolvimento",
+            "nenhuma",
+            "suite"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/integration/engineeringBugAutonomousLoopE2E.test.js",
+          "pontos": 3,
+          "tokens": [
+            "branch",
+            "nenhuma",
+            "suite"
+          ],
+          "citacaoDoId": false
+        }
+      ],
+      "evidenciaDeclarada": "scripts/ci/dev-branch-gate.js passo L0b (npx jest tests/integration/engineering --maxWorkers=2, fail-closed) + .github/workflows/dev-branch-ci.yml job dev-branch-integration com services pgvector/redis e migrations. Prova: a primeira execucao do passo reprovou 2 suites e expôs P1-MERGE-MISSAO-PERDA-DE-ATUALIZACAO",
+      "confianca": "SOBREPOSICAO_DE_TOKENS_NAO_CONFIRMADA"
+    },
+    {
+      "id": "P1-CONCORRENCIA-EXIGE-POSTGRES",
+      "severity": "P1",
+      "titulo": "Teste de concorrencia HTTP passava sem PostgreSQL (retorno silencioso)",
+      "tokensDoDefeito": [
+        "concorrencia",
+        "exige",
+        "postgres",
+        "concorrencia",
+        "http",
+        "passava",
+        "postgresql",
+        "retorno",
+        "silencioso"
+      ],
+      "candidatos": [
+        {
+          "teste": "tests/integration/crmTenantIsolation.postgres.test.js",
+          "pontos": 4,
+          "tokens": [
+            "postgres",
+            "exige",
+            "postgresql"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/integration/engineeringBugLoop.test.js",
+          "pontos": 4,
+          "tokens": [
+            "exige",
+            "postgres",
+            "passava",
+            "silencioso"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/integration/engineeringRouterConcurrentRunHttp.test.js",
+          "pontos": 4,
+          "tokens": [
+            "exige",
+            "postgres",
+            "http",
+            "postgresql"
+          ],
+          "citacaoDoId": false
+        }
+      ],
+      "evidenciaDeclarada": "com banco: PASS (202/409 + SELECT 1 real); DATABASE_URL invalida: FAIL com POSTGRES_UNAVAILABLE (antes: PASS silencioso)",
+      "confianca": "SOBREPOSICAO_DE_TOKENS_NAO_CONFIRMADA"
+    },
+    {
+      "id": "P1-EVIDENCIA-COMMIT-ORFAO",
+      "severity": "P1",
+      "titulo": "Fila oficial aceitava prova com commit inexistente (3 itens citavam hash reescrito)",
+      "tokensDoDefeito": [
+        "evidencia",
+        "commit",
+        "orfao",
+        "fila",
+        "oficial",
+        "aceitava",
+        "prova",
+        "commit",
+        "inexistente",
+        "itens",
+        "citavam",
+        "hash",
+        "reescrito"
+      ],
+      "candidatos": [
+        {
+          "teste": "tests/unit/governance/hardeningQueueCommitExists.test.js",
+          "pontos": 9,
+          "tokens": [
+            "commit",
+            "fila",
+            "prova",
+            "inexistente",
+            "itens",
+            "citavam",
+            "hash",
+            "reescrito"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/unit/governance/bugClosureQueueModel.test.js",
+          "pontos": 8,
+          "tokens": [
+            "commit",
+            "fila",
+            "oficial",
+            "prova",
+            "inexistente",
+            "itens",
+            "hash"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/unit/governance/discoveredBlockerGuards.test.js",
+          "pontos": 8,
+          "tokens": [
+            "evidencia",
+            "commit",
+            "orfao",
+            "aceitava",
+            "prova",
+            "inexistente",
+            "hash"
+          ],
+          "citacaoDoId": false
+        }
+      ],
+      "evidenciaDeclarada": "tests/unit/governance/hardeningQueueCommitExists.test.js (5 casos, inclui o hash real 5f6d0c1c9) + tests/unit/governance 177 suites/1854 testes exit 0",
+      "confianca": "SOBREPOSICAO_DE_TOKENS_NAO_CONFIRMADA"
+    },
+    {
+      "id": "P1-GATE-PRONTIDAO-EXECUTAVEL",
+      "severity": "P1",
+      "titulo": "Veredito ENGINEER_SUPERVISED_READY_GO vivia em prosa; agora e gate executavel",
+      "tokensDoDefeito": [
+        "prontidao",
+        "executavel",
+        "veredito",
+        "engineer",
+        "supervised",
+        "ready",
+        "vivia",
+        "prosa",
+        "agora",
+        "executavel"
+      ],
+      "candidatos": [
+        {
+          "teste": "tests/unit/governance/bugClosureBypassDefense.test.js",
+          "pontos": 5,
+          "tokens": [
+            "veredito",
+            "engineer",
+            "supervised",
+            "ready",
+            "agora"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/unit/governance/discoveredBlockerGuards.test.js",
+          "pontos": 4,
+          "tokens": [
+            "veredito",
+            "engineer",
+            "ready",
+            "prosa"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/unit/governance/engineerSupervisedReadinessGate.test.js",
+          "pontos": 4,
+          "tokens": [
+            "veredito",
+            "engineer",
+            "supervised",
+            "ready"
+          ],
+          "citacaoDoId": false
+        }
+      ],
+      "evidenciaDeclarada": "npm run validate:engineer-supervised-readiness -> veredito=NOT_READY (exit 1) com 2 bloqueadores (6 blocked_external + sem assinatura humana); relatorio reports/engineer-supervised-readiness-report.json; tests/unit/governance/engineerSupervisedReadinessGate.test.js 7/7",
+      "confianca": "SOBREPOSICAO_DE_TOKENS_NAO_CONFIRMADA"
+    },
+    {
+      "id": "P1-GUARDA-SKIP-ASSERTIONS-COMMITS",
+      "severity": "P1",
+      "titulo": "Guarda de integridade nao via skip/assertion removida nem mutacao commitada",
+      "tokensDoDefeito": [
+        "guarda",
+        "skip",
+        "assertions",
+        "commits",
+        "guarda",
+        "integridade",
+        "skip",
+        "assertion",
+        "removida",
+        "mutacao",
+        "commitada"
+      ],
+      "candidatos": [
+        {
+          "teste": "tests/unit/governance/worktreeIntegrity.test.js",
+          "pontos": 7,
+          "tokens": [
+            "guarda",
+            "skip",
+            "integridade",
+            "assertion",
+            "removida"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/unit/engineeringMission/preventiveRules.test.js",
+          "pontos": 5,
+          "tokens": [
+            "guarda",
+            "skip",
+            "removida"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/unit/governance/releaseSuiteRunner.test.js",
+          "pontos": 5,
+          "tokens": [
+            "skip",
+            "assertions",
+            "assertion",
+            "removida"
+          ],
+          "citacaoDoId": false
+        }
+      ],
+      "evidenciaDeclarada": "tests/unit/governance/worktreeIntegrity.test.js 14/14 (TEST_SUPPRESSION_ADDED, ASSERTION_REMOVAL, waiver sem autoridade) + prova do pre-push: mutacao commitada em branch temporaria => FAIL exit 1; arvore limpa => PASS",
+      "confianca": "SOBREPOSICAO_DE_TOKENS_NAO_CONFIRMADA"
+    },
+    {
+      "id": "P1-L0-INDETERMINISTA-POR-CONTENCAO",
+      "severity": "P1",
+      "titulo": "L0 do gate do branch variava de suite vermelha por contencao (11 workers)",
+      "tokensDoDefeito": [
+        "indeterminista",
+        "contencao",
+        "branch",
+        "variava",
+        "suite",
+        "vermelha",
+        "contencao",
+        "workers"
+      ],
+      "candidatos": [
+        {
+          "teste": "tests/integration/engineeringBugLoopNaturalPathE2E.test.js",
+          "pontos": 4,
+          "tokens": [
+            "branch",
+            "suite",
+            "vermelha",
+            "workers"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/integration/engineeringMissionGovernanceAndConcurrency.test.js",
+          "pontos": 3,
+          "tokens": [
+            "branch",
+            "suite",
+            "workers"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/integration/governanceApprovalFullWorkerE2E.test.js",
+          "pontos": 3,
+          "tokens": [
+            "branch",
+            "suite",
+            "workers"
+          ],
+          "citacaoDoId": false
+        }
+      ],
+      "evidenciaDeclarada": "npx jest tests/unit --maxWorkers=4 -> 1086 suites / 9214 testes / exit 0 em 358 s; com o default (11 workers) 3 execucoes falharam em 3 suites DIFERENTES (sandbox, tenantAiCredentials, ...) sempre por timeout/probe e nunca por defeito; tests/unit/ciGateL0Determinism.test.js 3/3",
+      "confianca": "SOBREPOSICAO_DE_TOKENS_NAO_CONFIRMADA"
+    },
+    {
+      "id": "P1-LINEAGE-RUN-MAIS-RECENTE",
+      "severity": "P1",
+      "titulo": "Lineage de relatorio escolhia o run mais recente e omitia sourceCommit",
+      "tokensDoDefeito": [
+        "lineage",
+        "mais",
+        "recente",
+        "lineage",
+        "relatorio",
+        "escolhia",
+        "mais",
+        "recente",
+        "omitia",
+        "sourcecommit"
+      ],
+      "candidatos": [
+        {
+          "teste": "tests/unit/governance/bugLoopEvidenceBinding.test.js",
+          "pontos": 7,
+          "tokens": [
+            "lineage",
+            "mais",
+            "recente",
+            "sourcecommit"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/unit/governance/reportLineageExplicit.test.js",
+          "pontos": 7,
+          "tokens": [
+            "lineage",
+            "mais",
+            "recente",
+            "sourcecommit"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/unit/governance/runIdentityCommit.test.js",
+          "pontos": 5,
+          "tokens": [
+            "lineage",
+            "mais",
+            "sourcecommit"
+          ],
+          "citacaoDoId": false
+        }
+      ],
+      "evidenciaDeclarada": "tests/unit/governance/reportLineageExplicit.test.js (6 casos: sem contexto => LINEAGE_RUN_UNDEFINED; sem fingerprint => falha; sem sourceCommit => falha; contexto explicito => identidade completa) + tests/unit/governance 1836 passed",
+      "confianca": "SOBREPOSICAO_DE_TOKENS_NAO_CONFIRMADA"
+    },
+    {
+      "id": "P1-MERGE-MISSAO-PERDA-DE-ATUALIZACAO",
+      "severity": "P1",
+      "titulo": "mergeMissionJson (JSONB acumulativo) perdia atualizacao em escrita concorrente",
+      "tokensDoDefeito": [
+        "merge",
+        "perda",
+        "atualizacao",
+        "mergemissionjson",
+        "jsonb",
+        "acumulativo",
+        "perdia",
+        "atualizacao",
+        "escrita",
+        "concorrente"
+      ],
+      "candidatos": [
+        {
+          "teste": "tests/integration/engineeringMissionMergeConcurrency.test.js",
+          "pontos": 6,
+          "tokens": [
+            "merge",
+            "perda",
+            "mergemissionjson",
+            "acumulativo",
+            "escrita",
+            "concorrente"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/integration/engineeringMissionSourceE2E.test.js",
+          "pontos": 3,
+          "tokens": [
+            "merge",
+            "escrita",
+            "concorrente"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/unit/aiGovernanceCompliance.test.js",
+          "pontos": 3,
+          "tokens": [
+            "jsonb",
+            "perdia",
+            "escrita"
+          ],
+          "citacaoDoId": false
+        }
+      ],
+      "evidenciaDeclarada": "tests/integration/engineeringMissionMergeConcurrency.test.js (5 casos; 15 rodadas de escrita concorrente em chaves diferentes). Contra o codigo ANTERIOR: 1 falha. Com o fix: 5/5. Bateria tests/integration/engineering --maxWorkers=2: 39/40 suites, 218/219 testes (antes 2 falhas; a restante e P1-PROMOCAO-SMOKE-INSTAVEL-SOB-CARGA)",
+      "confianca": "SOBREPOSICAO_DE_TOKENS_NAO_CONFIRMADA"
+    },
+    {
+      "id": "P1-PATCH-SYMLINK-ESCAPE",
+      "severity": "P1",
+      "titulo": "validatePatch aceitava symlink (git mode 120000): alvo do link escapa do allowedPaths",
+      "tokensDoDefeito": [
+        "patch",
+        "symlink",
+        "escape",
+        "validatepatch",
+        "aceitava",
+        "symlink",
+        "mode",
+        "120000",
+        "alvo",
+        "link",
+        "escapa",
+        "allowedpaths"
+      ],
+      "candidatos": [
+        {
+          "teste": "tests/unit/engineeringRouterPatchSymlinkEscape.test.js",
+          "pontos": 12,
+          "tokens": [
+            "patch",
+            "symlink",
+            "escape",
+            "validatepatch",
+            "aceitava",
+            "mode",
+            "120000",
+            "alvo",
+            "link",
+            "escapa",
+            "allowedpaths"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/integration/engineeringPatchApplyAndTestRunner.test.js",
+          "pontos": 5,
+          "tokens": [
+            "patch",
+            "symlink",
+            "mode",
+            "link"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/integration/engineeringRouterPatchFormatRerouteE2E.test.js",
+          "pontos": 5,
+          "tokens": [
+            "patch",
+            "aceitava",
+            "mode",
+            "alvo",
+            "allowedpaths"
+          ],
+          "citacaoDoId": false
+        }
+      ],
+      "evidenciaDeclarada": "tests/unit/engineeringRouterPatchSymlinkEscape.test.js 7/7 com o fix e 4 falhas no codigo ANTERIOR (3 controles passam nos dois sentidos); medicao: gitApply=ok, isSymlink=true, target=/etc/shadow, validadorAceitou=true; tests/unit/engineeringRouter 39 suites/400 testes PASS; mission+patchRunner+promocao 38 suites/457 testes PASS",
+      "confianca": "SOBREPOSICAO_DE_TOKENS_NAO_CONFIRMADA"
+    },
+    {
+      "id": "P1-REVISAO-INDEPENDENCIA-SO-NEGATIVA",
+      "severity": "P1",
+      "titulo": "Gate review aceitava APPROVE sem prova positiva de independencia",
+      "tokensDoDefeito": [
+        "revisao",
+        "independencia",
+        "negativa",
+        "review",
+        "aceitava",
+        "approve",
+        "prova",
+        "positiva",
+        "independencia"
+      ],
+      "candidatos": [
+        {
+          "teste": "tests/integration/engineeringBugLoopNaturalPathE2E.test.js",
+          "pontos": 4,
+          "tokens": [
+            "review",
+            "aceitava",
+            "approve",
+            "prova"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/integration/engineeringMissionReviewEnforcement.test.js",
+          "pontos": 4,
+          "tokens": [
+            "review",
+            "aceitava",
+            "approve",
+            "prova"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/integration/engineeringRouterPatchFormatRerouteE2E.test.js",
+          "pontos": 4,
+          "tokens": [
+            "review",
+            "aceitava",
+            "approve",
+            "prova"
+          ],
+          "citacaoDoId": false
+        }
+      ],
+      "evidenciaDeclarada": "tests/unit/engineeringMission/missionGatesEvidence.test.js (10/10: sem declaracao, sem modelo, coder sem provider => INDEPENDENT_REVIEW_NOT_PROVEN) + integracao 16/16",
+      "confianca": "SOBREPOSICAO_DE_TOKENS_NAO_CONFIRMADA"
+    },
+    {
+      "id": "P1-SANDBOX-PROBE-CACHE-NEGATIVO",
+      "severity": "P1",
+      "titulo": "isSandboxAvailable cacheava NEGATIVO: falso SANDBOX_UNAVAILABLE sob carga",
+      "tokensDoDefeito": [
+        "sandbox",
+        "probe",
+        "cache",
+        "negativo",
+        "issandboxavailable",
+        "cacheava",
+        "negativo",
+        "sandbox",
+        "unavailable",
+        "carga"
+      ],
+      "candidatos": [
+        {
+          "teste": "tests/unit/engineeringRouterSandboxAvailabilityCache.test.js",
+          "pontos": 9,
+          "tokens": [
+            "sandbox",
+            "probe",
+            "cache",
+            "negativo",
+            "issandboxavailable",
+            "unavailable",
+            "carga"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/integration/governanceApprovalFullWorkerE2E.test.js",
+          "pontos": 8,
+          "tokens": [
+            "sandbox",
+            "cache",
+            "negativo",
+            "issandboxavailable",
+            "unavailable",
+            "carga"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/integration/engineeringPromotionService.test.js",
+          "pontos": 5,
+          "tokens": [
+            "sandbox",
+            "probe",
+            "cache",
+            "carga"
+          ],
+          "citacaoDoId": false
+        }
+      ],
+      "evidenciaDeclarada": "tests/unit/engineeringRouterSandboxAvailabilityCache.test.js 7/7 (contra o codigo ANTERIOR: 3 falhas) + sandbox real e cache 17/17 + npx jest tests/unit --maxWorkers=4 1086 suites/9214 testes exit 0",
+      "confianca": "SOBREPOSICAO_DE_TOKENS_NAO_CONFIRMADA"
+    },
+    {
+      "id": "P1-SELO-PUSH-ORIGIN-MAIN-NO-OP-FALSO-PUSH-OK",
+      "severity": "P1",
+      "titulo": "Selo publicava ref fixa (main) e imprimia \"push ok\" sem publicar o commit da branch em uso",
+      "tokensDoDefeito": [
+        "selo",
+        "push",
+        "origin",
+        "main",
+        "push",
+        "selo",
+        "publicava",
+        "fixa",
+        "main",
+        "imprimia",
+        "push",
+        "publicar",
+        "commit",
+        "branch"
+      ],
+      "candidatos": [
+        {
+          "teste": "tests/integration/engineeringMissionSourceE2E.test.js",
+          "pontos": 8,
+          "tokens": [
+            "push",
+            "origin",
+            "main",
+            "commit",
+            "branch"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/integration/missionSourceCrashWindowE2E.test.js",
+          "pontos": 8,
+          "tokens": [
+            "push",
+            "origin",
+            "main",
+            "commit",
+            "branch"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/integration/missionSourceLifecycleE2E.test.js",
+          "pontos": 8,
+          "tokens": [
+            "push",
+            "origin",
+            "main",
+            "commit",
+            "branch"
+          ],
+          "citacaoDoId": false
+        }
+      ],
+      "evidenciaDeclarada": "scripts/governance/seal-release.sh (commit_and_push) + medicao main local == origin/main com HEAD 36 a frente",
+      "confianca": "SOBREPOSICAO_DE_TOKENS_NAO_CONFIRMADA"
+    },
+    {
+      "id": "P1-STAGING-DIST-GOVERNANCE-ARTIFACTS-DERRUBA-VALIDATE-DIST",
+      "severity": "P1",
+      "titulo": "Certificacao deixa staging transitorio em dist/ e o agregado falha em validate:dist",
+      "tokensDoDefeito": [
+        "staging",
+        "dist",
+        "governance",
+        "artifacts",
+        "derruba",
+        "validate",
+        "dist",
+        "certificacao",
+        "deixa",
+        "staging",
+        "transitorio",
+        "dist",
+        "agregado",
+        "falha",
+        "validate",
+        "dist"
+      ],
+      "candidatos": [
+        {
+          "teste": "tests/unit/governance/allValidatorsRunner.test.js",
+          "pontos": 12,
+          "tokens": [
+            "governance",
+            "dist",
+            "derruba",
+            "validate",
+            "deixa",
+            "agregado",
+            "falha"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/unit/governance/temporalEvidenceLineage.test.js",
+          "pontos": 11,
+          "tokens": [
+            "governance",
+            "dist",
+            "artifacts",
+            "validate",
+            "deixa",
+            "falha"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/integration/engineeringBugLoop.test.js",
+          "pontos": 10,
+          "tokens": [
+            "dist",
+            "governance",
+            "validate",
+            "deixa",
+            "agregado",
+            "falha"
+          ],
+          "citacaoDoId": false
+        }
+      ],
+      "evidenciaDeclarada": "scripts/governance/seal-release.sh (fase certify) + medicao: bash scripts/check-dist-clean.sh acusando \"Arquivos/dirs inesperados na raiz de dist/: governance-artifacts\" + npm run validate:dist exit 0 apos a limpeza",
+      "confianca": "SOBREPOSICAO_DE_TOKENS_NAO_CONFIRMADA"
+    },
+    {
+      "id": "P1-UNIT-GATE-ACEITA-UNKNOWN",
+      "severity": "P1",
+      "titulo": "Gate unit era satisfeito por qualquer execucao verde (inclusive UNKNOWN/integracao)",
+      "tokensDoDefeito": [
+        "unit",
+        "aceita",
+        "unknown",
+        "unit",
+        "satisfeito",
+        "qualquer",
+        "execucao",
+        "verde",
+        "inclusive",
+        "unknown",
+        "integracao"
+      ],
+      "candidatos": [
+        {
+          "teste": "tests/unit/dev/devServicesSupervision.test.js",
+          "pontos": 9,
+          "tokens": [
+            "unit",
+            "aceita",
+            "unknown",
+            "qualquer",
+            "verde"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/integration/engineeringMissionReviewEnforcement.test.js",
+          "pontos": 8,
+          "tokens": [
+            "unit",
+            "aceita",
+            "unknown",
+            "qualquer",
+            "verde",
+            "inclusive"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/unit/dev/apiServiceUnit.test.js",
+          "pontos": 8,
+          "tokens": [
+            "unit",
+            "aceita",
+            "unknown",
+            "qualquer"
+          ],
+          "citacaoDoId": false
+        }
+      ],
+      "evidenciaDeclarada": "tests/unit/engineeringMission/missionGatesEvidence.test.js (comando generico UNKNOWN => UNIT_EVIDENCE_MISSING; npx jest tests/unit => PASS) + 443 unit + 7 integracao",
+      "confianca": "SOBREPOSICAO_DE_TOKENS_NAO_CONFIRMADA"
+    },
+    {
+      "id": "CI-FLOW-GATE-VACUOSO",
+      "severity": "P2",
+      "titulo": "test:flow carregava --passWithNoTests: verde com ZERO testes executados",
+      "tokensDoDefeito": [
+        "flow",
+        "vacuoso",
+        "flow",
+        "carregava",
+        "passwithnotests",
+        "verde",
+        "zero",
+        "testes",
+        "executados"
+      ],
+      "candidatos": [
+        {
+          "teste": "tests/unit/governance/officialTestScriptsNoVacuousPass.test.js",
+          "pontos": 6,
+          "tokens": [
+            "flow",
+            "passwithnotests",
+            "verde",
+            "zero",
+            "testes"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/frontend/login-flow.test.js",
+          "pontos": 5,
+          "tokens": [
+            "flow",
+            "testes"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/unit/governance/releaseSuiteRunner.test.js",
+          "pontos": 5,
+          "tokens": [
+            "vacuoso",
+            "carregava",
+            "verde",
+            "zero",
+            "testes"
+          ],
+          "citacaoDoId": false
+        }
+      ],
+      "evidenciaDeclarada": "`package.json` mantinha `jest tests/flow engine/__tests__ --passWithNoTests`. `tests/flow` nao contem nenhum `*.test.js` (0 arquivos; medido) — foi exatamente o gate vacuoso corrigido em 2026-07 acrescentando `engine/__tests__` (30 arquivos), mas a flag que permite o verde vazio continuou armada para a proxima selecao errada. Correcao: flag removida e regressao `tests/unit/governance/officialTestS",
+      "confianca": "SOBREPOSICAO_DE_TOKENS_NAO_CONFIRMADA"
+    },
+    {
+      "id": "H21-CRM-PERSISTENCIA-X-METRICAS",
+      "severity": "P2",
+      "titulo": "CRM grava em store in-memory por processo, mas o painel mede tabelas do banco: mutação não reflete nos números e o dado some no restart",
+      "tokensDoDefeito": [
+        "persistencia",
+        "metricas",
+        "grava",
+        "store",
+        "memory",
+        "processo",
+        "painel",
+        "mede",
+        "tabelas",
+        "banco",
+        "muta",
+        "reflete",
+        "meros",
+        "dado",
+        "some",
+        "restart"
+      ],
+      "candidatos": [
+        {
+          "teste": "tests/unit/marketDiscovery/pipeline.test.js",
+          "pontos": 8,
+          "tokens": [
+            "grava",
+            "store",
+            "memory",
+            "processo",
+            "mede",
+            "dado",
+            "some",
+            "restart"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/unit/crmRealtimeEvents.test.js",
+          "pontos": 7,
+          "tokens": [
+            "processo",
+            "painel",
+            "banco",
+            "muta",
+            "dado",
+            "some",
+            "restart"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/unit/governance/allValidatorsRunner.test.js",
+          "pontos": 6,
+          "tokens": [
+            "grava",
+            "memory",
+            "mede",
+            "muta",
+            "dado",
+            "some"
+          ],
+          "citacaoDoId": false
+        }
+      ],
+      "evidenciaDeclarada": "AI_MEMORY/evidence/h21-crm-persistencia.md",
+      "confianca": "SOBREPOSICAO_DE_TOKENS_NAO_CONFIRMADA"
+    },
+    {
+      "id": "HARDENING-ENG-GOV-RELEASE-AGREGADO-EXIGE-WORKTREE-CONGELADO",
+      "severity": "P2",
+      "titulo": "Gate agregado exige worktree CONGELADO — commitar durante o run quebra a promocao do E2E",
+      "tokensDoDefeito": [
+        "agregado",
+        "exige",
+        "worktree",
+        "congelado",
+        "agregado",
+        "exige",
+        "worktree",
+        "congelado",
+        "commitar",
+        "durante",
+        "quebra",
+        "promocao"
+      ],
+      "candidatos": [
+        {
+          "teste": "tests/unit/governance/bugClosureBypassDefense.test.js",
+          "pontos": 7,
+          "tokens": [
+            "exige",
+            "worktree",
+            "commitar",
+            "durante",
+            "quebra"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/unit/governance/sourceFreezeGuard.test.js",
+          "pontos": 7,
+          "tokens": [
+            "exige",
+            "worktree",
+            "congelado",
+            "durante"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/unit/governance/discoveredBlockerGuards.test.js",
+          "pontos": 6,
+          "tokens": [
+            "agregado",
+            "exige",
+            "worktree"
+          ],
+          "citacaoDoId": false
+        }
+      ],
+      "evidenciaDeclarada": "AI_MEMORY/evidence/AUDIT_ENTRYPOINT.json + /tmp/agg7.log (linha RED_TO_FIX) + timeline medida",
+      "confianca": "SOBREPOSICAO_DE_TOKENS_NAO_CONFIRMADA"
+    },
+    {
+      "id": "HARDENING-ENG-GOV-RELEASE-PONTEIROS-CLOSURE-ORFAOS",
+      "severity": "P2",
+      "titulo": "Ponteiros de fechamento na raiz estao stale e nenhum gate os mantem",
+      "tokensDoDefeito": [
+        "ponteiros",
+        "closure",
+        "orfaos",
+        "ponteiros",
+        "fechamento",
+        "raiz",
+        "estao",
+        "stale",
+        "nenhum",
+        "mantem"
+      ],
+      "candidatos": [
+        {
+          "teste": "tests/integration/engineeringBugLoop.test.js",
+          "pontos": 4,
+          "tokens": [
+            "fechamento",
+            "raiz",
+            "stale",
+            "nenhum"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/integration/missionSourceStaleReplanE2E.test.js",
+          "pontos": 4,
+          "tokens": [
+            "fechamento",
+            "raiz",
+            "stale",
+            "nenhum"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/unit/engineeringRouterAuditEnvelopeVerifier.test.js",
+          "pontos": 4,
+          "tokens": [
+            "closure",
+            "fechamento",
+            "raiz",
+            "nenhum"
+          ],
+          "citacaoDoId": false
+        }
+      ],
+      "evidenciaDeclarada": "AI_MEMORY/evidence/AUDIT_ENTRYPOINT.md (secao \"Ponteiros stale na raiz\") + FINAL_RAP_RELEASE_CLOSURE.json (marcado SUPERSEDED) + AGENTS.md (secao de auditoria externa)",
+      "confianca": "SOBREPOSICAO_DE_TOKENS_NAO_CONFIRMADA"
+    },
+    {
+      "id": "HARDENING-ENG-GOV-RELEASE-SBOM-RUN-WINDOW",
+      "severity": "P2",
+      "titulo": "SBOM anterior ao startedAt do run derruba o security gate (exit 3) mesmo com risco GO",
+      "tokensDoDefeito": [
+        "sbom",
+        "window",
+        "sbom",
+        "anterior",
+        "startedat",
+        "derruba",
+        "security",
+        "exit",
+        "mesmo",
+        "risco"
+      ],
+      "candidatos": [
+        {
+          "teste": "tests/unit/governance/shortTtlEvidence.test.js",
+          "pontos": 7,
+          "tokens": [
+            "sbom",
+            "anterior",
+            "startedat",
+            "security",
+            "exit",
+            "mesmo"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/unit/engineeringBugFindingEngine.test.js",
+          "pontos": 6,
+          "tokens": [
+            "anterior",
+            "derruba",
+            "security",
+            "exit",
+            "mesmo",
+            "risco"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/unit/governance/securityGateState.test.js",
+          "pontos": 6,
+          "tokens": [
+            "sbom",
+            "security",
+            "exit",
+            "mesmo",
+            "risco"
+          ],
+          "citacaoDoId": false
+        }
+      ],
+      "evidenciaDeclarada": "MEDIDO: `[security-release-gate] state=EVIDENCE_UNAVAILABLE decision=NO_GO exit=3 — SECURITY_GATE_STALE_EVIDENCE` enquanto o proprio motor de risco dizia GO (5 verificacoes satisfeitas). Regra (scripts/governance/lib/security-gate-provenance.js:56-62): o SBOM precisa de generatedAt posterior ao startedAt do run. Remedio aplicado: `npm run security:sbom` (produtor) DENTRO do run R3 (startedAt 14:49",
+      "confianca": "SOBREPOSICAO_DE_TOKENS_NAO_CONFIRMADA"
+    },
+    {
+      "id": "MISSAO-B8-ESTADOS-FILA",
+      "severity": "P2",
+      "titulo": "B8: modelo de estados da fila com hook fail-closed e validador",
+      "tokensDoDefeito": [
+        "estados",
+        "fila",
+        "modelo",
+        "estados",
+        "fila",
+        "hook",
+        "closed",
+        "validador"
+      ],
+      "candidatos": [
+        {
+          "teste": "tests/unit/governance/bugClosureQueueModel.test.js",
+          "pontos": 6,
+          "tokens": [
+            "estados",
+            "fila",
+            "modelo",
+            "validador"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/integration/evoContractAdversarial.test.js",
+          "pontos": 5,
+          "tokens": [
+            "estados",
+            "modelo",
+            "hook",
+            "closed"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/integration/evoWebhookSecurity.test.js",
+          "pontos": 5,
+          "tokens": [
+            "fila",
+            "modelo",
+            "hook",
+            "closed"
+          ],
+          "citacaoDoId": false
+        }
+      ],
+      "evidenciaDeclarada": "scripts/governance/validate-hardening-queue.js + reports/hardening-queue-report.json; prova do hook em /tmp/provar-b8.sh (11/11 casos: fixed_unverified/failed/pending/in_progress/typo/desconhecido BLOQUEIAM; verified/prevention_active/done/blocked/blocked_external LIBERAM); prova do validador (7/7 casos: fila real PASS; detecta fixed_unverified-com-evidence, verified-sem-evidence, blocked_external",
+      "confianca": "SOBREPOSICAO_DE_TOKENS_NAO_CONFIRMADA"
+    },
+    {
+      "id": "MISSAO-B3-REUSO-PROVENIENCIA",
+      "severity": "P3",
+      "titulo": "B3: reuso de lotes — verificado, NAO e defeito (rigor por desenho)",
+      "tokensDoDefeito": [
+        "reuso",
+        "proveniencia",
+        "reuso",
+        "lotes",
+        "verificado",
+        "rigor",
+        "desenho"
+      ],
+      "candidatos": [
+        {
+          "teste": "tests/unit/governance/releaseSuiteRunner.test.js",
+          "pontos": 3,
+          "tokens": [
+            "reuso",
+            "lotes"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/unit/engineeringMission/missionGatesEvidence.test.js",
+          "pontos": 2,
+          "tokens": [
+            "reuso"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/unit/learningTutor.test.js",
+          "pontos": 2,
+          "tokens": [
+            "reuso"
+          ],
+          "citacaoDoId": false
+        }
+      ],
+      "evidenciaDeclarada": "scripts/governance/run-release-suites.js:186 (avaliarReusoDeLote) + :207 (exitCodeDoRelatorioReusado) — leitura direta do codigo; analise registrada em /memories/repo/r-agent2-b4-independencia-revisao.md",
+      "confianca": "SOBREPOSICAO_DE_TOKENS_NAO_CONFIRMADA"
+    },
+    {
+      "id": "MISSAO-B4-REVISAO-INDEPENDENTE",
+      "severity": "P3",
+      "titulo": "B4: revisao independente — verificado, NAO e defeito (rigor maximo)",
+      "tokensDoDefeito": [
+        "revisao",
+        "independente",
+        "revisao",
+        "independente",
+        "verificado",
+        "rigor",
+        "maximo"
+      ],
+      "candidatos": [
+        {
+          "teste": "tests/unit/governance/bugClosureFirst.test.js",
+          "pontos": 4,
+          "tokens": [
+            "revisao",
+            "independente"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/integration/governanceChangeApprovalHttpE2E.test.js",
+          "pontos": 3,
+          "tokens": [
+            "independente",
+            "verificado"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/unit/audit/auditEntrypointArtifact.test.js",
+          "pontos": 3,
+          "tokens": [
+            "independente",
+            "verificado"
+          ],
+          "citacaoDoId": false
+        }
+      ],
+      "evidenciaDeclarada": "api/services/engineeringMission/missionReviewService.js:157-165 — leitura direta; analise registrada em /memories/repo/r-agent2-b4-independencia-revisao.md",
+      "confianca": "SOBREPOSICAO_DE_TOKENS_NAO_CONFIRMADA"
+    },
+    {
+      "id": "MISSAO-DEMO-SELF-ENGINEERING",
+      "severity": "P3",
+      "titulo": "Demonstracao de self-engineering: o RAP encontrou defeitos reais que passaram por todos os gates",
+      "tokensDoDefeito": [
+        "demo",
+        "self",
+        "engineering",
+        "demonstracao",
+        "self",
+        "engineering",
+        "encontrou",
+        "defeitos",
+        "reais",
+        "passaram",
+        "todos",
+        "gates"
+      ],
+      "candidatos": [
+        {
+          "teste": "tests/integration/engineeringBugLoop.test.js",
+          "pontos": 7,
+          "tokens": [
+            "demo",
+            "self",
+            "engineering",
+            "reais",
+            "gates"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/integration/engineeringMissionReviewEnforcement.test.js",
+          "pontos": 7,
+          "tokens": [
+            "self",
+            "engineering",
+            "reais",
+            "todos",
+            "gates"
+          ],
+          "citacaoDoId": false
+        },
+        {
+          "teste": "tests/integration/engineeringRouterAuditEnvelopeGeneration.test.js",
+          "pontos": 6,
+          "tokens": [
+            "self",
+            "engineering",
+            "todos",
+            "gates"
+          ],
+          "citacaoDoId": false
+        }
+      ],
+      "evidenciaDeclarada": "Os 6 defeitos abaixo foram encontrados PELO PROPRIO SISTEMA durante esta sessao, com prova reproduzivel: (1) DEF-TIMEBOMB-EVOSYNC-JANELA30D — encontrado pela 1a execucao real do L1 (1 de 219 testes); prova: passa isolado 8/8 apos correcao, e estava quebrado desde 03/10/2026; (2) DEF-WS-AUTH-POS-LOGIN, (3) DEF-REMOVECHILD-HEADER-ENHANCEMENT, (4) DEF-QUEUE-DELETE-DB-ONLY — encontrados por QA Mesh/br",
+      "confianca": "SOBREPOSICAO_DE_TOKENS_NAO_CONFIRMADA"
+    }
+  ]
+}

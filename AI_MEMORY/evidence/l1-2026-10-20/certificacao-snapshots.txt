@@ -1,0 +1,6 @@
+SNAP_INI head=486a498cb dirty=0 23:15:46
+SNAP_FIM head=486a498cb dirty=0 23:27:38
+SNAP_L0_INI head=486a498cb dirty=0 23:27:53
+SNAP_FIM2 head=486a498cb dirty=0 23:45:05
+SNAP_L1R_INI head=486a498cb dirty=0 23:47:19
+SNAP_FIM3 head=486a498cb dirty=0 23:58:01

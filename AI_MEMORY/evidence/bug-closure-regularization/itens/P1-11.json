@@ -1,0 +1,14 @@
+{
+  "id": "P1-11",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Destravar empacotamento e selagem (ciclo release:seal completo)",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+  "teste": "tests/unit/governance/v2SealOrchestration.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-11.log",
+  "draft": "governance/bug-closure/proofs-drafts/P1-11.json",
+  "camposParaAssinar": 18
+}

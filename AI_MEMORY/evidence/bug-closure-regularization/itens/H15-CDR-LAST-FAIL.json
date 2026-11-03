@@ -1,0 +1,14 @@
+{
+  "id": "H15-CDR-LAST-FAIL",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "CDR nao morre mais em silencio com o backend REGISTRADO sobre conexao que falhou",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+  "teste": "tests/unit/pbx/pbxCdrHealth.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/H15-CDR-LAST-FAIL.log",
+  "draft": "governance/bug-closure/proofs-drafts/H15-CDR-LAST-FAIL.json",
+  "camposParaAssinar": 18
+}

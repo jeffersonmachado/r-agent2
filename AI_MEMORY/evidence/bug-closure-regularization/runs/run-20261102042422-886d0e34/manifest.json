@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "kind": "bug-closure-regularization-run",
+  "authoritative": false,
+  "runId": "run-20261102042422-886d0e34",
+  "versaoRegularizador": "2.0.0",
+  "identidade": {
+    "commit": "94dfefe68794277f6af617091983fe6496cc3c16",
+    "sourceFingerprint": "ba0673e3cf2795172599b93da74b6d875c8d0f36c7fa569b0953fd34c7154bed",
+    "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+    "hardeningQueueFingerprint": "fc1d79240124280a7405f76371db4ce58fd2845f8b62596f93ac095cff857401",
+    "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+  },
+  "ambiente": {
+    "node": "v22.12.0",
+    "plataforma": "linux-x64",
+    "host": "jmachado-Precision-5530",
+    "runnerDeTeste": "jest",
+    "bancoDeTeste": "CRM_PG_TEST_URL",
+    "runnerEngenharia": "ENGINEERING_RUNNER_URL"
+  },
+  "escopo": {
+    "tipo": "PARCIAL",
+    "filtroSeveridade": "ALL",
+    "idsSelecionados": [
+      "HARDENING-ENG-GOV-RELEASE-AUDITORIA-GIT-ENTRYPOINT",
+      "AUDITORIA-ENTRYPOINT-TRAVAS",
+      "AUDITORIA-FASE-B-TESTE-MUTAVA-EVIDENCIA-GOVERNADA",
+      "AUDITORIA-FASE-B-CADEIA-FORA-DO-AGREGADO"
+    ],
+    "limite": 0,
+    "esperadoNoEscopo": 4,
+    "idsEsperados": [
+      "AUDITORIA-ENTRYPOINT-TRAVAS",
+      "AUDITORIA-FASE-B-CADEIA-FORA-DO-AGREGADO",
+      "AUDITORIA-FASE-B-TESTE-MUTAVA-EVIDENCIA-GOVERNADA",
+      "HARDENING-ENG-GOV-RELEASE-AUDITORIA-GIT-ENTRYPOINT"
+    ],
+    "completo": false
+  },
+  "status": "COMPLETED",
+  "startedAt": "2026-11-02T04:24:22.238Z",
+  "completedAt": "2026-11-02T04:24:32.859Z",
+  "resultados": 4,
+  "observacoes": []
+}

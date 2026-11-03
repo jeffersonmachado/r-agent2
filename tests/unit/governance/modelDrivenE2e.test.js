@@ -16,6 +16,14 @@ const fs   = require('fs');
 const path = require('path');
 
 const { preservarArtefato } = require('../../helpers/preserveGovernedArtifact');
+const infraGate = require('../../helpers/infraGate');
+
+// Artefato PROD-LIKE exigido pela prova: produzido pelo job `prod-like-smoke` do
+// dev-branch-ci (e baixado pelo dev-branch-gate). Ele é gitignored por política (`qa/smoke/`),
+// então em qualquer checkout limpo — inclusive o do `jest.yml` — ele NÃO existe por
+// construção. Antes desta porta o `test:unit` media a AUSÊNCIA do artefato de outro workflow
+// e ficava permanentemente vermelho em main (run 40737265748: 327/328, única vermelha aqui).
+const ARTEFATO_PROD_LIKE = path.join(__dirname, '..', '..', '..', 'qa', 'smoke', 'prod-like', 'qa-waves-operational-prod-like-smoke.json');
 
 const SCRIPT = path.join(__dirname, '..', '..', '..', 'scripts', 'governance', 'validate-model-driven-e2e.js');
 
@@ -120,6 +128,16 @@ describe('validate-model-driven-e2e — pipeline REAL, não simulação', () => 
   });
 
   test('Script passa com smoke report real presente', () => {
+    // Dependência declarada (porta ÚNICA §11/§12): artefato ausente em modo dev é NOT_EXECUTED
+    // registrado; em `RELEASE_AUTHORITATIVE=1` continua FAIL-CLOSED (INFRA_ERROR). O artefato
+    // presente porém ilegível NUNCA é pulado — cai no erro auto-descritivo mais abaixo.
+    if (infraGate.skipOrFail({
+      suite: 'model-driven-e2e-prod-like',
+      available: fs.existsSync(ARTEFATO_PROD_LIKE),
+      reason: `artefato prod-like ausente (${ARTEFATO_PROD_LIKE}); ele é produzido pelo job prod-like-smoke do dev-branch-ci`,
+      requirement: 'prod-like-smoke-report',
+    })) return;
+
     // Verificar que o script atual (com arquivos reais) passa
     const { spawnSync } = require('child_process');
     const result = spawnSync(process.execPath, [SCRIPT], {
@@ -138,6 +156,20 @@ describe('validate-model-driven-e2e — pipeline REAL, não simulação', () => 
       } catch (_) { return null; }
     })();
 
+    // FALHA AUTO-DESCRITIVA (medido 2026-10-24 nos cenários `missing-artifact` e
+    // `corrupt-artifact` do harness): quando a prova prod-like está ausente ou ilegível, o
+    // produtor devolve `pass:false` com a violação `EXECUTED: smoke report ausente (...)`. Sem
+    // nomear a dependência, a mensagem de reprovação era só `Expected: 0, Received: 1` e o harness
+    // classificava como `EXPECTED_FAILURE_SEM_ASSINATURA` (falha pelo motivo ERRADO) — o cenário
+    // negativo ficava vermelho sem dizer por quê. Aqui a dependência é nomeada e o relatório do
+    // produtor é anexado à mensagem.
+    if (report?.pass !== true) {
+      throw new Error(
+        'artefato prod-like ausente ou ilegivel: qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json '
+        + `(exit=${result.status}, decision=${report?.decision || 'sem-relatorio'}, `
+        + `violacoes=${JSON.stringify(report?.violations || [])}, saida=${output.slice(-400)})`,
+      );
+    }
     expect(result.status).toBe(0);
     expect(report?.pass).toBe(true);
     expect(report?.decision).toBe('MODEL_DRIVEN_E2E_VALIDATED');

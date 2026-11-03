@@ -11,6 +11,43 @@ const PASS = 'PASS';
 
 function serviceError(code, message) { const error = new Error(`${code}: ${message}`); error.code = code; return error; }
 
+/**
+ * Estados de run e encerramento CONDICIONAL (P1-H).
+ *
+ * Defeito medido: o encerramento era `run.update({ status })` sem filtro de estado — um run já
+ * `COMPLETED` podia ser reescrito para `FAILED` (ou o contrário) e o número de linhas afetadas era
+ * ignorado, então uma transição que não aplicou nada era indistinguível de sucesso.
+ *
+ * Contrato: transição só a partir de estado NÃO-terminal, com `WHERE run_id + status IN
+ * (não-terminais)` e exigência de EXATAMENTE uma linha atualizada. Zero linhas ⇒ erro nomeado
+ * (fail-closed), nunca silêncio.
+ */
+const RUN_ESTADOS_TERMINAIS = Object.freeze(['COMPLETED', 'FAILED', 'INVALIDATED']);
+const RUN_ESTADOS_TRANSICIONAVEIS = Object.freeze(['CREATED', 'RUNNING', 'PENDING', 'EVALUATING']);
+
+function runEmEstadoTerminal(status) {
+  return RUN_ESTADOS_TERMINAIS.includes(String(status || '').toUpperCase());
+}
+
+async function aplicarEncerramentoDeRun({ runId, statusAtual, alvo, transaction, modelo = null, agora = null }) {
+  const Model = modelo || getGovernanceRun();
+  if (!RUN_ESTADOS_TERMINAIS.includes(String(alvo || '').toUpperCase())) {
+    throw serviceError('RUN_STATUS_ALVO_INVALIDO', `alvo "${alvo}" não é terminal canônico`);
+  }
+  if (runEmEstadoTerminal(statusAtual)) {
+    throw serviceError('RUN_JA_TERMINAL', `run ${runId} já está em ${String(statusAtual).toUpperCase()}`);
+  }
+  const { Op } = require('sequelize');
+  const [afetadas] = await Model.update(
+    { status: alvo, completed_at: agora || new Date() },
+    { where: { run_id: runId, status: { [Op.in]: [...RUN_ESTADOS_TRANSICIONAVEIS] } }, transaction },
+  );
+  if (Number(afetadas) !== 1) {
+    throw serviceError('RUN_STATUS_NAO_TRANSICIONOU', `esperava 1 linha, atualizou ${afetadas}`);
+  }
+  return { status: alvo, afetadas: Number(afetadas) };
+}
+
 async function createRun(input, options = {}) {
   const sequelize = getSequelize();
   if (!sequelize) throw serviceError('governance_db_required', 'Sequelize não inicializado');
@@ -69,10 +106,13 @@ async function calculateFinalDecision({ runId, sourceFingerprint, proofFingerpri
       ? 'COMPLETED'
       : (phase === 'PRE_PACKAGE' ? null : 'FAILED');
     if (terminalStatus) {
-      await run.update({ status: terminalStatus, completed_at: new Date() }, { transaction });
+      // Encerramento CONDICIONAL: não sobrescreve run terminal e exige exatamente 1 linha.
+      await aplicarEncerramentoDeRun({
+        runId, statusAtual: run.status, alvo: terminalStatus, transaction,
+      });
     }
     return { record, decision, mandatoryGateFailures: failedGates.length + missingMandatoryGates, scorecardBelow10: below10, openGaps: openGaps.length, runStatus: terminalStatus || run.status };
   });
 }
 
-module.exports = { createRun, recordGate, calculateFinalDecision, serviceError };
+module.exports = { createRun, recordGate, calculateFinalDecision, serviceError, aplicarEncerramentoDeRun, RUN_ESTADOS_TERMINAIS, RUN_ESTADOS_TRANSICIONAVEIS, runEmEstadoTerminal };

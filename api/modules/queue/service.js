@@ -31,7 +31,7 @@ function createQueueService({ deps }) {
     parseTicketFilters,
 
     listQueues(tenantId) {
-      const legacyQueues = deps.listQueues() || [];
+      const legacyQueues = deps.listQueues(tenantId) || [];
       const storedQueues = deps.queueDefinitionService
         .listQueues({ tenantId })
         .map((queue) => queue.name);
@@ -64,13 +64,23 @@ function createQueueService({ deps }) {
       });
 
       if (persistencia && persistencia.success === false) {
-        // Rollback da memória: devolver sucesso deixaria a listagem anunciando
-        // uma fila que não sobrevive a restart — o estado inconsistente que
-        // produzia as centenas de filas órfãs de teste.
-        try {
-          deps.deleteQueue(result.queueName, true);
-        } catch (_) {
-          /* rollback best-effort; o erro real é reportado abaixo */
+        // COMPENSAÇÃO ESCOPADA (P0 medido em 2026-10-20).
+        //
+        // A versão anterior chamava `deleteQueue(queueName, true)` — `force` fecha TODOS os
+        // tickets ativos. Em fila PREEXISTENTE (idempotência), uma falha de persistência
+        // apagava a fila e FECHAVA atendimentos que já existiam antes da operação. Rollback
+        // só pode reverter o que ESTA operação criou, e nunca com exclusão forçada.
+        if (result.created === true) {
+          try {
+            deps.deleteQueue(result.queueName, false);
+          } catch (_) {
+            /* rollback best-effort; o erro real é reportado abaixo */
+          }
+        } else {
+          deps.logger.error('Persistência falhou em fila preexistente — estado anterior preservado', {
+            queueName: result.queueName,
+            error: (persistencia && persistencia.error) || null,
+          });
         }
         deps.logger.error('Erro ao persistir definição da fila', {
           queueName: result.queueName,
@@ -86,12 +96,12 @@ function createQueueService({ deps }) {
       return result;
     },
 
-    getQueueInfo(queueName) {
-      return deps.getQueueInfo(queueName);
+    getQueueInfo(queueName, tenantId = null) {
+      return deps.getQueueInfo(queueName, tenantId ? { tenantId } : {});
     },
 
     async deleteQueue(queueName, force, tenantId = null) {
-      const result = deps.deleteQueue(queueName, force);
+      const result = deps.deleteQueue(queueName, force, tenantId ? { tenantId } : {});
 
       // A definição PERSISTIDA precisa ser desativada mesmo quando o serviço legado
       // não encontra a fila. O legado trabalha num Map EM MEMÓRIA (volátil: o

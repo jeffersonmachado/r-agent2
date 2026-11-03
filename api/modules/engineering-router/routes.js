@@ -9,6 +9,7 @@
  */
 
 const express = require('express');
+const crypto = require('crypto');
 const { checkClassification } = require('../../middleware/requireClassification');
 const { TASK_TYPES, RISK_LEVELS, TASK_SCOPES } = require('../../../engine/engineeringRouter/constants');
 
@@ -139,8 +140,16 @@ function createEngineeringRouterRoutes({ buildDeps }) {
       // `await`, então o `catch` nunca via o erro de lock — toda chamada concorrente recebia
       // 202 "ACCEPTED" mesmo quando a execução nunca chegava a rodar de verdade.
       const eventAudienceTenantId = req.tenantId || req.agent?.tenantId || undefined;
+      // IDENTIDADE ÚNICA POR REQUISIÇÃO (defeito medido em 2026-10-20).
+      //
+      // `http-<agent>-Date.now()` colide quando dois pedidos chegam no MESMO milissegundo. Como a
+      // cláusula de reentrada do lease aceita `lease_worker_instance_id = :workerInstanceId`, o
+      // segundo pedido se apresentava como o MESMO worker e re-adquiria o lease (fence+1) em vez
+      // de receber 409 — medido em suite de concorrência sob carga: `[202, 202]`, duas execuções
+      // aceitas para a mesma task. UUID por requisição remove a colisão sem enfraquecer a
+      // idempotência real (task terminal continua devolvendo 200 idempotente).
       const beginResult = await deps.engineeringRouterService.beginRun(req.params.id, {
-        runnerId: `http-${req.agent?.id || 'unknown'}-${Date.now()}`,
+        runnerId: `http-${req.agent?.id || 'unknown'}-${crypto.randomUUID()}`,
         ...(eventAudienceTenantId ? { eventAudienceTenantId } : {}),
       });
 

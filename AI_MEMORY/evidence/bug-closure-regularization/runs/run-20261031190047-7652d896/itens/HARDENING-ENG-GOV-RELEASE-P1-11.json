@@ -1,0 +1,25 @@
+{
+  "id": "HARDENING-ENG-GOV-RELEASE-P1-11",
+  "severity": "P1",
+  "estadoPersistido": "RESOLVED",
+  "titulo": "TTL/frescor de evidencia: autoridade unica com 5 regras e vinculacao por run",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "CAMPO_DO_ITEM",
+  "teste": "tests/unit/governance/evidenceTtl.test.js",
+  "transicao": "RESOLVED → RESOLVED",
+  "provasAusentes": [
+    "ASSINATURA_INVALIDA"
+  ],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-P1-11.log",
+  "draft": "governance/bug-closure/proofs-drafts/HARDENING-ENG-GOV-RELEASE-P1-11.json",
+  "camposParaAssinar": 18,
+  "runId": "run-20261031190047-7652d896",
+  "identidade": {
+    "commit": "6cb26bc30a92852019ae58f288cf0fad0a314719",
+    "sourceFingerprint": "2c63e4e87cb2517a1a45a4afaf8bc835f12547c1c05c3d72bef4396bfc64109c",
+    "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+    "hardeningQueueFingerprint": "55380cab06973ba3b5b6c844dbe56b9ce75842d630c5dfa9b175b8325aa6c982",
+    "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+  },
+  "artifactSha256": "63f5508ec537c511bc59a4d2b1b43825d461d507e00cb9410c6aa2d7e14a7436"
+}

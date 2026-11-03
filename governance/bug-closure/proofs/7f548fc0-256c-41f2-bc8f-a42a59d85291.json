@@ -1,0 +1,85 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "7f548fc0-256c-41f2-bc8f-a42a59d85291",
+  "defectId": "L1-CONCORRENCIA-HTTP-DUPLO-ACCEPT",
+  "severityBefore": "P0",
+  "severityAfter": "P0",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "66159b64dcdfd0c7fdabfb70628395370c1f42b8",
+  "codeFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
+  "requiredTests": [
+    "tests/integration/engineeringRouterConcurrentRunHttp.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/integration/engineeringRouterConcurrentRunHttp.test.js",
+      "command": "npx jest tests/integration/engineeringRouterConcurrentRunHttp.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-01T05:14:42.349Z",
+      "finishedAt": "2026-11-01T05:14:48.606Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101051400-b7478e36/logs/L1-CONCORRENCIA-HTTP-DUPLO-ACCEPT.log",
+      "outputSha256": "9c3f704ca71fdeab1fb70ec7a0e38f83a6d0b61e20dd1f2677239170e9475db6"
+    }
+  ],
+  "negativeEvidence": [
+    {
+      "targetFile": "api/services/engineeringRouter/engineeringTaskService.js",
+      "control": "aquisição de lease volta a aceitar reentrada de QUALQUER worker (segunda execução concorrente re-adquire o fence em vez de 409)",
+      "mutatedFromSha256": "24f5cd8525aeda34ad73476f7d1d6af31ee08b05ff827e00f17367894fde4342",
+      "mutatedToSha256": "2d2dba161f5a23c7cb48d113e00422adccb03fca37ee20c06811eda0d0044948",
+      "testPath": "tests/integration/engineeringRouterConcurrentRunHttp.test.js",
+      "command": "npx jest tests/integration/engineeringRouterConcurrentRunHttp.test.js --bail=1 --ci",
+      "baseline": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/L1-CONCORRENCIA-HTTP-DUPLO-ACCEPT-baseline-92ca5b5f.log",
+        "logSha256": "1172456ea83ac15ec08a77f0605dd6f21270565eaa405357a443c9ec29be23a5"
+      },
+      "mutated": {
+        "exitCode": 1,
+        "log": "AI_MEMORY/evidence/prova-negativa/L1-CONCORRENCIA-HTTP-DUPLO-ACCEPT-mutado-92ca5b5f.log",
+        "logSha256": "a0efaa8be5621636e64fae2e08d661fb4e3a7953d4248fd9875f7de2b798b34a"
+      },
+      "restored": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/L1-CONCORRENCIA-HTTP-DUPLO-ACCEPT-restaurado-92ca5b5f.log",
+        "logSha256": "98477b46c2b82095917e51eae3c8703b77c3a7ec99031e310529f4d2eb4731ca"
+      },
+      "capturedAt": "2026-11-01T05:13:40.306Z"
+    }
+  ],
+  "artifactHashes": [
+    {
+      "path": "tests/integration/engineeringRouterConcurrentRunHttp.test.js",
+      "sha256": "ff769ca53e44c73b73f33bbadfb702bf8ae1bfe6ed50e5568783bebab89e96ae"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": {
+    "channel": "VSCODE_AGENT",
+    "by": "platform-owner:jeffersonmachado",
+    "at": "2026-11-01T05:45:40.950931Z",
+    "ref": "session:e92510ac-0f54-41c6-bb85-90f42042999c",
+    "agentSession": "e92510ac-0f54-41c6-bb85-90f42042999c"
+  },
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+  },
+  "createdAt": "2026-11-01T05:14:48.614Z",
+  "proofHash": "98fae20e21690d5198b084220df5e21214ef3e655dcd092957b6133548e13067",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "qjrfIFoMJrrJo+IlRpifPqeFRkVGd8jMFQpmppfuI1u6W4ITS4Tl3uVaGvMZNWM+u2MUvd986stwsdUhak7VAg==",
+    "signedAt": "2026-11-01T05:45:52.978Z"
+  }
+}

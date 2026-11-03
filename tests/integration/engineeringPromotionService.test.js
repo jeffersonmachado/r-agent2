@@ -18,7 +18,13 @@ const { execFileSync } = require('child_process');
 const { createWorkspace, applyPatch, destroyWorkspace } = require('../../api/services/engineeringRouter/patchApplyService');
 const { promoteValidatedPatch, candidateBranchName } = require('../../api/services/engineeringRouter/promotionService');
 
-const REPO_ROOT = path.resolve(__dirname, '..', '..');
+// QUAL REPOSITÓRIO? O que o SERVIÇO usa, não o diretório deste arquivo.
+// `promotionService`/`patchApplyService` operam sobre `ROOT` de `contextBuilderService`, que honra
+// `ENGINEERING_ROUTER_HOST_REPO_ROOT` (o container do Router precisa do caminho do HOST). Numa worktree
+// ligada os dois divergem — medido em 2026-10-26: `.env` aponta `HOST_REPO_ROOT` para o checkout
+// principal (HEAD 484eee47), enquanto `__dirname/../..` é a worktree (HEAD 8dbaec15). O teste então
+// media um repositório e o serviço promovia em outro, e as duas asserções de HEAD invertiam.
+const { ROOT: REPO_ROOT } = require('../../api/services/engineeringRouter/contextBuilderService');
 const FIXTURE_FILE = 'tests/fixtures/engineering-router-sandbox/mathUtils.js';
 const FIXTURE_TEST_COMMAND = 'npx jest --testPathIgnorePatterns=/node_modules/ --testPathPattern=tests/fixtures/engineering-router-sandbox/mathUtils.test.js --no-coverage';
 
@@ -346,7 +352,10 @@ describe('ER-V1-SEAL-001 — Immutable Promotion Baseline (dirty working tree nu
     });
     if (result.promoted) createdBranches.push(candidateBranchName(taskId));
 
-    expect(result.promoted).toBe(true);
+    // DIAGNÓSTICO (2026-10-20): sob carga (bateria em --maxWorkers=2) a promoção reprovou em silêncio
+    // e a mensagem padrão `Expected: true, Received: false` não dizia QUAL etapa falhou. Incluir o
+    // `code` na asserção não afrouxa nada (continua exigindo promoted=true) e torna a falha acionável.
+    expect({ promoted: result.promoted, code: result.code || null }).toEqual({ promoted: true, code: null });
     expect(result.evidence.validatedChangedPaths).toEqual([FIXTURE_FILE]);
     expect(result.evidence.promotedChangedPaths).toEqual([FIXTURE_FILE]);
 

@@ -41,6 +41,21 @@
 const path = require('path');
 const { execFileSync } = require('child_process');
 
+/**
+ * ESCOPO DE CREDENCIAL DO ROUTER = O TENANT DESTA SUÍTE.
+ *
+ * O Router resolve credencial por `ENGINEERING_ROUTER_TENANT_ID` (default `system`) e, no runner
+ * efêmero, `system` não tem credencial nenhuma: o diagnóstico do próprio teste mostrou
+ * `routing_decision.coder = {selected: null, reasonCodes: [NO_QUALIFIED_CANDIDATE]}` e a task de
+ * correção `BLOCKED` — nada a ver com o finding. O mesmo defeito já foi medido e corrigido em
+ * `engineeringBugLoopNaturalPathE2E` (runs 39673283430 e 39676752021); aqui vale o MESMO padrão.
+ *
+ * ORDEM IMPORTA: a variável é lida no carregamento do módulo, então a atribuição vem ANTES dos
+ * `require` que trazem `engineeringRouterService`/`engineeringModelAvailabilityService`.
+ */
+const TEST_TENANT_KEY = 'jest-e2e-gov-approval-worker';
+process.env.ENGINEERING_ROUTER_TENANT_ID = TEST_TENANT_KEY;
+
 const sequelizeModule = require('../../api/db/sequelize');
 const { skipOrFail } = require('../helpers/infraGate');
 const { registerAiProvider, clearAiProviderConfig } = require('../../api/services/aiProviderManager');
@@ -64,7 +79,6 @@ const FIXTURE_TEST_COMMAND = 'npx jest --testPathIgnorePatterns=/node_modules/ -
 /** Escopo DECLARADO da task: inclui governança ⇒ a triagem classifica self-modification. */
 const GOVERNANCE_SCOPE = 'scripts/governance/';
 
-const TEST_TENANT_KEY = 'jest-e2e-gov-approval-worker';
 const SUITE_NAME = 'governance-approval-full-worker-e2e';
 
 /** Marcador do objetivo da task ORIGINAL — o dublê de LLM falha apenas nela. */
@@ -118,6 +132,40 @@ async function cleanupTask(taskId) {
   await index.getEngineeringTelemetryEvent().destroy({ where: { task_id: taskId } }).catch(() => {});
   await index.getEngineeringOperation().destroy({ where: { task_id: taskId } }).catch(() => {});
   await index.getEngineeringTask().destroy({ where: { id: taskId } }).catch(() => {});
+}
+
+/**
+ * Guarda de ORDEM DO ESCOPO (a variável é lida no carregamento dos módulos do Router).
+ *
+ * Chamada no setup: se alguém mover a atribuição de `ENGINEERING_ROUTER_TENANT_ID` para depois dos
+ * `require` — ou sobrescrevê-la no meio do arquivo — o Router volta a resolver credencial no tenant
+ * `system`, e a suíte passa a depender de estado do operador (foi exatamente o defeito medido nos
+ * runs 39673283430/39676752021). Aqui isso falha ALTO, no setup, em vez de virar `BLOCKED` no meio
+ * do ciclo.
+ */
+function provisionCredentialScope() {
+  const escopo = process.env.ENGINEERING_ROUTER_TENANT_ID;
+  if (escopo !== TEST_TENANT_KEY) {
+    throw new Error(
+      `escopo de credencial do Router deveria ser ${TEST_TENANT_KEY} (tenant da suíte) e é ${escopo} — `
+      + 'a env é lida no carregamento do módulo, então a atribuição tem de vir ANTES dos requires',
+    );
+  }
+  return escopo;
+}
+
+/**
+ * Não há nada a restaurar: o escopo é o tenant que esta suíte cria e destrói, e nenhuma credencial é
+ * escrita em tenant de terceiro (o padrão canônico substituiu a fixture que usava `system`).
+ * A função permanece como registro executável dessa garantia — se o escopo divergir no teardown,
+ * algo escreveu no lugar errado e a suíte falha.
+ */
+function restoreCredentialScope() {
+  const escopo = process.env.ENGINEERING_ROUTER_TENANT_ID;
+  if (escopo !== TEST_TENANT_KEY) {
+    throw new Error(`escopo de credencial divergiu no teardown: ${escopo} (esperado ${TEST_TENANT_KEY})`);
+  }
+  return { restored: false, reason: 'escopo é o tenant da suíte; nenhuma credencial de terceiro foi tocada' };
 }
 
 beforeAll(async () => {
@@ -176,6 +224,7 @@ beforeAll(async () => {
 
   const CANDIDATE_PROVIDERS = ['anthropic', 'mistral', 'kimi', 'deepseek', 'openai', 'qwen', 'groq'];
   const { saveAICredentials } = require('../../api/services/tenantAIService');
+  provisionCredentialScope();
   for (const provider of CANDIDATE_PROVIDERS) {
     registerAiProvider(provider, makeFakeProvider(provider));
     await saveAICredentials(TEST_TENANT_KEY, provider, `jest-fixture-fake-key-${provider}-${Date.now()}`);
@@ -183,6 +232,7 @@ beforeAll(async () => {
 }, 60000);
 
 afterAll(async () => {
+  restoreCredentialScope();
   if (!dbAvailable) return;
   clearAiProviderConfig();
   const index = require('../../api/db/models');
@@ -325,9 +375,21 @@ describe('GOVERNANCE_APPROVAL — o worker autônomo bloqueia sem aval e conclui
       // DIAGNÓSTICO (não narrativa): quando o ciclo não fecha, o defeito é medido aqui — estado do
       // finding, contrato da task de correção e erro real das tentativas.
       const diagnostic = await bugFindingService.getFinding(finding.id);
+      // O finding ESPERADO pode não ser o único da missão: o laço pode criar/renomear linhas por
+      // dedupe e recorrência. Sem a lista completa, "status CONFIRMED" não distingue "não fechou"
+      // de "fechou OUTRO finding" — foi exatamente a ambiguidade que travou o diagnóstico no
+      // runner em 2026-10-29 (dois findings fecharam e o esperado continuou CONFIRMED).
+      const diagFindings = await bugFindingService
+        .listFindings({ missionId: mission.id, limit: 20 })
+        .catch(() => []);
       const diagTask = await engineeringTaskService.getTask(triaged.fix_task_id);
       const diagAttempts = await engineeringTaskService.listAttempts(triaged.fix_task_id);
       console.log('DIAG_NAO_FECHOU', JSON.stringify({
+        findingIdEsperado: finding.id,
+        findingsDaMissao: diagFindings.map((f) => ({
+          id: f.id, status: f.status, fix_task_id: f.fix_task_id, created_at: f.created_at,
+          recurrence_count: f.recurrence_count, dedupe_key: f.dedupe_key,
+        })),
         finding: {
           status: diagnostic.status, severity: diagnostic.severity, category: diagnostic.category,
           self_modification: diagnostic.self_modification,

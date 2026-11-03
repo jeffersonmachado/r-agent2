@@ -468,12 +468,20 @@ describe('Qwen — taxonomia de estados (nada de "live" sem execução ao vivo)'
     let liveKey = null;
     let resolveError = null;
     try {
-      await connect();
-      liveKey = await realTenantAIService.getDecryptedAPIKey('system', QWEN);
+      // PRAZO EXPLÍCITO (medido no CI, run 39585223390): sem Postgres no runner o `connect()`
+      // fica pendurado e o Jest matava o teste por `Exceeded timeout of 60000 ms` — o fluxo
+      // nunca chegava ao `skipOrFail` que registra NOT_EXECUTED, então a suíte ficava vermelha
+      // por AMBIENTE. Com prazo, a indisponibilidade vira erro explícito e o estado reportado é
+      // o correto (NOT_EXECUTED em dev, INFRA_ERROR em release-authoritative).
+      await infraGate.comPrazo(() => connect(), { ms: 8000, requisito: 'postgres' });
+      liveKey = await infraGate.comPrazo(
+        () => realTenantAIService.getDecryptedAPIKey('system', QWEN),
+        { ms: 8000, requisito: 'postgres+encryption_key' },
+      );
     } catch (error) {
       resolveError = error;
     } finally {
-      await close().catch(() => {});
+      await infraGate.comPrazo(() => close(), { ms: 5000, requisito: 'postgres' }).catch(() => {});
     }
 
     // Infra indisponível (Postgres fora do ar, ou ENCRYPTION_KEY diferente da que cifrou a

@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "kind": "bug-closure-regularization-run",
+  "authoritative": false,
+  "runId": "run-20261101065707-6738559c",
+  "versaoRegularizador": "2.0.0",
+  "identidade": {
+    "commit": "68a1da1922d793a5937fcfa9a0c4441a7d734594",
+    "sourceFingerprint": "f11b8df06b0649b60593c1dfdf19732315a805dad802c1669dfdd11de376e649",
+    "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+    "hardeningQueueFingerprint": "0f9a6027f934c0e3e2947e898df77f0681eaeba80b26276ede7bc73f05098146",
+    "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+  },
+  "ambiente": {
+    "node": "v22.12.0",
+    "plataforma": "linux-x64",
+    "host": "jmachado-Precision-5530",
+    "runnerDeTeste": "jest",
+    "bancoDeTeste": "padrao",
+    "runnerEngenharia": "ENGINEERING_RUNNER_URL"
+  },
+  "escopo": {
+    "tipo": "PARCIAL",
+    "filtroSeveridade": "ALL",
+    "idsSelecionados": [
+      "MISSAO-A-L2-L3-ORQUESTRADOR"
+    ],
+    "limite": 0,
+    "esperadoNoEscopo": 1,
+    "idsEsperados": [
+      "MISSAO-A-L2-L3-ORQUESTRADOR"
+    ],
+    "completo": false
+  },
+  "status": "COMPLETED",
+  "startedAt": "2026-11-01T06:57:07.065Z",
+  "completedAt": "2026-11-01T06:57:10.272Z",
+  "resultados": 1,
+  "observacoes": []
+}

@@ -45,6 +45,11 @@ process.env.ENGINEERING_ROUTER_WORKSPACE_ROOT = WORKSPACE_DIR;
 const sequelizeModule = require('../../api/db/sequelize');
 const { skipOrFail: infraSkipOrFail } = require('../helpers/infraGate');
 
+// Orçamento de espera para suíte com I/O real (git). Ver tests/helpers/jestTimeouts.js.
+const { TIMEOUT_INTEGRATION_IO_MS } = require('../helpers/jestTimeouts');
+
+jest.setTimeout(TIMEOUT_INTEGRATION_IO_MS);
+
 /**
  * HIGIENE DE INFRAESTRUTURA DE TESTE (intervenção humana/externa, 2026-10-07).
  *
@@ -750,5 +755,137 @@ describe('Mission Source Authority — E2E com git real', () => {
     const healed = await missionSourceService.getMissionSource(mission.id);
     expect(healed.currentCommit).toBe(candidate);
     expect(healed.state).toBe('READY');
+  });
+
+  /**
+   * PÍLULA ENVENENADA DA RECONCILIAÇÃO DE BOOT — regressão de 2026-10-27.
+   *
+   * DEFEITO MEDIDO: o desfecho `BLOCKED_REQUIRES_REPAIR` não era PERSISTIDO, então o intent voltava
+   * ao scan em todo boot sem sair de PREPARED/GIT_APPLIED/DB_APPLIED. Com backlog de ~209 linhas
+   * nesse estado, a reconciliação de boot consumia o lote inteiro nesses intents para sempre e
+   * NUNCA alcançava o intent recém-crashado (medido: missions=138, reconciled=0).
+   *
+   * A prova é em dois passos, sem depender da ordem global da tabela:
+   *   1. o desfecho "requer reparo" PERSISTE estado (intent + missão) — antes ficava pendente;
+   *   2. na chamada SEGUINTE o intent não é mais reprocessado — antes voltava para sempre.
+   */
+  /**
+   * DRENAGEM COM HEAD ESTACIONÁRIO — regressão de 2026-10-28 (achado P1 da revisão).
+   *
+   * DEFEITO MEDIDO: excluir os já visitados EM MEMÓRIA não bastava. O desfecho `PROCEED` NÃO muda
+   * `integration_status`; se o head da fila é ocupado por esses intents, o lote seguinte devolve as
+   * MESMAS linhas, `novos` fica vazio e a drenagem PARA — o intent recuperável (mais recente) nunca
+   * é alcançado. A exclusão passou a ir no SQL (`Op.notIn`), como o resto da casa já fazia.
+   *
+   * Prova: 2 intents estacionários ANTIGOS + 1 recuperável logo depois, varredura com `limit` menor
+   * que a fila. A asserção é sobre o recuperável ser ALCANÇADO.
+   */
+  test('MISSION_SRC_15 — desfecho "requer reparo" PERSISTE no intent (antes ficava preso em PREPARED)', async () => {
+    if (skipReason) return skipOrFail(SUITE_NAME, skipReason);
+
+    const { EngineeringMissionIntegration } = require('../../api/db/models');
+    const Integration = EngineeringMissionIntegration();
+
+    // Intent cujo estado a reconciliação automática NÃO consegue resolver: tem candidate e task, mas
+    // nenhuma branch de integração — o desfecho é `BLOCKED_REQUIRES_REPAIR`. É exatamente a linha que,
+    // antes da correção, ficava presa em PREPARED e consumia o lote em todo boot.
+    const current = await missionSourceService.getMissionSource(mission.id);
+    const candidate = createCandidate({
+      baseCommit: current.currentCommit,
+      files: { 'src/nao-reconciliavel.js': 'module.exports = "poison";\n' },
+      message: 'candidate nao reconciliavel',
+    });
+    const task = await createTaskRow({
+      missionId: mission.id, sourceCommit: current.currentCommit, sourceRef: current.integrationBranch, title: 'task-nao-reconciliavel',
+    });
+    const integrationKey = source.buildIntegrationKey({ missionId: mission.id, taskId: task.id, candidateCommit: candidate });
+    const intent = await Integration.create({
+      mission_id: mission.id,
+      task_id: task.id,
+      integration_type: 'CANDIDATE',
+      integration_result: 'PENDING',
+      integration_status: 'PREPARED',
+      candidate_commit: candidate,
+      candidate_base_commit: current.currentCommit,
+      mission_commit_before: current.currentCommit,
+      mission_commit_after: null,
+      integration_branch: null,
+      integration_key: integrationKey,
+      source_fence: Number(current.fence || 0),
+    });
+
+    // Reconciliação POR MISSÃO (escopo explícito). A varredura GLOBAL não entra em teste de propósito:
+    // ela classifica o banco inteiro contra o repositório DESTE processo e escreveria estado em linhas
+    // de terceiros (medido em revisão de 2026-10-28) — a prova do scan fica em MISSION_SRC_16, com o
+    // serviço por missão DUBLADO, sem efeito colateral.
+    const resultado = await missionSourceService.reconcileMissionSourceIntents({ missionId: mission.id });
+    expect(resultado.outcomes.find((o) => o.intentId === intent.id).outcome).toBe('BLOCKED_REQUIRES_REPAIR');
+
+    const intentPersistido = await Integration.findByPk(intent.id);
+    expect(intentPersistido.integration_status).toBe('RECOVERY_REQUIRED');
+    // O motivo auditável fica NO INTENT (fonte do desfecho). Não se escreve estado na missão: o raio
+    // de dano disso foi medido — um processo apontando para um repo sem as refs de missão marcaria
+    // como "requer reparo" missões sadias, sem caminho de volta.
+    expect(intentPersistido.evidence && intentPersistido.evidence.code).toBe('MISSION_SOURCE_RECOVERY_REQUIRED');
+  });
+
+  test('MISSION_SRC_16 — fila com head estacionário não impede alcançar o intent recuperável', async () => {
+    if (skipReason) return skipOrFail(SUITE_NAME, skipReason);
+
+    const { EngineeringMissionIntegration } = require('../../api/db/models');
+    const Integration = EngineeringMissionIntegration();
+    const recovery = require('../../api/services/engineeringMission/missionRecoveryCoordinator');
+
+    const missaoEstacionaria = (n) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
+    const RECUPERAVEL = '00000000-0000-4000-8000-000000007777';
+    const inserir = async (missionId, status, quando) => {
+      const row = await Integration.create({
+        mission_id: missionId, task_id: null, integration_type: 'CANDIDATE', integration_result: 'PENDING',
+        integration_status: status, candidate_commit: 'a'.repeat(40), integration_branch: null,
+        integration_key: source.buildIntegrationKey({ missionId, taskId: `t${missionId.slice(-6)}`, candidateCommit: 'a'.repeat(40) }),
+        source_fence: 0,
+      });
+      // `updated_at` controlado: são os mais ANTIGOS do banco, então entram no primeiro lote.
+      await Integration.sequelize.query(
+        'UPDATE engineering_mission_integrations SET updated_at = :q WHERE id = :id',
+        { replacements: { q: quando, id: row.id } },
+      );
+      return row;
+    };
+
+    const criadas = [];
+    try {
+      criadas.push(await inserir(missaoEstacionaria(1), 'PREPARED', '1990-01-01T00:00:00Z'));
+      criadas.push(await inserir(missaoEstacionaria(2), 'PREPARED', '1990-01-02T00:00:00Z'));
+      criadas.push(await inserir(RECUPERAVEL, 'GIT_APPLIED', '1990-01-03T00:00:00Z'));
+
+      // Um intent que JÁ exige reparo não pode voltar ao scan automático (é o que consumia o lote).
+      criadas.push(await inserir(missaoEstacionaria(3), 'RECOVERY_REQUIRED', '1990-01-04T00:00:00Z'));
+
+      // `PROCEED` = intent que NÃO sai do conjunto auto-reconciliável (o caso que travava a drenagem).
+      const svc = require('../../api/services/engineeringMission/missionSourceService');
+      const espiao = jest.spyOn(svc, 'reconcileMissionSourceIntents')
+        .mockResolvedValue({ reconciled: 0, outcomes: [{ intentId: 'estacionario', outcome: 'PROCEED' }] });
+      try {
+        const r = await recovery.reconcilePendingIntents({ limit: 2, maxLotes: 3 });
+        const visitadas = espiao.mock.calls.map(([args]) => args.missionId);
+        // 1) o recuperável é ALCANÇADO mesmo com o head da fila estacionário;
+        expect(visitadas).toContain(RECUPERAVEL);
+        expect(r.missions).toBeGreaterThanOrEqual(3);
+        // 2) o que exige reparo NÃO é reescaneado;
+        expect(visitadas).not.toContain(missaoEstacionaria(3));
+        // 3) e a dívida de reparo é CONTADA (sinal agregado, sem tocar estado de missão);
+        expect(r.needsRepair).toBeGreaterThanOrEqual(1);
+        expect(typeof r.pending).toBe('number');
+
+        // 4) TETO: com `maxLotes` menor que a fila, o que sobra é CONTADO em `pending` (nunca silêncio).
+        const teto = await recovery.reconcilePendingIntents({ limit: 1, maxLotes: 1 });
+        expect(teto.pending).toBeGreaterThanOrEqual(1);
+      } finally {
+        espiao.mockRestore();
+      }
+    } finally {
+      for (const row of criadas) await row.destroy().catch(() => {});
+    }
   });
 });

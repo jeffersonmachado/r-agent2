@@ -1,0 +1,14 @@
+{
+  "id": "AUDITORIA-CHECKPOINT-PROTOCOL",
+  "severity": "P3",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Checkpoints incrementais auditáveis (gravador executável + runbook + ponteiro)",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+  "teste": "tests/unit/audit/checkpointTool.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/AUDITORIA-CHECKPOINT-PROTOCOL.log",
+  "draft": "governance/bug-closure/proofs-drafts/AUDITORIA-CHECKPOINT-PROTOCOL.json",
+  "camposParaAssinar": 18
+}

@@ -203,9 +203,19 @@ describe('final-status-projection gate', () => {
     expect(result.issues).toHaveLength(0);
   });
 
-  it('estado real do repositório está consistente', () => {
-    const result = checkProjectionConsistency(path.resolve(__dirname, '..', '..'));
-    expect(result.issues).toEqual([]);
-    expect(result.status).toBe('PASS');
+  // Fase 3, missão D: a asserção sobre o ESTADO REAL do repositório não pertence ao L2. Ela não
+  // testa o validador com fixture — testa a CERTIFICAÇÃO do estado canônico, que depende de
+  // `governance/rap-master-scorecard.json` (gitignored, produzido em run governado). Num checkout
+  // limpo o artefato não existe e o L2 ficava vermelho por dependência de evidência governada.
+  // O controle NÃO foi removido: vive em `tests/certification/canonicalProjectionState.test.js` e é
+  // exigido pelo gate de certificação (`PASSOS.R` → `npm run test:certification`). Este caso trava
+  // justamente a EXISTÊNCIA e o conteúdo daquele controle — apagar a suíte de certificação para
+  // "limpar" o L2 passa a reprovar aqui.
+  it('estado real do repositório é verificado pela suíte de CERTIFICAÇÃO (separação formal)', () => {
+    const caminhoCertificacao = path.join(__dirname, '..', 'certification', 'canonicalProjectionState.test.js');
+    expect(fs.existsSync(caminhoCertificacao)).toBe(true);
+    const fonte = fs.readFileSync(caminhoCertificacao, 'utf8');
+    expect(fonte).toContain('checkProjectionConsistency(ROOT)');
+    expect(fonte).toContain('BLOCKED_BY_GOVERNED_EVIDENCE');
   });
 });

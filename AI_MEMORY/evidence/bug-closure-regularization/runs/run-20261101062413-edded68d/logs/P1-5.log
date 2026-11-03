@@ -1,0 +1,25 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-9.2.0, pluggy-1.7.0
+rootdir: /opt/results/ria/er-fixci/rag-service
+configfile: pytest.ini
+plugins: cov-7.1.0
+collected 18 items
+
+rag-service/tests/test_hybrid_search.py ..................               [100%]
+
+================================ tests coverage ================================
+_______________ coverage: platform linux, python 3.12.3-final-0 ________________
+
+Name                                      Stmts   Miss  Cover   Missing
+-----------------------------------------------------------------------
+rag-service/config/__init__.py                0      0   100%
+rag-service/config/settings.py              131     52    60%   24, 38, 41, 57-59, 82-86, 101-143, 229-241, 282, 322-323
+rag-service/services/__init__.py              0      0   100%
+rag-service/services/hybrid_search.py        66      1    98%   86
+rag-service/tests/__init__.py                 0      0   100%
+rag-service/tests/conftest.py                45     10    78%   29, 53, 57-58, 67-73
+rag-service/tests/test_hybrid_search.py      95      0   100%
+-----------------------------------------------------------------------
+TOTAL                                       337     63    81%
+Coverage HTML written to dir htmlcov
+============================== 18 passed in 1.40s ==============================

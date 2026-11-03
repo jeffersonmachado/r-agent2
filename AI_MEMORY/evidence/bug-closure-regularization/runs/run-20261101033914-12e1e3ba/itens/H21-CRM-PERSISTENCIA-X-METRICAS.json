@@ -1,0 +1,25 @@
+{
+  "id": "H21-CRM-PERSISTENCIA-X-METRICAS",
+  "severity": "P2",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "CRM grava em store in-memory por processo, mas o painel mede tabelas do banco: mutação não reflete nos números e o dado some no restart",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "CAMPO_DO_ITEM",
+  "teste": "tests/unit/crmRealtimeEvents.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [
+    "ASSINATURA_INVALIDA"
+  ],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101033914-12e1e3ba/logs/H21-CRM-PERSISTENCIA-X-METRICAS.log",
+  "draft": "governance/bug-closure/proofs-drafts/H21-CRM-PERSISTENCIA-X-METRICAS.json",
+  "camposParaAssinar": 18,
+  "runId": "run-20261101033914-12e1e3ba",
+  "identidade": {
+    "commit": "3441bcacac223f381adfbc749bff054c58fdf358",
+    "sourceFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
+    "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+    "hardeningQueueFingerprint": "36ca0d6fcc472d5d75ad821c12966ab791abb42189d8503e78a9b4990c850d52",
+    "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+  },
+  "artifactSha256": "a1c41dcc0f6de887580281379630c23347ed0340378eba8c864b2aba49a5a610"
+}

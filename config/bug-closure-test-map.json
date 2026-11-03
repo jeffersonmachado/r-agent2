@@ -1,0 +1,6 @@
+{
+  "$comment": "Mapeamento CONFIRMADO por humano entre item da fila e suíte de regressão. Usado por scripts/governance/regularize-bug-closures.js. Cada entrada exige que o arquivo exista; o teste é executado de verdade e a saída vira artefato da prova.",
+  "MISSAO-B1-CADEIA-CRIPTOGRAFICA": "tests/unit/governance/bugClosureHistoricalGuards.test.js",
+  "P1-AGREGADO-SEM-IDENTIDADE-DE-RUN-BLOQUEIA-L3": "tests/unit/governance/bugClosureHistoricalGuards.test.js",
+  "CI-CHECKOUT-LIMPO-HARNESS": "tests/unit/governance/bugClosureHistoricalGuards.test.js"
+}

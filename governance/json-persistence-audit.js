@@ -66,6 +66,13 @@ const CLASSIFIED = {
   'governance/.current-run.json': 'DB_CANONICAL_JSON_EXPORT',
   'governance/materialized-proof-artifacts-report.json': 'DB_CANONICAL_JSON_EXPORT',
   'reports/governance-score.json': 'DB_CANONICAL_JSON_EXPORT',
+  // Proposta mecânica de testes de regressão (derivada do inventário; reconstruível por
+  // `node scripts/governance/regularize-bug-closures.js --propor-testes`).
+  'reports/bug-closure-test-proposals.json': 'ARTIFACT_STORAGE',
+  // Manifesto e resultados POR EXECUÇÃO do regularizador (P1-B): `runs/<runId>/manifest.json`
+  // e `runs/<runId>/itens/<ID>.json`. Evidência regenerável a cada execução — nunca estado
+  // canônico. Classificados pelo PADRÃO porque o caminho carrega o runId.
+  'AI_MEMORY/evidence/bug-closure-regularization/runs': 'ARTIFACT_STORAGE',
   'reports/master-scorecard-regression-report.json': 'DB_CANONICAL_JSON_EXPORT',
   'reports/master-scorecard-test-report.json': 'DB_CANONICAL_JSON_EXPORT',
   'reports/coverage-gate-report.json': 'DB_CANONICAL_JSON_EXPORT',
@@ -80,6 +87,10 @@ const CLASSIFIED = {
   // estes dois são EXPORT regenerável a cada execução dos validadores.
   'reports/bug-closure-status.json': 'DB_CANONICAL_JSON_EXPORT',
   'reports/hardening-queue-migration.json': 'DB_CANONICAL_JSON_EXPORT',
+  // Backfill da suíte de regressão (2026-10-30): relatório DERIVADO da fila oficial,
+  // regenerado a cada `node scripts/governance/backfill-regression-tests.js`. A fonte
+  // canônica dos fechamentos continua sendo `AI_MEMORY/hardening-queue.json`.
+  'reports/regression-test-backfill.json': 'DB_CANONICAL_JSON_EXPORT',
   // Veredito PRÓPRIO do gate agregado (P1: antes só existia o exit code do
   // processo que invocava a cadeia `&&`).
   'reports/governance-enforcement-verdict.json': 'DB_CANONICAL_JSON_EXPORT',
@@ -138,6 +149,9 @@ const CLASSIFIED = {
 // (ex.: scripts/smoke escreve em qa/enterprise/ com caminho relativo variável).
 const BASENAME_CLASSIFIED = {
   'human-handoff-full-validation.json': 'ARTIFACT_STORAGE',
+  // Mapa CONFIRMADO por humano de defeito → teste (P1-A/P1-B). É configuração VERSIONADA lida
+  // pelo regularizador; o scanner estático só enxerga o basename (path.join em variável).
+  'bug-closure-test-map.json': 'STATIC_VERSIONED_CONFIG',
   'pbx-voice-flow-prod-like.json': 'ARTIFACT_STORAGE',
   'omnichannel-unified-replay.json': 'ARTIFACT_STORAGE',
   'enterprise-proof-report.json': 'ARTIFACT_STORAGE',
@@ -290,6 +304,10 @@ function classifyByPattern(norm, writer) {
   // `audit:json-persistence` inteiro. Não é estado de banco nem cache: é configuração versionada,
   // imutável em runtime — mesma classe dos demais arquivos de `config/`.
   if (base === 'mandatory-gate-dependencies.json') return 'STATIC_VERSIONED_CONFIG';
+  // Relatório derivado do backfill da suíte de regressão (2026-10-30). O scanner estático
+  // resolve `path.join` em variável para o BASENAME, então a entrada por caminho em
+  // CLASSIFIED não é alcançada — a regra por basename é o que classifica de fato.
+  if (base === 'regression-test-backfill.json') return 'DB_CANONICAL_JSON_EXPORT';
   if (base === 'latest.json' || base === 'index.json' || /learning-routine|cenario2|demo/.test(base) || /demo/.test(writer)) return 'DB_CANONICAL_JSON_EXPORT';
   return null;
 }

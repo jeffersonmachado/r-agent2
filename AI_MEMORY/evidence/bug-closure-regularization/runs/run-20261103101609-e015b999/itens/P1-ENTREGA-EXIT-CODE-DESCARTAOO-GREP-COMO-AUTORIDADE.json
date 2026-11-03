@@ -1,0 +1,25 @@
+{
+  "id": "P1-ENTREGA-EXIT-CODE-DESCARTAOO-GREP-COMO-AUTORIDADE",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Verificacao de ENTREGA descartava o exit code e usava grep de texto positivo como autoridade",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+  "teste": "tests/unit/governance/deliveryVerification.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [
+    "ASSINATURA_INVALIDA"
+  ],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103101609-e015b999/logs/P1-ENTREGA-EXIT-CODE-DESCARTAOO-GREP-COMO-AUTORIDADE.log",
+  "draft": "governance/bug-closure/proofs-drafts/P1-ENTREGA-EXIT-CODE-DESCARTAOO-GREP-COMO-AUTORIDADE.json",
+  "camposParaAssinar": 18,
+  "runId": "run-20261103101609-e015b999",
+  "identidade": {
+    "commit": "c43614969fa7e5eafcf680b4028097b25143cd94",
+    "sourceFingerprint": "330ad47b88702d47d7e21c625a1e77f0b4c8570f55d13be8e8dbc2fc64212ad6",
+    "inventoryFingerprint": "39003d9ea50ba5df64c09cac080101b8cfe1011e0128cbf74c0f5c426d38ce8c",
+    "hardeningQueueFingerprint": "600da24c0515b6d1d9076b2356d196463066f13ae986679cf91189d454974a22",
+    "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+  },
+  "artifactSha256": "dab35e4beb7a106037aac62364d1f06ef36197fd80113710df6047c1e9ab3a98"
+}

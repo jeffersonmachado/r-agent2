@@ -89,7 +89,7 @@ describe('queue module', () => {
 
     await controller.remove(req, res);
 
-    expect(deps.deleteQueue).toHaveBeenCalledWith('oldq', false);
+    expect(deps.deleteQueue).toHaveBeenCalledWith('oldq', false, { tenantId: 'tenant-1' });
     expect(deps.queueDefinitionService.upsertQueue).toHaveBeenCalledWith(expect.objectContaining({
       tenantId: 'tenant-1',
       name: 'oldq',

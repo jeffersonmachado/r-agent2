@@ -21,7 +21,7 @@
  */
 
 const fs = require('fs');
-const { PID_FILE } = require('./engineeringRunnerGlobalSetup');
+const { PID_FILE, SESSION_FILE } = require('./engineeringRunnerGlobalSetup');
 
 function isAlive(pid) {
   try {
@@ -48,8 +48,26 @@ async function waitForDeath(pid, timeoutMs) {
 
 module.exports = async function engineeringRunnerGlobalTeardown() {
   if (!fs.existsSync(PID_FILE)) return;
+  // SÓ ENCERRA O RUNNER QUE *ESTA* SESSÃO SUBIU.
+  //
+  // DEFEITO REAL MEDIDO (2026-10-21): o teardown lia um arquivo por PORTA, não por sessão. Uma
+  // sessão Jest ANINHADA (o `npx jest --runInBand` de `run-impact-validation.js`, disparado
+  // dentro de um teste) que reutilizava o runner da sessão-mãe apagava o PID e — pior — encerrava
+  // o runner alheio ao terminar, derrubando o resto da bateria da sessão-mãe com
+  // `ECONNREFUSED`/`SANDBOX_UNAVAILABLE`. O dono é agora explícito: sem registro de dono, ou com
+  // dono diferente deste processo, nada é encerrado nem apagado (o resíduo real continua sendo
+  // limpo pelo pré-check do globalSetup, que é fail-closed).
+  const donoBruto = fs.existsSync(SESSION_FILE) ? fs.readFileSync(SESSION_FILE, 'utf8').trim() : '';
+  if (donoBruto !== String(process.pid)) {
+    process.stderr.write(
+      `[jest-global-teardown] runner desta porta pertence à sessão Jest ${donoBruto || '(desconhecida)'}, ` +
+      `não a esta (${process.pid}) — reutilizado, não encerrado.\n`,
+    );
+    return;
+  }
   const pid = Number(fs.readFileSync(PID_FILE, 'utf8').trim());
   fs.rmSync(PID_FILE, { force: true });
+  fs.rmSync(SESSION_FILE, { force: true });
   if (!pid || !isAlive(pid)) return;
   try {
     process.kill(pid, 'SIGTERM');

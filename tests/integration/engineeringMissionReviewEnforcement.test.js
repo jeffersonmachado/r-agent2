@@ -85,7 +85,9 @@ async function fabricateExecutedTaskArtifacts(taskId, { patchDiff, acceptanceCri
   });
   await m.TestRun.create({
     attempt_id: attempt.id,
-    command: 'npx jest DR-ENGINEERING_MEMORY_REUSE --no-coverage',
+    // Comando CLASSIFICADO como UNIT (auditoria 2026-10-20): o gate `unit` deixou de aceitar
+    // execução genérica/UNKNOWN como cobertura unitária.
+    command: 'npx jest tests/unit --no-coverage',
     status: 'PASS',
     exit_code: 0,
     stdout_excerpt: 'DR-ENGINEERING_MEMORY_REUSE ok',

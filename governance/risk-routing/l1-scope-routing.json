@@ -1,0 +1,71 @@
+{
+  "artifactType": "l1-scope-routing",
+  "artifactVersion": 1,
+  "_doc": "Roteamento dos bloqueios declarados da fila para a DECISAO que de fato os possui (missao L-1 FINAL §2, §5, §6). Rotear NAO e aceitar nem resolver: nenhum item aqui vira 'resolvido' sem PROBE executada, e nenhum item pode ser roteado se carregar categoria nao dispensavel (governance/risk-acceptance/policy.js). Alterar este arquivo e alterar um ato de governanca: fica no diff e exige revisao humana.",
+  "decision": "ENGINEER_SUPERVISED_READINESS",
+  "verifiedAt": "2026-10-22T10:40:00.000Z",
+  "items": {
+    "H15-DIST-RECIBO-STALE": {
+      "class": "RELEASE_ONLY",
+      "ownedBy": "RELEASE_CERTIFICATION_READINESS",
+      "categories": [],
+      "justification": "Higiene de dist/ e do recibo do verifier pertence ao ciclo de selagem/empacotamento, nao a cadeia do Engenheiro. Medido em 2026-10-21: dist/release e dist/candidate estao VAZIOS e dist/verifier/verify-result.json e de 2026-10-17 apontando para payload ja arquivado. Provar a higiene exige novo ciclo de selagem, proibido nesta missao. Nao toca evidencia, isolamento ou execucao da missao.",
+      "evidenceReferences": [
+        "dist/verifier/verify-result.json",
+        "AI_MEMORY/hardening-queue.json"
+      ]
+    },
+    "H19-DIST-CAUSA-UNICA": {
+      "class": "RELEASE_ONLY",
+      "ownedBy": "RELEASE_CERTIFICATION_READINESS",
+      "categories": [],
+      "justification": "Mesma familia do H15: reduzir validate:dist a causa unica depende do mesmo ciclo de selagem/empacotamento para produzir payload real. Sem payload entregue, o unico comportamento observavel e 'payload ausente'. Nao afeta a cadeia do Engenheiro nem a evidencia da missao.",
+      "evidenceReferences": [
+        "dist/verifier/verify-result.json",
+        "AI_MEMORY/hardening-queue.json"
+      ]
+    },
+    "MISSAO-B9-CI-GITHUB-ACTIONS": {
+      "class": "RESOLVED_VERIFIED",
+      "ownedBy": "PLATFORM_PRODUCTION_READINESS",
+      "categories": [],
+      "justification": "O bloqueio original era de BUDGET do GitHub Actions (jobs nao iniciavam). Verificado em 2026-10-21 pelo run 39538386346: os jobs INICIARAM e executaram passos reais (checkout, setup-node, npm ci, gate de fases), portanto o bloqueio de budget nao se manifesta mais. A falha remanescente desse run e de CODIGO (npm test exit 1) e foi registrada como defeito proprio (L1-NPM-TEST-CI-VERMELHO), nao escondida atras deste item.",
+      "probe": "node scripts/governance/assert-ci-budget-unblocked.js",
+      "evidenceReferences": [
+        "AI_MEMORY/hardening-queue.json"
+      ]
+    },
+    "H20-CADEIA-POS-CERTIFICACAO-DIVERGENTE": {
+      "class": "RELEASE_ONLY",
+      "ownedBy": "RELEASE_CERTIFICATION_READINESS",
+      "categories": [],
+      "justification": "A divergencia e entre a cadeia criptografica do RELEASE e o conteudo atual, causada por escritas posteriores a certificacao de 2026-10-17. Recertificar exige ciclo completo de selagem (proibido nesta missao). O controle funcionou: verifyChain recalculado acusa divergencia. Nao ha manipulacao de evidencia da missao L-1 — a cadeia e do run de release.",
+      "evidenceReferences": [
+        "AI_MEMORY/hardening-queue.json",
+        "governance/governance-chain.json"
+      ]
+    },
+    "P1-PROJECAO-FINAL-DIVERGE-DA-CANONICA-DE-RUN-ABANDONADO": {
+      "class": "RESOLVED_VERIFIED",
+      "ownedBy": "PLATFORM_PRODUCTION_READINESS",
+      "categories": [],
+      "justification": "Divergencia entre decisao canonica e projecoes de status. Medido em 2026-10-21: governance/final-readiness-report.json, docs/governance/_platform-status-source.json e dev/platform-readiness/latest.json declaram a MESMA decisao (PASS_WITH_DEFERRED_PACKAGE_GATE) com o MESMO generatedAt (2026-10-20T16:11:47.630Z). O produtor canonico passou a sincronizar as projecoes na mesma execucao (commit 5ad00b31d).",
+      "probe": "npm run --silent validate:final-status-projection",
+      "evidenceReferences": [
+        "governance/final-readiness-report.json",
+        "docs/governance/_platform-status-source.json",
+        "dev/platform-readiness/latest.json"
+      ]
+    },
+    "P1-AGREGADO-SEM-IDENTIDADE-DE-RUN-BLOQUEIA-L3": {
+      "class": "PLATFORM_BLOCKING",
+      "ownedBy": "PLATFORM_PRODUCTION_READINESS",
+      "categories": [],
+      "justification": "O gate agregado e a autoridade de SELO/release e exige identidade de run governado; o run corrente (rap-governed-20261020150721180) tem sourceCommit 16a3aa6720, diferente do HEAD medido. Comportamento fail-closed correto. A evidencia da missao L-1 tem identidade propria (sourceCommit + sourceFingerprint gravados pelo coletor de runtime e pelos relatorios de teste), portanto a ausencia de run governado nao compromete a prova de L-1 — compromete a certificacao de release.",
+      "evidenceReferences": [
+        "governance/.current-run.json",
+        "AI_MEMORY/hardening-queue.json"
+      ]
+    }
+  }
+}

@@ -102,6 +102,12 @@ build_latest_name() {
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
+# PORTEIRO DE PUBLICAÇÃO (Fase 2 / MISSÃO C): sem autorização explícita e sem decisão canônica
+# de release em GO definitivo, este script NÃO publica. Antes disso, `npm run deploy:push`
+# empurrava imagens com a governança em NO_GO (o bloqueio só existia no workflow de CI).
+. "$(dirname "${BASH_SOURCE[0]}")/governance/publication-gate.sh"
+rap_publication_gate "docker-push"
+
 section "Build e Push das Imagens Docker"
 
 info "Configuração:"

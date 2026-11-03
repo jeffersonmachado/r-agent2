@@ -1,0 +1,405 @@
+  console.info
+    [2026-10-31T22:28:38.109Z] [INFO] [Sequelize] Conectado ao PostgreSQL com sucesso
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-10-31T22:28:39.464Z] [INFO] [missionSource] InitializationIntent PREPARED persistido antes de criar a branch da fonte
+    {
+      "missionId": "4d26bd37-20c3-4051-a645-40e07d4edfec",
+      "branch": "engineering/missions/4d26bd37-20c3-4051-a645-40e07d4edfec",
+      "baseCommit": "07e3337fe2bb",
+      "worker": "pid-1428284"
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-10-31T22:28:39.558Z] [INFO] [missionSource] fonte da missão inicializada
+    {
+      "missionId": "4d26bd37-20c3-4051-a645-40e07d4edfec",
+      "branch": "engineering/missions/4d26bd37-20c3-4051-a645-40e07d4edfec",
+      "baseCommit": "07e3337fe2bb",
+      "actor": "jest",
+      "alreadyPersisted": null
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-10-31T22:28:39.990Z] [INFO] [missionSource] IntegrationIntent PREPARED persistido antes do efeito no git
+    {
+      "missionId": "4d26bd37-20c3-4051-a645-40e07d4edfec",
+      "taskId": "85b1d65d-0674-4478-b5dc-83cf92cef009",
+      "candidateCommit": "1ac3de9a4e11",
+      "worker": "pid-1428284"
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-10-31T22:28:40.057Z] [INFO] [missionSource] candidate integrado na fonte da missão
+    {
+      "missionId": "4d26bd37-20c3-4051-a645-40e07d4edfec",
+      "taskId": "85b1d65d-0674-4478-b5dc-83cf92cef009",
+      "findingId": null,
+      "integrationType": "TASK_CANDIDATE",
+      "from": "07e3337fe2bb",
+      "to": "1ac3de9a4e11",
+      "actor": "jest"
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-10-31T22:28:40.328Z] [INFO] [missionSource] IntegrationIntent PREPARED persistido antes do efeito no git
+    {
+      "missionId": "4d26bd37-20c3-4051-a645-40e07d4edfec",
+      "taskId": "e5c50ff2-63c7-4eef-84c4-09ec95553fc2",
+      "candidateCommit": "f05a63589d39",
+      "worker": "pid-1428284"
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-10-31T22:28:40.380Z] [INFO] [missionSource] candidate integrado na fonte da missão
+    {
+      "missionId": "4d26bd37-20c3-4051-a645-40e07d4edfec",
+      "taskId": "e5c50ff2-63c7-4eef-84c4-09ec95553fc2",
+      "findingId": null,
+      "integrationType": "BUG_FIX_CANDIDATE",
+      "from": "1ac3de9a4e11",
+      "to": "f05a63589d39",
+      "actor": "jest-bug-loop"
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-10-31T22:28:41.315Z] [INFO] [missionSource] IntegrationIntent PREPARED persistido antes do efeito no git
+    {
+      "missionId": "4d26bd37-20c3-4051-a645-40e07d4edfec",
+      "taskId": "d4c625d7-8e6c-4ce6-bbab-3a76f72e6461",
+      "candidateCommit": "5d619e09bc63",
+      "worker": "pid-1428284"
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+          at async Promise.all (index 0)
+
+  console.info
+    [2026-10-31T22:28:41.325Z] [INFO] [missionSource] IntegrationIntent PREPARED persistido antes do efeito no git
+    {
+      "missionId": "4d26bd37-20c3-4051-a645-40e07d4edfec",
+      "taskId": "546994ae-ce8c-4f85-9696-8a2ef7e48ad0",
+      "candidateCommit": "5daec4d29fff",
+      "worker": "pid-1428284"
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+          at async Promise.all (index 1)
+
+  console.info
+    [2026-10-31T22:28:41.417Z] [INFO] [missionSource] candidate integrado na fonte da missão
+    {
+      "missionId": "4d26bd37-20c3-4051-a645-40e07d4edfec",
+      "taskId": "d4c625d7-8e6c-4ce6-bbab-3a76f72e6461",
+      "findingId": null,
+      "integrationType": "TASK_CANDIDATE",
+      "from": "f05a63589d39",
+      "to": "5d619e09bc63",
+      "actor": "jest-x"
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+          at async Promise.all (index 0)
+
+  console.info
+    [2026-10-31T22:28:41.712Z] [INFO] [missionSource] IntegrationIntent PREPARED persistido antes do efeito no git
+    {
+      "missionId": "4d26bd37-20c3-4051-a645-40e07d4edfec",
+      "taskId": "8cfebc64-1b41-4a07-a52a-e4626d81e097",
+      "candidateCommit": "406c0b5665de",
+      "worker": "pid-1428284"
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-10-31T22:28:41.766Z] [INFO] [missionSource] candidate integrado na fonte da missão
+    {
+      "missionId": "4d26bd37-20c3-4051-a645-40e07d4edfec",
+      "taskId": "8cfebc64-1b41-4a07-a52a-e4626d81e097",
+      "findingId": null,
+      "integrationType": "TASK_CANDIDATE",
+      "from": "5d619e09bc63",
+      "to": "406c0b5665de",
+      "actor": "jest-1"
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-10-31T22:28:42.079Z] [INFO] [missionSource] IntegrationIntent PREPARED persistido antes do efeito no git
+    {
+      "missionId": "4d26bd37-20c3-4051-a645-40e07d4edfec",
+      "taskId": "a63fc517-57d2-46c5-b31e-7b3c4b010a45",
+      "candidateCommit": "1875bddd9cff",
+      "worker": "pid-1428284"
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-10-31T22:28:42.145Z] [INFO] [missionSource] candidate integrado na fonte da missão
+    {
+      "missionId": "4d26bd37-20c3-4051-a645-40e07d4edfec",
+      "taskId": "a63fc517-57d2-46c5-b31e-7b3c4b010a45",
+      "findingId": null,
+      "integrationType": "TASK_CANDIDATE",
+      "from": "406c0b5665de",
+      "to": "1875bddd9cff",
+      "actor": "jest"
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.warn
+    [2026-10-31T22:28:42.209Z] [WARN] [missionSource] reconciliação pós-crash: commit corrente alinhado com a branch
+    {
+      "missionIdValue": "4d26bd37-20c3-4051-a645-40e07d4edfec",
+      "commit": "1875bddd9cff",
+      "fenceBefore": 4,
+      "fenceAfter": 5,
+      "advanced": true
+    }
+
+    [0m [90m 166 |[39m     [36mif[39m (level [33m<=[39m [33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m) {
+     [90m 167 |[39m       [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 168 |[39m       console[33m.[39mwarn(formatMessage([33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m[33m,[39m message[33m,[39m data))[33m;[39m
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 169 |[39m     }
+     [90m 170 |[39m   }[33m,[39m
+     [90m 171 |[39m   [0m
+
+      at Object.warn (api/utils/logger.js:168:15)
+      at Object.warn [as integrateCandidate] (api/services/engineeringMission/missionSourceService.js:1210:16)
+      at Object.<anonymous> (tests/integration/engineeringMissionSourceE2E.test.js:530:21)
+
+  console.error
+    [2026-10-31T22:28:43.251Z] [ERROR] [missionSource] MISSION_SOURCE_DIVERGENCE — branch não explicada por intent/receipt; adoção recusada
+    {
+      "code": "MISSION_SOURCE_DIVERGENCE",
+      "reason": "branch em f82b72e819e1 sem intent/receipt que explique o avanço (esperado 1875bddd9cff) — adoção recusada",
+      "detectedAt": "2026-10-31T22:28:43.243Z",
+      "branch": "engineering/missions/4d26bd37-20c3-4051-a645-40e07d4edfec",
+      "branchCommit": "f82b72e819e13ebc3c2d0441d49717ca307714e0",
+      "expectedMissionCommit": "1875bddd9cffff4847db2e15c5473f3434bf6aa4",
+      "missionBaseCommit": "07e3337fe2bbf62f31d49f71f18b4223dc922506",
+      "explainedCommits": [
+        "07e3337fe2bbf62f31d49f71f18b4223dc922506",
+        "07e3337fe2bbf62f31d49f71f18b4223dc922506",
+        "1ac3de9a4e115153e7e6aebbec93eb2470223a43",
+        "f05a63589d3906bd49a680db4aeb395c19e418a7",
+        "5d619e09bc632059c8947438ce498d537a6a21fb",
+        "406c0b5665de649842d69fa26c3c38396fad3a9d",
+        "1875bddd9cffff4847db2e15c5473f3434bf6aa4"
+      ],
+      "detectedBy": "ensureMissionSource",
+      "actor": "jest-tamper"
+    }
+
+    [0m [90m 183 |[39m       
+     [90m 184 |[39m       [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 185 |[39m       console[33m.[39merror(formatMessage([33mLOG_LEVELS[39m[33m.[39m[33mERROR[39m[33m,[39m message[33m,[39m errorData))[33m;[39m
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 186 |[39m     }
+     [90m 187 |[39m   }[33m,[39m
+     [90m 188 |[39m   [0m
+
+      at Object.error (api/utils/logger.js:185:15)
+      at Object.error [as ensureMissionSource] (api/services/engineeringMission/missionSourceService.js:374:14)
+      at Object.<anonymous> (tests/integration/engineeringMissionSourceE2E.test.js:642:7)
+
+  console.info
+    [2026-10-31T22:28:43.577Z] [INFO] [missionSource] IntegrationIntent PREPARED persistido antes do efeito no git
+    {
+      "missionId": "4d26bd37-20c3-4051-a645-40e07d4edfec",
+      "taskId": "1987e6a5-90d1-4dc4-9e83-73f8e7825a72",
+      "candidateCommit": "042088d0a4fa",
+      "worker": "pid-1428284"
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-10-31T22:28:43.640Z] [INFO] [missionSource] candidate integrado na fonte da missão
+    {
+      "missionId": "4d26bd37-20c3-4051-a645-40e07d4edfec",
+      "taskId": "1987e6a5-90d1-4dc4-9e83-73f8e7825a72",
+      "findingId": null,
+      "integrationType": "TASK_CANDIDATE",
+      "from": "1875bddd9cff",
+      "to": "042088d0a4fa",
+      "actor": "jest"
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-10-31T22:28:44.032Z] [INFO] [missionSource] IntegrationIntent PREPARED persistido antes do efeito no git
+    {
+      "missionId": "4d26bd37-20c3-4051-a645-40e07d4edfec",
+      "taskId": "63b9f45f-32ef-4545-be10-d16a2579cdc1",
+      "candidateCommit": "523fd700fa72",
+      "worker": "pid-1428284"
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-10-31T22:28:44.085Z] [INFO] [missionSource] candidate integrado na fonte da missão
+    {
+      "missionId": "4d26bd37-20c3-4051-a645-40e07d4edfec",
+      "taskId": "63b9f45f-32ef-4545-be10-d16a2579cdc1",
+      "findingId": null,
+      "integrationType": "TASK_CANDIDATE",
+      "from": "042088d0a4fa",
+      "to": "523fd700fa72",
+      "actor": "jest"
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.error
+    [2026-10-31T22:28:44.805Z] [ERROR] [WebScraping] cheerio não instalado. Defina SCRAPING_ALLOW_DEGRADED=true para modo degradado explícito.
+
+    [0m [90m 183 |[39m       
+     [90m 184 |[39m       [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 185 |[39m       console[33m.[39merror(formatMessage([33mLOG_LEVELS[39m[33m.[39m[33mERROR[39m[33m,[39m message[33m,[39m errorData))[33m;[39m
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 186 |[39m     }
+     [90m 187 |[39m   }[33m,[39m
+     [90m 188 |[39m   [0m
+
+      at Object.error (api/utils/logger.js:185:15)
+      at Object.error (api/services/webScrapingService.js:63:12)
+      at Object.require (api/services/tenantService.js:24:28)
+      at Object.require (api/services/authService.js:18:55)
+      at Object.require (api/services/websocketService.js:19:27)
+      at Object.require (api/services/engineeringMission/missionEvents.js:11:23)
+      at Object.require (api/services/engineeringMission/missionCompilerService.js:52:30)
+      at Object.require (api/services/engineeringMission/missionApprovalService.js:25:18)
+      at Object.require (api/services/engineeringMission/missionRecoveryCoordinator.js:32:25)
+      at Object.require (tests/integration/engineeringMissionSourceE2E.test.js:750:22)
+
+  console.warn
+    [2026-10-31T22:28:44.952Z] [WARN] [missionRecovery] intents não terminais reconciliados no boot
+    {
+      "missions": 1,
+      "reconciled": 1,
+      "total": 1,
+      "pending": 0,
+      "needsRepair": 0
+    }
+
+    [0m [90m 166 |[39m     [36mif[39m (level [33m<=[39m [33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m) {
+     [90m 167 |[39m       [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 168 |[39m       console[33m.[39mwarn(formatMessage([33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m[33m,[39m message[33m,[39m data))[33m;[39m
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 169 |[39m     }
+     [90m 170 |[39m   }[33m,[39m
+     [90m 171 |[39m   [0m
+
+      at Object.warn (api/utils/logger.js:168:15)
+      at Object.warn [as reconcilePendingIntents] (api/services/engineeringMission/missionRecoveryCoordinator.js:402:12)
+      at Object.<anonymous> (tests/integration/engineeringMissionSourceE2E.test.js:751:20)
+
+  console.warn
+    [2026-10-31T22:28:45.335Z] [WARN] [missionRecovery] intents não terminais reconciliados no boot
+    {
+      "missions": 3,
+      "reconciled": 0,
+      "total": 3,
+      "pending": 0,
+      "needsRepair": 2
+    }
+
+    [0m [90m 166 |[39m     [36mif[39m (level [33m<=[39m [33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m) {
+     [90m 167 |[39m       [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 168 |[39m       console[33m.[39mwarn(formatMessage([33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m[33m,[39m message[33m,[39m data))[33m;[39m
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 169 |[39m     }
+     [90m 170 |[39m   }[33m,[39m
+     [90m 171 |[39m   [0m
+
+      at Object.warn (api/utils/logger.js:168:15)
+      at Object.warn [as reconcilePendingIntents] (api/services/engineeringMission/missionRecoveryCoordinator.js:402:12)
+      at Object.<anonymous> (tests/integration/engineeringMissionSourceE2E.test.js:870:19)
+
+  console.warn
+    [2026-10-31T22:28:45.348Z] [WARN] [missionRecovery] intents não terminais reconciliados no boot
+    {
+      "missions": 1,
+      "reconciled": 0,
+      "total": 1,
+      "pending": 2,
+      "needsRepair": 2
+    }
+
+    [0m [90m 166 |[39m     [36mif[39m (level [33m<=[39m [33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m) {
+     [90m 167 |[39m       [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 168 |[39m       console[33m.[39mwarn(formatMessage([33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m[33m,[39m message[33m,[39m data))[33m;[39m
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 169 |[39m     }
+     [90m 170 |[39m   }[33m,[39m
+     [90m 171 |[39m   [0m
+
+      at Object.warn (api/utils/logger.js:168:15)
+      at Object.warn [as reconcilePendingIntents] (api/services/engineeringMission/missionRecoveryCoordinator.js:402:12)
+      at Object.<anonymous> (tests/integration/engineeringMissionSourceE2E.test.js:882:22)
+
+[jest-global-setup] .env carregado (40 chave(s) aplicada(s); ambiente explícito vence)
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+Preparing worktree (detached HEAD 07e3337)
+Preparing worktree (detached HEAD 1ac3de9)
+Preparing worktree (detached HEAD 07e3337)
+fatal: path 'src/stale.js' does not exist in 'f05a63589d3906bd49a680db4aeb395c19e418a7'
+Preparing worktree (detached HEAD f05a635)
+Preparing worktree (detached HEAD f05a635)
+fatal: path 'src/y.js' does not exist in '5d619e09bc632059c8947438ce498d537a6a21fb'
+Preparing worktree (detached HEAD 5d619e0)
+Preparing worktree (detached HEAD 406c0b5)
+Preparing worktree (detached HEAD 1875bdd)
+fatal: path 'src/no-review.js' does not exist in '1875bddd9cffff4847db2e15c5473f3434bf6aa4'
+Preparing worktree (detached HEAD 1875bdd)
+Preparing worktree (detached HEAD 1875bdd)
+Preparing worktree (detached HEAD 042088d)
+Preparing worktree (detached HEAD 523fd70)
+PASS tests/integration/engineeringMissionSourceE2E.test.js (8.854 s)
+  Mission Source Authority — E2E com git real
+    ✓ MISSION_SRC_01 — a missão recebe uma fonte ISOLADA derivada da main, nunca a própria main (122 ms)
+    ✓ MISSION_SRC_02 — a task HERDA o commit da fonte e o worktree é materializado DELE (161 ms)
+    ✓ MISSION_SRC_02b — a task NASCE do patch já integrado (o valor que task-a deixa) (341 ms)
+    ✓ MISSION_SRC_03/04 — o fix do bug INTEGRA na fonte e a replacement task VÊ o fix (375 ms)
+    ✓ MISSION_SRC_05 — MAIN PERMANECE INTOCADA durante toda a missão (146 ms)
+    ✓ MISSION_SRC_06 — candidate OBSOLETO é recusado, nunca aplicado cegamente (256 ms)
+    ✓ MISSION_SRC_07 — integração CONCORRENTE é serializada por CAS (sem sobrescrever o outro) (562 ms)
+    ✓ MISSION_SRC_08 — integração é CRASH-SAFE: a mesma tríade não aplica o patch duas vezes (336 ms)
+    ✓ MISSION_SRC_08b — RECONCILIAÇÃO: crash entre o git e o banco não deixa a fonte mentindo (453 ms)
+    ✓ MISSION_SRC_09 — pré-condição não satisfeita RECUSA a integração (candidate não entra só porque o coder terminou) (287 ms)
+    ✓ MISSION_SRC_10 — o candidate final da missão é o commit DA FONTE, e ele carrega o histórico inteiro (179 ms)
+    ✓ MISSION_SRC_11 — a herança é EXIGIDA: task de missão sem fonte não cai silenciosamente na main (266 ms)
+    ✓ MISSION_SRC_12 — branch movida para commit NÃO explicado → MISSION_SOURCE_DIVERGENCE (NUNCA adota) (311 ms)
+    ✓ MISSION_SRC_13 — intent GIT_APPLIED: reconciliação completa o banco SEM reaplicar o git (484 ms)
+    ✓ MISSION_SRC_14 — a reconciliação acontece no BOOT, sem comando manual (1191 ms)
+    ✓ MISSION_SRC_15 — desfecho "requer reparo" PERSISTE no intent (antes ficava preso em PREPARED) (209 ms)
+    ✓ MISSION_SRC_16 — fila com head estacionário não impede alcançar o intent recuperável (197 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       17 passed, 17 total
+Snapshots:   0 total
+Time:        8.934 s, estimated 12 s
+Ran all test suites matching /tests\/integration\/engineeringMissionSourceE2E.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

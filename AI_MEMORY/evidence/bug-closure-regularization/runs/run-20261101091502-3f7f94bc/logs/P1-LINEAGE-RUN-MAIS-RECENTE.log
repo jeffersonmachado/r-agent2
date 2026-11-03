@@ -1,0 +1,17 @@
+[jest-global-setup] .env carregado (0 chave(s) aplicada(s); ambiente explícito vence)
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/governance/reportLineageExplicit.test.js
+  report-lineage — identidade explícita obrigatória
+    ✓ sem run explícito FALHA (nunca escolhe o mais recente) (115 ms)
+    ✓ env explícito é usado e exige fingerprint (106 ms)
+    ✓ env sem fingerprint FALHA (identidade incompleta) (103 ms)
+    ✓ .current-run.json fornece a identidade (com sourceCommit) (155 ms)
+    ✓ contexto sem sourceCommit e sem git FALHA (162 ms)
+    ✓ comLineage grava runId, fingerprint e sourceCommit (128 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       6 passed, 6 total
+Snapshots:   0 total
+Time:        1.068 s, estimated 2 s
+Ran all test suites matching /tests\/unit\/governance\/reportLineageExplicit.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

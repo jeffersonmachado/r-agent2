@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "a519e6b5-8568-40ba-b4a5-0a1c1733bf81",
+  "defectId": "CI-INTEG-JEST-DUAS-SUITES-BLOCKED",
+  "severityBefore": "P2",
+  "severityAfter": "P2",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "fc08d682044ddb6be24f28c7ad8cfdca7b03b51e",
+  "codeFingerprint": "3f873a4f5e2d9d5ffa3bf6cc40bd8c9278012309c093787538719b4c7f06ea38",
+  "requiredTests": [
+    "tests/integration/governanceApprovalFullWorkerE2E.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/integration/governanceApprovalFullWorkerE2E.test.js",
+      "command": "npx jest tests/integration/governanceApprovalFullWorkerE2E.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-31T21:33:27.132Z",
+      "finishedAt": "2026-10-31T21:34:45.061Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/CI-INTEG-JEST-DUAS-SUITES-BLOCKED.log",
+      "outputSha256": "ecf1996df79431e0fcc910e7842469ad57edf5b61a0dec32fafd272685d8d68f"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/integration/governanceApprovalFullWorkerE2E.test.js",
+      "sha256": "fadebfb26ad896bc03d702569fb62d65f98222a76d8ef2b2b1abb701de1e157a"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-10-31T21:34:45.079Z",
+  "proofHash": "413035fad78ce29e2cd4ea54f46bdd26e37dc98587858964a10846a559871f22",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "MC9ZKbbH7ppJCImg9YbgeAdrdmd4q0Vx+qpzkKN0DQ53y8idHlq189kBGNKYjMLNIlv5TzTd4C4kfHnZ27ZQDA==",
+    "signedAt": "2026-10-31T21:48:56.831Z"
+  }
+}

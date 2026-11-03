@@ -1,0 +1,14 @@
+{
+  "id": "CI-ADAPTADOR-IA-NAO-VERSIONADO",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Gates de IA exigiam arquivo que nao existia em NENHUM commit (so no disco do desenvolvedor)",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+  "teste": "tests/unit/governance/aiGovernanceRequiredFilesTracked.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/CI-ADAPTADOR-IA-NAO-VERSIONADO.log",
+  "draft": "governance/bug-closure/proofs-drafts/CI-ADAPTADOR-IA-NAO-VERSIONADO.json",
+  "camposParaAssinar": 18
+}

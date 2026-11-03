@@ -110,6 +110,11 @@ const getLegacyMonService = require('./LegacyMonService');
 const getLegacyMonOs = require('./LegacyMonOs');
 const getLegacyMonApp = require('./LegacyMonApp');
 const getCrmRecord = require('./CrmRecord');
+const getLroOperation = require('./LroOperation');
+const getLroEvent = require('./LroEvent');
+const getLroOutbox = require('./LroOutbox');
+const getLroFeedbackRequest = require('./LroFeedbackRequest');
+const getLroFeedbackResponse = require('./LroFeedbackResponse');
 const getMarketingForm = require('./MarketingForm');
 const getMarketingLead = require('./MarketingLead');
 const getMarketingFormSubmission = require('./MarketingFormSubmission');
@@ -337,6 +342,11 @@ const LegacyMonService = () => getLegacyMonService();
 const LegacyMonOs = () => getLegacyMonOs();
 const LegacyMonApp = () => getLegacyMonApp();
 const CrmRecord = () => getCrmRecord();
+const LroOperation = () => getLroOperation();
+const LroEvent = () => getLroEvent();
+const LroOutbox = () => getLroOutbox();
+const LroFeedbackRequest = () => getLroFeedbackRequest();
+const LroFeedbackResponse = () => getLroFeedbackResponse();
 const MarketingForm = () => getMarketingForm();
 const MarketingLead = () => getMarketingLead();
 const MarketingFormSubmission = () => getMarketingFormSubmission();
@@ -1050,6 +1060,11 @@ module.exports = {
   LegacyMonOs,
   LegacyMonApp,
   CrmRecord,
+  LroOperation,
+  LroEvent,
+  LroOutbox,
+  LroFeedbackRequest,
+  LroFeedbackResponse,
   MarketingForm,
   MarketingLead,
   MarketingFormSubmission,
@@ -1259,6 +1274,11 @@ module.exports = {
   getLegacyMonOs,
   getLegacyMonApp,
   getCrmRecord,
+  getLroOperation,
+  getLroEvent,
+  getLroOutbox,
+  getLroFeedbackRequest,
+  getLroFeedbackResponse,
   getMarketingForm,
   getMarketingLead,
   getMarketingFormSubmission,

@@ -37,6 +37,7 @@ const { createTaskExpressRouter } = require('../composition/task');
 const { createPublicSystemExpressRouter } = require('../composition/public-system');
 const { createQaExpressRouter } = require('../composition/qa');
 const { createQaWavesExpressRouter } = require('../composition/qa-waves');
+const { criarRouterLro } = require('../modules/lro/routes');
 const { createQaMeshExpressRouter } = require('../composition/qa-mesh');
 const { createEngineeringRouterExpressRouter } = require('../composition/engineering-router');
 // Engineering Mission Compiler / enriquecimento (DEVELOPMENT-only).
@@ -142,6 +143,9 @@ function registerRoutes(app, { buildCoreRoutingContext, buildPlatformRoutingCont
   const webScrapingRouter = createWebScrapingExpressRouter();
   const qaRouter = createQaExpressRouter();
   const qaWavesRouter = createQaWavesExpressRouter();
+  // LRO (Long-Running Operations): SSE + REST. Router precisa estar TAMBÉM em routeRegistry,
+  // senão NÃO é montado e responde 404 sem erro de boot (validate:route-mounts).
+  const lroRouter = criarRouterLro();
   const qaMeshRouter = createQaMeshExpressRouter();
   const engineeringRouterRouter = createEngineeringRouterExpressRouter();
   const engineeringMissionRouter = createEngineeringMissionExpressRouter();
@@ -222,6 +226,7 @@ function registerRoutes(app, { buildCoreRoutingContext, buildPlatformRoutingCont
     webScrapingRouter,
     qaRouter,
     qaWavesRouter,
+    lroRouter,
     qaMeshRouter,
     engineeringRouterRouter,
     engineeringMissionRouter,

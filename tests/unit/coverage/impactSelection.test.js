@@ -146,6 +146,19 @@ describe('selectValidation — FAIL-CLOSED (o comportamento que faltava)', () =>
     expect(r.level).toBe(NIVEIS.L3);
   });
 
+  test('toda seleção declara changedFiles (inclusive zero) — contrato uniforme', () => {
+    // Regressão do crash medido no CI (2026-10-21): o ramo de zero arquivos não devolvia
+    // `changedFiles` e `run-impact-validation` quebrava em `selecao.changedFiles.length`,
+    // deixando `reports/impact-validation-report.json` AUSENTE.
+    const vazia = selectValidation(base({ changedFiles: [] }));
+    expect(Array.isArray(vazia.changedFiles)).toBe(true);
+    expect(vazia.changedFiles).toHaveLength(0);
+
+    const comArquivos = selectValidation(base({ changedFiles: ['api/modules/queue-v2/routes.js'] }));
+    expect(Array.isArray(comArquivos.changedFiles)).toBe(true);
+    expect(comArquivos.changedFiles.length).toBeGreaterThan(0);
+  });
+
   test('arquivo sem teste e sem jornada ESCALA em vez de silenciar', () => {
     const r = selectValidation(base({ changedFiles: ['api/services/orfaoService.js'] }));
     expect(r.escalate).toBe(true);

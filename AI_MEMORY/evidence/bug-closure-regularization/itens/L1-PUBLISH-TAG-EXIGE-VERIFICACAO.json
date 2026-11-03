@@ -1,0 +1,14 @@
+{
+  "id": "L1-PUBLISH-TAG-EXIGE-VERIFICACAO",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "publish-tag era oferecida com release selado mas NAO verificado",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+  "teste": "tests/unit/governance/devGovernanceModels.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/L1-PUBLISH-TAG-EXIGE-VERIFICACAO.log",
+  "draft": "governance/bug-closure/proofs-drafts/L1-PUBLISH-TAG-EXIGE-VERIFICACAO.json",
+  "camposParaAssinar": 18
+}

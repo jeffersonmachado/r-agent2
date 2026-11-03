@@ -1,0 +1,17 @@
+{
+  "id": "MISSAO-B8-ESTADOS-FILA",
+  "severity": "P2",
+  "estadoPersistido": "RESOLVED",
+  "titulo": "B8: modelo de estados da fila com hook fail-closed e validador",
+  "classe": "REQUER_DECISAO_HUMANA",
+  "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO",
+  "runId": "run-20261101033914-12e1e3ba",
+  "identidade": {
+    "commit": "3441bcacac223f381adfbc749bff054c58fdf358",
+    "sourceFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
+    "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+    "hardeningQueueFingerprint": "36ca0d6fcc472d5d75ad821c12966ab791abb42189d8503e78a9b4990c850d52",
+    "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+  },
+  "artifactSha256": "eca557edc47a4c00624136e30c728d1264097d9036bcf96202aa4a4af7f38370"
+}

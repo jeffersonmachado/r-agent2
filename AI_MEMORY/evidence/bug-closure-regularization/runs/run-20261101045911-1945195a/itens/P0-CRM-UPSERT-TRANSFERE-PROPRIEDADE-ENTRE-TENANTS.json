@@ -1,0 +1,20 @@
+{
+  "id": "P0-CRM-UPSERT-TRANSFERE-PROPRIEDADE-ENTRE-TENANTS",
+  "severity": "P0",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "CRM usava upsert com PK apenas `id`: tenant B sobrescrevia e TRANSFERIA registro do tenant A",
+  "classe": "AMBIENTE_INDISPONIVEL",
+  "teste": "tests/integration/crmTenantIsolation.postgres.test.js",
+  "exitCode": 1,
+  "motivo": "teste exige infraestrutura ausente neste ambiente — não é veredito sobre o defeito",
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101045911-1945195a/logs/P0-CRM-UPSERT-TRANSFERE-PROPRIEDADE-ENTRE-TENANTS.log",
+  "runId": "run-20261101045911-1945195a",
+  "identidade": {
+    "commit": "f4122cc89d078ead01a16658a2e0a21fd50af83f",
+    "sourceFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
+    "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+    "hardeningQueueFingerprint": "b2fa3c656afc109c83ae9c15d2a620a8bc9dd7ca4c9f42302075d7e5acd2cd09",
+    "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+  },
+  "artifactSha256": "7a0f50a0de7fe6e0fbdfba13a0b61949c280b887d4528e74f5edf8ebc9183514"
+}

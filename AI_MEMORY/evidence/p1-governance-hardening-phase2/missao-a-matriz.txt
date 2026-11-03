@@ -1,0 +1,27 @@
+MISSÃO A — MATRIZ DE REPRODUÇÃO (10 cenários exigidos)
+data: 2026-10-24T09:38:11Z
+
+1. L0 completo na baseline            : EXECUTADO (23 FAIL sem provisão; 2 FAIL com provisão)
+2. L0 completo na branch              : EXECUTADO (20 FAIL sem provisão; 1 FAIL com provisão)
+3. L0 com --runInBand                 : ver relatório (execução serial registrada à parte)
+4. execução paralela (default 1108)   : EXECUTADO (é o modo dos itens 1 e 2)
+5. suítes que falham, individualmente : EXECUTADO — 13 suítes; 12 exit 0; modelDrivenE2e exit 1
+6. suítes que falham, em conjunto     : EXECUTADO — 13 suítes: 12 PASS, 1 FAIL (modelDrivenE2e)
+7. repetição dos conjuntos suspeitos  : EXECUTADO — 2 repetições, mesmo resultado (122 testes, 1 FAIL)
+8. execução após limpeza de temporários: EXECUTADO (diretórios /tmp/v2-seal-* removidos)
+9. execução em checkout descartável   : EXECUTADO — worktree novo em 29a41bcdf: 9629 testes, 1 FAIL
+10. ordem embaralhada (--randomize)   : EXECUTADO — seed 20261024: 122 testes, 1 FAIL (o mesmo)
+
+CLASSIFICAÇÃO POR FALHA (identidade exata, causa-raiz medida)
+PRODUCT_REGRESSION .......... 0
+TEST_ISOLATION .............. 20 (19 em 11 suítes + 1 suite-level na baseline) — artefato gitignored ausente
+ENVIRONMENT ................. 3  (git config injetado: engineeringMissionSourceRefRemote; HEAD destacado:
+                                  runIdentityCommit; EADDRINUSE: devServicesSupervision)
+FLAKY ....................... 0 reproduzido (repetição e ordem embaralhada não mudaram nada)
+EXPECTED_FAIL_CLOSED ........ 1  (modelDrivenE2e: recusa fechada sem a prova prod-like do job de CI)
+UNKNOWN ..................... 0
+
+CORREÇÕES APLICADAS
+  1. npm run ci:artifacts (bootstrap --artifacts-only) — provisão canônica, 12 produtores;
+     fail-closed (INCOMPLETE/exit 1) quando falta artefato; veredito de produtor preservado.
+  2. engineeringMissionSourceRefRemote — GIT_CONFIG_COUNT=0 no helper (hermetismo do teste).

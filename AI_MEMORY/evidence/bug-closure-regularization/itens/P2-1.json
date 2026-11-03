@@ -1,0 +1,14 @@
+{
+  "id": "P2-1",
+  "severity": "P2",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Proveniencia remota verifica o commit do RUN, nao o HEAD",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+  "teste": "tests/unit/governance/remoteProvenanceAuthority.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/P2-1.log",
+  "draft": "governance/bug-closure/proofs-drafts/P2-1.json",
+  "camposParaAssinar": 18
+}

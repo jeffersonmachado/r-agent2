@@ -1,0 +1,35 @@
+  console.info
+    [2026-11-01T09:28:40.619Z] [INFO] [Sequelize] Conectado ao PostgreSQL com sucesso
+
+      at Object.info (api/utils/logger.js:155:15)
+
+[jest-global-setup] .env carregado (0 chave(s) aplicada(s); ambiente explícito vence)
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/integration/lroServiceTransaction.test.js (25.421 s)
+  LRO Fase 2 — transação, lease e fencing
+    ✓ criar operação grava estado + evento + outbox no MESMO commit (478 ms)
+    ✓ #3 dois workers disputam o lease: um vence, o outro recebe LEASE_HELD (215 ms)
+    ✓ #3 o token de fencing antigo NÃO pode gravar (heartbeat e transição) (614 ms)
+    ✓ concorrência otimista: versão errada é recusada, versão certa passa (142 ms)
+    ✓ sequência de eventos é monotônica e serve de cursor (afterSeq) (160 ms)
+    ✓ COMPLETED com NO_GO não vira sucesso e o desfecho fica registrado (177 ms)
+    ✓ idempotência: mesma chave no mesmo tenant devolve a MESMA operação (118 ms)
+    ✓ atomicidade: falha ao gravar evento NÃO deixa o status alterado (162 ms)
+  LRO Fase 2 — progresso real (sem mudar de estado)
+    ✓ recordProgress grava progresso, emite evento PROGRESS e mantém o status (168 ms)
+    ✓ progresso com total desconhecido é INDETERMINADO e nunca vira 100% (131 ms)
+  P1-E — fencing obrigatório para worker, humano explícito
+    ✓ recordProgress de WORKER sem fencingToken é recusado (149 ms)
+    ✓ recordProgress com fencing OBSOLETO é recusado (168 ms)
+    ✓ recordProgress com fencing válido é aceito (170 ms)
+    ✓ comando HUMANO explícito (origin=human) exige ator e dispensa fencing (180 ms)
+    ✓ heartbeat sem fencingToken é recusado (NaN não pode passar na comparação) (185 ms)
+    ✓ heartbeat com fencing obsoleto é recusado (227 ms)
+    ✓ heartbeat com fencing válido renova o lease (189 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       17 passed, 17 total
+Snapshots:   0 total
+Time:        25.528 s, estimated 30 s
+Ran all test suites matching /tests\/integration\/lroServiceTransaction.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

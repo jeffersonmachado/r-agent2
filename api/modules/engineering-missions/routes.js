@@ -218,6 +218,14 @@ function createEngineeringMissionRoutes({ buildDeps }) {
       GOVERNANCE_CHANGE_REASON_REQUIRED: 422,
       GOVERNANCE_CHANGE_REVIEWER_REQUIRED: 422,
       INVALID_FINDING_TRANSITION: 409,
+      // POSSE DO FINDING (2026-10-27, revisão adversarial): `FINDING_LEASE_*` e `FINDING_STATE_CONFLICT`
+      // são condições de CONCORRÊNCIA nomeadas e fail-closed. Sem mapeamento viravam 500 com log de
+      // erro — e o contrato ficava incoerente: "lease de outro worker" = 409 (skip) e "lease perdido
+      // no meio da operação" = 500. Ambos são conflito com o estado real.
+      FINDING_LEASE_HELD_BY_OTHER_WORKER: 409,
+      FINDING_LEASE_LOST: 409,
+      FINDING_LEASE_MISMATCH: 409,
+      FINDING_STATE_CONFLICT: 409,
       REPRODUCTION_PLAN_MISSING: 422,
       REPRODUCTION_INCONCLUSIVE: 422,
       INVALID_FINDING: 422,
@@ -852,7 +860,17 @@ function createEngineeringMissionRoutes({ buildDeps }) {
         actor: req.agent?.id || req.agent?.email || null,
         tenantId: requireTenantId(req.tenantId),
       });
-      deps.sendJson(res, 200, result);
+      // Recusa por POSSE não é confirmação. `confirmFinding` recusa quando o finding está sob lease
+      // de outro worker (defeito de concorrência medido em 2026-10-25): devolver 200 com
+      // `{ skipped: true, finding: null }` faria o cliente acreditar que confirmou. 409 explícito.
+      if (result && result.skipped) {
+        return deps.sendJson(res, 409, {
+          code: result.outcome || 'SKIPPED_LEASE_HELD',
+          message: 'finding está sob lease de outro worker — a confirmação não foi aplicada',
+          lease: result.lease || null,
+        });
+      }
+      return deps.sendJson(res, 200, result);
     } catch (err) {
       handleError(res, deps, err, 'confirm finding');
     }

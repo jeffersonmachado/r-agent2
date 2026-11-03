@@ -55,22 +55,60 @@ const SANDBOX_UID_GID = process.env.ENGINEERING_ROUTER_SANDBOX_UIDGID || '10001:
 let dockerAvailabilityCache = null;
 
 /**
- * Verifica, uma única vez por processo, se o Docker CLI consegue falar com um daemon — nunca
- * assume disponibilidade: um ambiente sem Docker deve falhar de forma explícita
- * (SANDBOX_UNAVAILABLE), nunca silenciosamente cair de volta para execução sem sandbox.
+ * Timeout do probe de disponibilidade. NÃO é "quanto tempo o Docker leva": é o quanto se tolera
+ * esperar por um probe de saúde. 5 s medido em máquina ociosa; sob carga o MESMO `docker info`
+ * passa disso.
+ */
+const DOCKER_PROBE_TIMEOUT_MS = Number(process.env.ENGINEERING_ROUTER_DOCKER_PROBE_TIMEOUT_MS) || 5000;
+
+/**
+ * Tentativas do probe de saúde. Duas, não uma: o consumidor típico (`beforeAll` de suíte e o
+ * Router) decide UMA vez a partir desta resposta, então uma lentidão momentânea do daemon
+ * decidiria a execução inteira. Fail-closed continua: se todas falharem, responde `false`.
+ */
+const DOCKER_PROBE_ATTEMPTS = Math.max(1, Number(process.env.ENGINEERING_ROUTER_DOCKER_PROBE_ATTEMPTS) || 2);
+
+/**
+ * Verifica se o Docker CLI consegue falar com um daemon — nunca assume disponibilidade: um
+ * ambiente sem Docker falha de forma explícita (SANDBOX_UNAVAILABLE), nunca cai silenciosamente
+ * para execução sem sandbox.
+ *
+ * DEFEITO REAL MEDIDO (2026-10-21): a checagem era feita UMA vez por processo e o resultado
+ * NEGATIVO era cacheado para sempre. Rodando `npx jest tests/unit` completo, o probe de 5 s
+ * estourou por contenção (a máquina estava executando 11 workers) e a suíte
+ * `engineeringRouterExecutionSandboxSecurity` passou a receber `SANDBOX_UNAVAILABLE` em 6 casos —
+ * com o Docker saudável e `docker ps` respondendo normalmente. O mesmo arquivo, executado
+ * isolado, passava 10/10.
+ *
+ * O cache negativo é pior que não ter cache: ele transforma uma lentidão momentânea em
+ * "sandbox inexistente" até o processo morrer. Em produção isso reprova tasks legítimas como
+ * falha de infraestrutura (e o Router trata INFRA_ERROR como não-testável).
+ *
+ * Correção: só o resultado POSITIVO é cacheado (o Docker não "desaparece" durante o processo).
+ * Negativo por timeout/transiente é reavaliado na próxima chamada; apenas `ENOENT` (CLI
+ * inexistente) é definitivo, porque aí não há o que reavaliar.
  */
 function isSandboxAvailable() {
   if (dockerAvailabilityCache !== null) return dockerAvailabilityCache;
-  try {
-    execFileSync('docker', ['info', '--format', '{{.ServerVersion}}'], {
-      timeout: 5000,
-      stdio: ['ignore', 'ignore', 'ignore'],
-    });
-    dockerAvailabilityCache = true;
-  } catch (_) {
-    dockerAvailabilityCache = false;
+  for (let tentativa = 1; tentativa <= DOCKER_PROBE_ATTEMPTS; tentativa += 1) {
+    try {
+      execFileSync('docker', ['info', '--format', '{{.ServerVersion}}'], {
+        timeout: DOCKER_PROBE_TIMEOUT_MS,
+        stdio: ['ignore', 'ignore', 'ignore'],
+      });
+      dockerAvailabilityCache = true;
+      return true;
+    } catch (err) {
+      // CLI ausente é definitivo: reavaliar não mudaria nada.
+      if (err && err.code === 'ENOENT') {
+        dockerAvailabilityCache = false;
+        return false;
+      }
+      // Qualquer outra falha (timeout/SIGTERM, daemon momentaneamente ocupado) é TRANSITÓRIA:
+      // tenta de novo; se todas falharem, responde `false` nesta chamada sem envenenar o processo.
+    }
   }
-  return dockerAvailabilityCache;
+  return false;
 }
 
 /** Uso interno de teste: força reavaliação da disponibilidade do Docker. */

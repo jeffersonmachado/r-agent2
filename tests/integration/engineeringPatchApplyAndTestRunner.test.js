@@ -12,6 +12,11 @@ const {
   createWorkspace, applyPatch, listChangedFiles, destroyWorkspace,
 } = require('../../api/services/engineeringRouter/patchApplyService');
 const { runTestCommands } = require('../../api/services/engineeringRouter/testRunnerService');
+// `stdoutRef` é `path.relative(ROOT, arquivo)` — ROOT é o repositório que o SERVIÇO usa
+// (`ENGINEERING_ROUTER_HOST_REPO_ROOT` quando definido), não o diretório deste arquivo. Resolver o ref
+// a partir de `__dirname/../..` só coincide quando teste e serviço apontam para o mesmo checkout; em
+// worktree ligada o arquivo é procurado no lugar errado (medido 2026-10-26).
+const { ROOT: ENGINEERING_ROOT } = require('../../api/services/engineeringRouter/contextBuilderService');
 
 const NEW_FILE_DIFF = `diff --git a/tmp-engineering-router-fixture.txt b/tmp-engineering-router-fixture.txt
 new file mode 100644
@@ -93,7 +98,8 @@ describe('patchApplyService + testRunnerService — integração real', () => {
       expect(allPass).toBe(true);
       expect(results[0].status).toBe('PASS');
       expect(results[0].exitCode).toBe(0);
-      expect(fs.existsSync(path.join(__dirname, '..', '..', results[0].stdoutRef))).toBe(true);
+      const stdoutPath = path.resolve(ENGINEERING_ROOT, results[0].stdoutRef);
+      expect(fs.existsSync(stdoutPath)).toBe(true);
     } finally {
       await destroyWorkspace(workspace);
     }

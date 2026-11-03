@@ -1,0 +1,25 @@
+{
+  "id": "QA-MESH-SCHEDULER-REASON-BUG-CLOSURE-ANTES-DE-PIPELINE",
+  "severity": "P2",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "qa-mesh scheduler.test.js reprova em 2 casos: reason virou bug_closure_blocked onde o teste espera pipeline_active",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+  "teste": "qa-mesh/__tests__/scheduler.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [
+    "ASSINATURA_INVALIDA"
+  ],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102135112-3a485a47/logs/QA-MESH-SCHEDULER-REASON-BUG-CLOSURE-ANTES-DE-PIPELINE.log",
+  "draft": "governance/bug-closure/proofs-drafts/QA-MESH-SCHEDULER-REASON-BUG-CLOSURE-ANTES-DE-PIPELINE.json",
+  "camposParaAssinar": 18,
+  "runId": "run-20261102135112-3a485a47",
+  "identidade": {
+    "commit": "a15f550e3522b48a49fb2d7cc6c948fdf2b60f01",
+    "sourceFingerprint": "68b2804492d5bf2d9b5e02a86ba0dd1f8846917384d13b61d18ab7fad7dce0c4",
+    "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+    "hardeningQueueFingerprint": "512a1d3560e6a811cbb0c118830368ea5c47f73518962f7217e270605a3ba77f",
+    "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+  },
+  "artifactSha256": "46ce4de07acbb39cfca1f9f59665cd76736f276c5a4541dab3b559e347e18693"
+}

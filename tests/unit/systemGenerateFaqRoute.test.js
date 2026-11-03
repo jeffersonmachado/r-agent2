@@ -1,4 +1,5 @@
 const http = require('http');
+const { TIMEOUT_BOOT_APP_MS } = require('../helpers/jestTimeouts');
 
 // Este arquivo boota o SERVIDOR REAL (`api/server.js`) uma vez por teste: cada
 // teste custa ~7-8 s (medido 6.7-8.0 s em isolamento) só de criar o servidor e
@@ -9,7 +10,7 @@ const http = require('http');
 // NÃO reduzir: sob carga concorrente o boot do servidor estoura budgets
 // apertados e produz falso vermelho (flake observado em 2026-09-26 com o
 // `test:unit` paralelo — a suíte completa passa 877/877 quando não há disputa).
-jest.setTimeout(30000);
+jest.setTimeout(TIMEOUT_BOOT_APP_MS);
 
 jest.mock('../../api/utils/logger', () => ({
   debug: jest.fn(),

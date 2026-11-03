@@ -1,0 +1,269 @@
+{
+  "_doc": "Registro de MUTAÇÕES para provar EVIDÊNCIA NEGATIVA (P0). Cada entrada neutraliza UM controle específico e declara qual teste tem de FALHAR quando o controle desaparece. Sem isso, 'o teste passa' não prova que o teste testa alguma coisa: passaria igual se o guard nunca existisse. A mutação é textual e exata (find/replace) justamente para ser revisável: qualquer pessoa lê o que foi desativado.",
+  "_schema": {
+    "defectId": "id do item da fila (P0)",
+    "targetFile": "arquivo do CONTROLE (não do teste)",
+    "control": "descrição curta do que a mutação desativa",
+    "find": "trecho EXATO presente UMA vez no arquivo",
+    "replace": "substituto que neutraliza o controle",
+    "test": "suíte que precisa FALHAR com a mutação aplicada"
+  },
+  "mutations": [
+    {
+      "defectId": "P0-2",
+      "targetFile": "governance/lib/evidence-manifest-hash-baseline.js",
+      "control": "ausência de baseline deixa de ser FAIL e passa a PASS (\"não há dado\" == \"dado confere\")",
+      "find": "  if (!recordedHash) {\n    return {\n      pass: false,\n      severity: 'HIGH',\n      code: CODES.BASELINE_MISSING,",
+      "replace": "  if (false && !recordedHash) {\n    return {\n      pass: false,\n      severity: 'HIGH',\n      code: CODES.BASELINE_MISSING,",
+      "test": "tests/unit/governance/evidenceManifestHashBaseline.test.js"
+    },
+    {
+      "defectId": "P0-2",
+      "targetFile": "governance/lib/evidence-manifest-hash-baseline.js",
+      "control": "manifest ilegível deixa de ser FAIL (fail-closed quebrado na origem)",
+      "find": "  if (!computedHash) {\n    return {\n      pass: false,\n      severity: 'HIGH',\n      code: CODES.UNREADABLE,",
+      "replace": "  if (false && !computedHash) {\n    return {\n      pass: false,\n      severity: 'HIGH',\n      code: CODES.UNREADABLE,",
+      "test": "tests/unit/governance/evidenceManifestHashBaseline.test.js"
+    },
+    {
+      "defectId": "P0-3",
+      "targetFile": "scripts/governance/lib/security-gate-provenance.js",
+      "control": "run SUPERSEDED/ABANDONED deixa de bloquear a avaliação de evidência (run encerrado passaria como corrente)",
+      "find": "  if (statusRun === 'SUPERSEDED' || statusRun === 'ABANDONED') {",
+      "replace": "  if (false && (statusRun === 'SUPERSEDED' || statusRun === 'ABANDONED')) {",
+      "test": "tests/unit/securityIntel/securityGateProvenance.test.js"
+    },
+    {
+      "defectId": "P0-4",
+      "targetFile": "api/services/securityIntel/waiverService.js",
+      "control": "aprovação de waiver deixa de exigir aprovador identificado (segregação de funções quebrada)",
+      "find": "  if (!cleanApprover) throw codedError('waiver_approver_required');",
+      "replace": "  if (false && !cleanApprover) throw codedError('waiver_approver_required');",
+      "test": "tests/unit/securityIntel/waiverService.test.js"
+    },
+    {
+      "defectId": "P0-IDENTIDADE-AUSENTE-E-ACEITA-COMO-COERENTE",
+      "targetFile": "governance/canonical-release-decision.js",
+      "control": "certificação deixa de exigir identidade completa (run/commit/fingerprint) no contrato",
+      "find": "  if (faltandoIdentidade.length > 0) {",
+      "replace": "  if (false && faltandoIdentidade.length > 0) {",
+      "test": "tests/unit/governance/canonicalReleaseDecisionIdentityContract.test.js"
+    },
+    {
+      "defectId": "P0-AVALIADOR-CONFIAVA-EM-CAMPO-VALID-GRAVADO",
+      "targetFile": "scripts/governance/assert-canonical-release-decision.js",
+      "control": "veredito da cadeia volta a vir do campo `valid` GRAVADO em vez da recomputação dos bytes",
+      "find": "    valid: r && r.valid === true,",
+      "replace": "    valid: chainPersistido.valid === true,",
+      "test": "tests/unit/governance/assertCanonicalReleaseDecision.test.js"
+    },
+    {
+      "defectId": "P0-FALSO-GO-ESTADO-DE-GATE-NAO-PERMITIDO",
+      "targetFile": "governance/canonical-release-decision.js",
+      "control": "gate com status fora dos permitidos (UNKNOWN/SKIPPED/NOT_EXECUTED) deixa de bloquear a certificação",
+      "find": "  if (naoPermitidos.length > 0) {",
+      "replace": "  if (false && naoPermitidos.length > 0) {",
+      "test": "tests/unit/governance/canonicalReleaseDecision.test.js"
+    },
+    {
+      "defectId": "P0-ESTADO-E-VEREDITO-PODEM-DISCORDAR",
+      "targetFile": "scripts/governance/assert-canonical-release-decision.js",
+      "control": "veredito `ok` deixa de derivar do estado decidido e passa a aprovar um estado pré-pacote",
+      "find": "  const ok = isFinalGo(decisao.state) && divergencias.length === 0;",
+      "replace": "  const ok = divergencias.length === 0;",
+      "test": "tests/unit/governance/assertCanonicalReleaseDecision.test.js"
+    },
+    {
+      "defectId": "P0-PRODUTORES-GRAVAM-LINEAGE-SEM-SOURCECOMMIT",
+      "targetFile": "governance/export-governance-artifacts.js",
+      "control": "produtor volta a gravar lineage sem sourceCommit (identidade INCOMPLETA para sempre)",
+      "find": "    sourceCommit: run.git_commit || null,",
+      "replace": "    sourceCommit: null,",
+      "test": "tests/unit/governance/producerLineageIdentity.test.js"
+    },
+    {
+      "defectId": "P0-CADEIA-APARENCIA-DE-VALIDA-APOS-ALTERACAO",
+      "targetFile": "governance/governance-chain.js",
+      "control": "artefato pode declarar valid=true sobre conteudo alterado sem reprovar a auto-declaracao",
+      "find": "  let autoDeclaracao = 'AUSENTE';\n  if (declaraValidade) {",
+      "replace": "  let autoDeclaracao = 'AUSENTE';\n  if (false && declaraValidade) {",
+      "test": "tests/unit/governance/governanceChainAppearance.test.js"
+    },
+    {
+      "defectId": "P0-FILAS-ROLLBACK-DESTRUTIVO",
+      "targetFile": "api/modules/queue/service.js",
+      "control": "rollback de criacao volta a apagar fila PREEXISTENTE (fechando atendimentos anteriores)",
+      "find": "        if (result.created === true) {",
+      "replace": "        if (true) {",
+      "test": "tests/unit/queueCreatePersistBeforeResponse.test.js"
+    },
+    {
+      "defectId": "P0-FILAS-ISOLAMENTO-TENANT",
+      "targetFile": "api/services/queue/queueAdminOperations.js",
+      "control": "getQueueStats volta a rodar sem escopo de tenant (force do tenant A fecha tickets do B)",
+      "find": "  const { ticketIds, activeTickets } = getQueueStats({ tickets, queues, queueName: normalizedName, tenantId });",
+      "replace": "  const { ticketIds, activeTickets } = getQueueStats({ tickets, queues, queueName: normalizedName });",
+      "test": "tests/unit/queueTenantIsolation.test.js"
+    },
+    {
+      "defectId": "P0-RUN-SEM-SOURCE-COMMIT-IDENTIDADE-DE-RELEASE-IMPOSSIVEL",
+      "targetFile": "scripts/governance/create-governed-run.js",
+      "control": "run governado volta a nascer sem gitCommit (identidade de release IMPOSSIVEL para sempre)",
+      "find": "    gitCommit: git.sourceCommit,",
+      "replace": "    gitCommitIgnorado: git.sourceCommit,",
+      "test": "tests/unit/governance/runIdentityCommit.test.js"
+    },
+    {
+      "defectId": "P0-GATE-FASES-DUPLICADAS-DESCONHECIDAS-FALSO-PASS",
+      "targetFile": "scripts/ci/dev-branch-gate.js",
+      "control": "fases duplicadas deixam de invalidar a entrada e o gate pode certificar",
+      "find": "  if (duplicadas.length > 0) {\n    return {\n      fases: unicas, invalido: true,",
+      "replace": "  if (false && duplicadas.length > 0) {\n    return {\n      fases: unicas, invalido: true,",
+      "test": "tests/unit/governance/devBranchGatePhaseContract.test.js"
+    },
+    {
+      "defectId": "P0-GATE-ACEITA-COBERTURA-PARCIAL-DE-FASE",
+      "targetFile": "scripts/ci/phase-step-contract.js",
+      "control": "fase é aprovada com apenas PARTE dos passos obrigatórios (ausentes não bloqueiam)",
+      "find": "  const ausentes = esperados.filter((id) => !presentes.has(id));\n  if (ausentes.length > 0) {",
+      "replace": "  const ausentes = esperados.filter((id) => !presentes.has(id));\n  if (false && ausentes.length > 0) {",
+      "test": "tests/unit/governance/phaseStepContract.test.js"
+    },
+    {
+      "defectId": "P0-RISCO-ACEITO-DISPENSA-CONTROLE-CRITICO",
+      "targetFile": "governance/bug-closure/eligibility.js",
+      "control": "RISK_ACCEPTED válido volta a dispensar defeito P0 (deixa de ser bloqueante)",
+      "find": "      const avaliacao = avaliarAceitacaoDeRisco(d);\n      riscoAceito.push(d);\n      const dispensa = avaliacao.valida && sev !== SEVERIDADES.P0;",
+      "replace": "      const avaliacao = avaliarAceitacaoDeRisco(d);\n      riscoAceito.push(d);\n      const dispensa = avaliacao.valida;",
+      "test": "tests/unit/governance/riskAcceptedCriticalControl.test.js"
+    },
+    {
+      "defectId": "P0-AGREGADO-AUTORIZACAO-TARDIA-CADEIA-VAZIA-PASS",
+      "targetFile": "scripts/governance/run-governance-enforcement.js",
+      "control": "agregado executa passos mesmo com autorização NEGADA (decisão deixa de preceder a execução)",
+      "find": "  if (!autorizacao.allowed) {",
+      "replace": "  if (false && !autorizacao.allowed) {",
+      "test": "tests/unit/governance/governanceEnforcementOrder.test.js"
+    },
+    {
+      "defectId": "HARDENING-ENG-GOV-RELEASE-P0-6",
+      "targetFile": "scripts/governance/run-release-suites.js",
+      "control": "reuso de lote volta a ignorar o exit code REAL do processo (falso verde do JSON)",
+      "find": "  if (meta.exitCode !== 0) return { reuse: false, reason: 'ORIGINAL_EXIT_CODE_NONZERO' };",
+      "replace": "  if (false && meta.exitCode !== 0) return { reuse: false, reason: 'ORIGINAL_EXIT_CODE_NONZERO' };",
+      "test": "tests/unit/governance/releaseSuiteRunner.test.js"
+    },
+    {
+      "defectId": "HARDENING-ENG-GOV-RELEASE-P0-5",
+      "targetFile": "scripts/governance/run-impact-validation.js",
+      "control": "grafo construído de OUTRO source deixa de escalar (decide sobre árvore que não analisou)",
+      "find": "  } else if (grafo && fingerprintAtual && grafo.sourceFingerprint !== fingerprintAtual) {",
+      "replace": "  } else if (false) {",
+      "test": "tests/unit/coverage/impactRunnerBinding.test.js"
+    },
+    {
+      "defectId": "HARDENING-ENG-GOV-RELEASE-P0-7",
+      "targetFile": "scripts/governance/verify-branch-protection.js",
+      "control": "corpo do PUT volta a omitir required_status_checks (HTTP 422 silencioso, --apply nunca funciona)",
+      "find": "    required_status_checks: desired.required_status_checks === undefined ? null : desired.required_status_checks,",
+      "replace": "    required_status_checks_omitido: desired.required_status_checks === undefined ? null : desired.required_status_checks,",
+      "test": "tests/unit/governance/branchProtectionApplyPayload.test.js"
+    },
+    {
+      "defectId": "MISSAO-B1-CADEIA-CRIPTOGRAFICA",
+      "targetFile": "governance/governance-chain.js",
+      "control": "verificador deixa de recalcular o hash do elo (aceita a cadeia como ela se declara)",
+      "find": "    if (link.exists && exists && currentHash !== link.hash) {",
+      "replace": "    if (false && link.exists && exists && currentHash !== link.hash) {",
+      "test": "tests/unit/governance/bugClosureHistoricalGuards.test.js"
+    },
+    {
+      "defectId": "HARDENING-ENG-GOV-RELEASE-MESH-EVIDENCE-POISONING",
+      "targetFile": "qa-mesh/intelligence/failureIntelligence.js",
+      "control": "execução SEM lineage volta a sobrescrever a evidência governada (latest.json)",
+      "find": "  const temLineage = Boolean(intelligence.runId && intelligence.sourceFingerprint);",
+      "replace": "  const temLineage = true;",
+      "test": "tests/unit/qa-mesh/failureIntelligenceLineage.test.js"
+    },
+    {
+      "defectId": "HARDENING-ENG-GOV-RELEASE-EVIDENCIA-DENTRO-DO-RUN",
+      "targetFile": "scripts/governance/check-wave-evidence-same-run.js",
+      "control": "evidência de wave de OUTRO run deixa de ser violação (passa como se fosse do run atual)",
+      "find": "    if (runDaEvidencia !== runId) {",
+      "replace": "    if (false && runDaEvidencia !== runId) {",
+      "test": "tests/unit/governance/waveEvidenceSameRunPreflight.test.js"
+    },
+    {
+      "defectId": "P0-1",
+      "targetFile": "api/modules/security-intel/approvalAuthority.js",
+      "control": "identidade de aprovação volta a ser aceita do CORPO (autodeclaração de autoridade)",
+      "find": "    if (isUsefulValue(body[field])) {",
+      "replace": "    if (false && isUsefulValue(body[field])) {",
+      "test": "tests/unit/securityIntel/approvalAuthority.test.js"
+    },
+    {
+      "defectId": "L1-WORKTREE-MUTILACAO-RECORRENTE",
+      "targetFile": "governance/worktree-integrity.js",
+      "control": "remoção de casos de teste deixa de ser violação (worktree mutilado passa como PASS)",
+      "find": "    if (file.removedTests > file.addedTests) {",
+      "replace": "    if (false && file.removedTests > file.addedTests) {",
+      "test": "tests/unit/governance/worktreeIntegrity.test.js"
+    },
+    {
+      "defectId": "HARDENING-ENG-GOV-RELEASE-P0-2",
+      "targetFile": "governance/governance-chain.js",
+      "control": "certificação volta a NÃO recalcular a cadeia (sela sobre declaração, não sobre bytes)",
+      "find": "  const resultado  = verificar(chain);",
+      "replace": "  const resultado  = { valid: true, failures: [] };",
+      "test": "tests/unit/governance/governanceChainCertification.test.js"
+    },
+    {
+      "defectId": "HARDENING-ENG-GOV-RELEASE-P0-3",
+      "targetFile": "scripts/governance/seal-release.sh",
+      "control": "selo publica ANTES de certificar (artefato publicado sem certificação)",
+      "find": "PHASES=(prepare candidate final consolidate certify publish verify-delivery)",
+      "replace": "PHASES=(prepare candidate final consolidate publish certify verify-delivery)",
+      "test": "tests/unit/governance/sealPhaseOrder.test.js"
+    },
+    {
+      "defectId": "HARDENING-ENG-GOV-RELEASE-P0-4",
+      "targetFile": "governance/canonical-release-decision.js",
+      "control": "decisão volta a ser comparada por SUBSTRING (literal desconhecido contendo GO aprova)",
+      "find": "  const jaEstado = Object.values(STATES).includes(texto);",
+      "replace": "  const jaEstado = /GO/i.test(texto);",
+      "test": "tests/unit/governance/assertCanonicalReleaseDecision.test.js"
+    },
+    {
+      "defectId": "HARDENING-ENG-GOV-RELEASE-CANDIDATE-IDENTIDADE-FOREIGN-RUN",
+      "targetFile": "governance/release-artifact-identity.js",
+      "control": "isolamento de run deixa de reprovar candidato/entregue de OUTRO run",
+      "find": "    if (manifest.governanceRunId !== currentRun.runId) {",
+      "replace": "    if (false && manifest.governanceRunId !== currentRun.runId) {",
+      "test": "tests/unit/governance/releaseArtifactIdentity.test.js"
+    },
+    {
+      "defectId": "P0-CRM-UPSERT-TRANSFERE-PROPRIEDADE-ENTRE-TENANTS",
+      "targetFile": "api/services/crm/crmRecordStore.js",
+      "control": "criação volta a usar upsert com PK só `id` (tenant B sobrescreve e transfere registro de A)",
+      "find": "    const row = await model().create({\n      id: registroId,\n      tenant_key: chave,\n      entity: alvo,\n      payload: sanitizarPayload(payload),\n    });",
+      "replace": "    const [row] = await model().upsert({\n      id: registroId,\n      tenant_key: chave,\n      entity: alvo,\n      payload: sanitizarPayload(payload),\n    });",
+      "test": "tests/integration/crmTenantIsolation.postgres.test.js"
+    },
+    {
+      "defectId": "L1-CONCORRENCIA-HTTP-DUPLO-ACCEPT",
+      "targetFile": "api/services/engineeringRouter/engineeringTaskService.js",
+      "control": "aquisição de lease volta a aceitar reentrada de QUALQUER worker (segunda execução concorrente re-adquire o fence em vez de 409)",
+      "find": "          AND (t.lease_token IS NULL OR t.lease_expires_at IS NULL OR t.lease_expires_at < NOW() OR t.lease_worker_instance_id = :workerInstanceId)",
+      "replace": "          AND (t.lease_token IS NULL OR t.lease_expires_at IS NULL OR t.lease_expires_at < NOW() OR TRUE)",
+      "test": "tests/integration/engineeringRouterConcurrentRunHttp.test.js"
+    },
+    {
+      "defectId": "P0-5",
+      "targetFile": "api/services/securityIntel/waiverService.js",
+      "control": "waiver EXPIRADO volta a poder ser aprovado (isenção vencida passa a valer)",
+      "find": "  if (!Number.isNaN(expiry.getTime()) && expiry.getTime() <= now.getTime()) {",
+      "replace": "  if (false && !Number.isNaN(expiry.getTime()) && expiry.getTime() <= now.getTime()) {",
+      "test": "tests/integration/securityWaiverApprovalE2E.test.js"
+    }
+  ]
+}

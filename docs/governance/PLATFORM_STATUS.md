@@ -1,7 +1,7 @@
 # Platform Status
 
-- Generated at: 2026-10-20T14:16:00.510Z
-- Canonical mesh execution: mesh-2026-10-20T13-30-48-788Z
+- Generated at: 2026-11-03T13:04:54.940Z
+- Canonical mesh execution: mesh-2026-11-03T11-27-04-915Z
 - Canonical mesh decision: GO
 - Readiness decision: PASS_WITH_DEFERRED_PACKAGE_GATE
 - Readiness score: 100
@@ -13,10 +13,10 @@
 - none
 
 ## Canonical mesh artifacts
-- History: /opt/results/ria/r-agent2/qa-mesh/meshHistory/mesh-2026-10-20T13-30-48-788Z.json
-- Summary: /opt/results/ria/r-agent2/qa-mesh/meshReport.json
-- GO/NO_GO: /opt/results/ria/r-agent2/qa-mesh/go-no-go-report.json
-- Metrics: /opt/results/ria/r-agent2/qa-mesh/metrics.json
+- History: /opt/results/ria/er-fixci/qa-mesh/meshHistory/mesh-2026-11-03T11-27-04-915Z.json
+- Summary: /opt/results/ria/er-fixci/qa-mesh/meshReport.json
+- GO/NO_GO: /opt/results/ria/er-fixci/qa-mesh/go-no-go-report.json
+- Metrics: /opt/results/ria/er-fixci/qa-mesh/metrics.json
 
 ## GO reasons
 - Foundation prod-like QA Waves governance exists and is machine-readable.

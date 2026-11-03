@@ -1,0 +1,26 @@
+{
+  "id": "HARDENING-ENG-GOV-RELEASE-EVIDENCIA-DENTRO-DO-RUN",
+  "severity": "P0",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Evidencia runtime so vale se produzida DENTRO da janela de um run governado aberto",
+  "classe": "AGUARDA_INSUMOS_HUMANOS",
+  "origemDoTeste": "CAMPO_DO_ITEM",
+  "teste": "tests/unit/governance/waveEvidenceSameRunPreflight.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [
+    "EVIDENCIA_NEGATIVA_AUSENTE",
+    "APROVACAO_HUMANA_AUSENTE"
+  ],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-EVIDENCIA-DENTRO-DO-RUN.log",
+  "draft": "governance/bug-closure/proofs-drafts/HARDENING-ENG-GOV-RELEASE-EVIDENCIA-DENTRO-DO-RUN.json",
+  "camposParaAssinar": 18,
+  "runId": "run-20261031140531-06a0a799",
+  "identidade": {
+    "commit": "40c1f07807dbc0ba55247c52f17ff28dfd5c5b4e",
+    "sourceFingerprint": "d5b817b10d978637f79b36835b6603040b0e584f063abfa725bf437fe3e973c2",
+    "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+    "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+    "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+  },
+  "artifactSha256": "3c76ee1f1bd923087660cb5e35c208fc10f495d03f46d764760c0f4e979cd09b"
+}

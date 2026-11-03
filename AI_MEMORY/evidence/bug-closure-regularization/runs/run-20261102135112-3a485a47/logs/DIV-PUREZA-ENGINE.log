@@ -1,0 +1,25 @@
+[jest-global-setup] .env carregado (0 chave(s) aplicada(s); ambiente explícito vence)
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/engine/enginePurityPorts.test.js
+  portas de ambiente da engine — injeção e restauração
+    ✓ clock: injetar congela o tempo; resetar volta ao relógio real (117 ms)
+    ✓ rng: injetar torna o aleatório reprodutível; default volta a variar (109 ms)
+    ✓ logger: injetar desvia o log e nada vai para o console (107 ms)
+    ✓ timers: injetar executa sem espera real (sem efeito pendente) (104 ms)
+    ✓ fileSystem: injetar substitui a leitura de disco (102 ms)
+    ✓ runtimeEnv: injetar substitui cwd/env (sem congelar valor no require) (103 ms)
+  determinismo — o defeito que a impureza causava
+    ✓ createEngineEvent produz id e timestamp IDÊNTICOS com as portas congeladas (105 ms)
+    ✓ sem congelar, o id VARIA (o determinismo vem da porta, não de sorte) (102 ms)
+    ✓ nowIso() respeita o relógio injetado (não é mais imutável de fora) (104 ms)
+    ✓ computeBackoffMs é reprodutível com o rng injetado (104 ms)
+  anti-vacuidade — varredura INDEPENDENTE do relatório do gate
+    ✓ nenhum módulo de domínio da engine lê ambiente direto (162 ms)
+    ✓ a regra distingue CONVERSÃO de LEITURA: há conversões no engine e nenhuma é acusada (134 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       12 passed, 12 total
+Snapshots:   0 total
+Time:        2.036 s, estimated 3 s
+Ran all test suites matching /tests\/unit\/engine\/enginePurityPorts.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

@@ -133,6 +133,7 @@ function deriveGates({ task, testRuns, reviews, regressionRuns, greenAttempt = n
   // ver que não havia evidência de integração distinta.
   const coverage = summarizeTestCoverage(testRuns);
   const unitEvidence = coverage.byCategory[TEST_CATEGORIES.UNIT];
+  const unitBacked = Boolean(unitEvidence && unitEvidence.passed > 0);
   const integrationEvidence = coverage.byCategory[TEST_CATEGORIES.INTEGRATION];
   const e2eEvidence = coverage.byCategory[TEST_CATEGORIES.E2E];
   const hasDistinctIntegration = coverage.hasIntegrationEvidence;
@@ -158,10 +159,24 @@ function deriveGates({ task, testRuns, reviews, regressionRuns, greenAttempt = n
   // dados, o gate NÃO aceita como PASS e nomeia o código.
   const coderProvider = String((greenAttempt && greenAttempt.coder_provider) || '').trim();
   const reviewerProvider = String((approvedReview && approvedReview.reviewer_provider) || '').trim();
+  const reviewerModel = String((approvedReview && approvedReview.reviewer_model) || '').trim();
   const providersDiffer = Boolean(coderProvider && reviewerProvider && coderProvider !== reviewerProvider);
   const declaredIndependent = Boolean(approvedReview && approvedReview.independent_of_coder === true);
   const independentContradicted = declaredIndependent && coderProvider !== '' && reviewerProvider !== '' && !providersDiffer;
-  const reviewBacked = Boolean(approvedReview) && !independentContradicted;
+
+  // PROVA POSITIVA DE INDEPENDÊNCIA (P1 medido em 2026-10-20).
+  //
+  // A versão anterior era `Boolean(approvedReview) && !independentContradicted`: só a AUSÊNCIA de
+  // contradição. Um APPROVE SEM declaração de independência (campo `false`/ausente) nunca era
+  // contradito — e portanto satisfazia o gate. Agora o gate exige as três provas juntas:
+  //   (a) declaração explícita `independent_of_coder === true`;
+  //   (b) identidade completa do revisor (provider E modelo) e do coder (provider);
+  //   (c) provider do revisor DIFERENTE do provider do coder.
+  // Identidade ausente nunca vira independência (fail-closed).
+  const reviewerIdentityComplete = Boolean(reviewerProvider && reviewerModel && coderProvider);
+  const independenceProven = declaredIndependent && reviewerIdentityComplete && providersDiffer;
+  const independenceMissing = Boolean(approvedReview) && !independenceProven && !independentContradicted;
+  const reviewBacked = Boolean(approvedReview) && independenceProven;
 
   const regressionPass = regressionRuns.length > 0 && regressionRuns.every((r) => r.status === 'PASS');
   const greenAttestation = Boolean(task && task.status === 'GREEN');
@@ -200,7 +215,11 @@ function deriveGates({ task, testRuns, reviews, regressionRuns, greenAttempt = n
   const gates = [
     gate(
       'unit',
-      testsAllPass,
+      // CLASSIFICAÇÃO RIGOROSA (P1 medido em 2026-10-20): antes o gate usava
+      // `testsAllPass` — QUALQUER execução verde (inclusive só integração)
+      // satisfazia UNIT. Agora exige pelo menos uma execução CLASSIFICADA como
+      // UNIT com status PASS e exit code 0; UNKNOWN/SKIPPED não contam.
+      unitBacked,
       {
         source: 'engineering_test_runs',
         commands: testRuns.map((t) => t.command),
@@ -208,6 +227,12 @@ function deriveGates({ task, testRuns, reviews, regressionRuns, greenAttempt = n
         classification: TEST_CATEGORIES.UNIT,
         executedUnitCommands: unitEvidence.commands,
         unitRuns: unitEvidence.passed,
+        ...(unitBacked
+          ? {}
+          : {
+            code: 'UNIT_EVIDENCE_MISSING',
+            note: 'nenhuma execução classificada como UNIT com PASS/exit 0 — execução genérica não comprova cobertura unitária',
+          }),
       },
       { source: 'engineering_test_runs', count: testRuns.length, attestedBy: 'task.status' },
     ),
@@ -239,16 +264,23 @@ function deriveGates({ task, testRuns, reviews, regressionRuns, greenAttempt = n
       {
         source: 'engineering_reviews',
         reviewerProvider: approvedReview && approvedReview.reviewer_provider,
+        reviewerModel: approvedReview && approvedReview.reviewer_model,
         coderProvider: coderProvider || null,
         independentOfCoder: declaredIndependent,
         providersDiffer,
+        reviewerIdentityComplete,
         attemptId: reviewAttemptId,
+        reviewedAt: (approvedReview && approvedReview.created_at) || null,
         // Código explícito quando a independência afirmada é contradita pelos dados
         // — sem isso o gate diria apenas "review" sem dizer POR QUE recusou.
-        code: independentContradicted ? 'INDEPENDENT_REVIEW_CONTRADICTED_BY_PROVIDER' : null,
+        code: independentContradicted
+          ? 'INDEPENDENT_REVIEW_CONTRADICTED_BY_PROVIDER'
+          : (independenceMissing ? 'INDEPENDENT_REVIEW_NOT_PROVEN' : null),
         note: independentContradicted
           ? 'a revisão se declara independente mas o provider do revisor é o MESMO do coder'
-          : (approvedReview ? 'APPROVE da tentativa que avançou' : 'nenhum APPROVE na tentativa que avançou'),
+          : (independenceMissing
+            ? 'revisão sem prova positiva de independência (declaração explícita + provider e modelo do revisor + provider do coder distintos)'
+            : (approvedReview ? 'APPROVE da tentativa que avançou, com independência comprovada' : 'nenhum APPROVE na tentativa que avançou')),
       },
       { source: 'engineering_reviews', count: attemptReviews.length, attestedBy: 'task.status' },
     ),

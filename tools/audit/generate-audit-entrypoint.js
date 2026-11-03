@@ -167,21 +167,33 @@ if (fs.existsSync(dirRelease)) {
 }
 
 // -------------------------------------------------------------- provas
-const provas = PROVAS.map(({ path: rel, campo }) => {
+// DEFEITO MEDIDO (2026-11-01, local): o mapa original colocava TODOS os caminhos em `provas`,
+// inclusive os AUSENTES, com `existe:false, sha256:null, veredito:null` — a "linha oca" que
+// `tests/unit/audit/auditEntrypointArtifact.test.js` proíbe. Regenerar o entrypoint numa máquina
+// sem os relatórios de release (que só existem no ciclo de selagem) quebrava a suíte. Separação
+// honesta: `provas` contém SÓ o que existe (com sha256 e veredito reais); `provasAusentes` nomeia
+// o que é esperado mas não está nesta máquina — sem fabricar sha256/veredito para o que não existe.
+const provas = [];
+const provasAusentes = [];
+for (const { path: rel, campo } of PROVAS) {
   const abs = path.join(ROOT, rel);
-  const existe = fs.existsSync(abs);
-  const d = existe ? lerJson(abs) : null;
-  return {
+  const gitTracked = Boolean(git(['ls-files', '--error-unmatch', rel]));
+  if (!fs.existsSync(abs)) {
+    provasAusentes.push({ path: rel, gitTracked, campoVeredito: campo });
+    continue;
+  }
+  const d = lerJson(abs);
+  provas.push({
     path: rel,
-    gitTracked: Boolean(git(['ls-files', '--error-unmatch', rel])),
-    existe,
+    gitTracked,
+    existe: true,
     veredito: d && d[campo] !== undefined ? d[campo] : null,
     campoVeredito: campo,
     runId: d && d.runId ? d.runId : null,
     generatedAt: d && d.generatedAt ? d.generatedAt : null,
-    sha256: existe ? sha256Arquivo(abs) : null,
-  };
-});
+    sha256: sha256Arquivo(abs),
+  });
+}
 
 // ----------------------------------------------- itens abertos da fila
 // `path.resolve`: leitura registrada pelo auditor de persistência sem virar
@@ -412,6 +424,7 @@ const payload = {
   agregado,
   cadeiaCriptografica: cadeia,
   provas,
+  provasAusentes,
   artefatosFisicos,
   fila: {
     total: (fila.items || []).length,
@@ -501,7 +514,7 @@ if (agregado.passosNaoNpmRun.length > 0) {
 }
 linhas.push(`- ${agregado.semantica}`);
 linhas.push(`- Relatório próprio do agregado: \`${agregado.relatorioProprio.path}\` — ${agregado.relatorioProprio.existe ? `existe, gerado em ${agregado.relatorioProprio.generatedAt}, runId corrente? **${agregado.relatorioProprio.doRunCorrente ? 'sim' : 'NÃO'}**` : 'ausente'}`);
-linhas.push(`- Provas acima com o runId corrente: **${agregado.provasComRunIdCorrente} de ${provas.length}**`);
+linhas.push(`- Provas acima com o runId corrente: **${agregado.provasComRunIdCorrente} de ${provas.length}** (${provasAusentes.length} prova(s) esperada(s) ausente(s) nesta máquina)`);
 if (agregado.provasSemCampoRunId.length > 0) {
   linhas.push(`- Provas que não registram campo \`runId\` (não é violação, o campo não existe nelas): ${agregado.provasSemCampoRunId.map((p) => `\`${p}\``).join(', ')}`);
 }
@@ -611,7 +624,7 @@ linhas.push('');
 fs.writeFileSync(SAIDA_MD, linhas.join('\n'));
 
 console.log(`[audit-entrypoint] auditEpoch=${epoch}`);
-console.log(`[audit-entrypoint] provas=${provas.length} com veredito=${provas.filter((p) => p.veredito).length} ausentes=${provas.filter((p) => !p.existe).length}`);
+console.log(`[audit-entrypoint] provas=${provas.length} com veredito=${provas.filter((p) => p.veredito).length} ausentes=${provasAusentes.length}`);
 console.log(`[audit-entrypoint] artefatos fisicos=${artefatosFisicos.length}`);
 console.log(`[audit-entrypoint] fila: total=${payload.fila.total} naoFechados=${payload.fila.naoFechados.length}`);
 console.log(`[audit-entrypoint] agregado: ${agregado.ultimaExecucaoMedida.existe ? `${agregado.ultimaExecucaoMedida.veredito} (exit ${agregado.ultimaExecucaoMedida.exitCode})` : 'nao embutido'}`);

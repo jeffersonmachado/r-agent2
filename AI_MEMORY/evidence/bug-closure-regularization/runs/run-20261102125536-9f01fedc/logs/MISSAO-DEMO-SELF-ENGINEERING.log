@@ -1,0 +1,35 @@
+[jest-global-setup] .env carregado (0 chave(s) aplicada(s); ambiente explícito vence)
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/governance/selfEngineeringDemonstration.test.js
+  demonstração de self-engineering — os defeitos citados existem na fila
+    ✓ DEF-TIMEBOMB-EVOSYNC-JANELA30D está na fila oficial (103 ms)
+    ✓ DEF-WS-AUTH-POS-LOGIN está na fila oficial (101 ms)
+    ✓ DEF-REMOVECHILD-HEADER-ENHANCEMENT está na fila oficial (101 ms)
+    ✓ DEF-QUEUE-DELETE-DB-ONLY está na fila oficial (101 ms)
+    ✓ MISSAO-B8-ESTADOS-FILA está na fila oficial (101 ms)
+    ✓ MISSAO-B1-CADEIA-CRIPTOGRAFICA está na fila oficial (101 ms)
+    ✓ são seis defeitos distintos (a demonstração não repete o mesmo caso) (101 ms)
+  demonstração de self-engineering — cada defeito citado tem prova ASSINADA em disco
+    ✓ DEF-TIMEBOMB-EVOSYNC-JANELA30D tem closureProof existente e assinado (102 ms)
+    ✓ DEF-WS-AUTH-POS-LOGIN tem closureProof existente e assinado (103 ms)
+    ✓ DEF-REMOVECHILD-HEADER-ENHANCEMENT tem closureProof existente e assinado (101 ms)
+    ✓ DEF-QUEUE-DELETE-DB-ONLY tem closureProof existente e assinado (102 ms)
+    ✓ MISSAO-B8-ESTADOS-FILA tem closureProof existente e assinado (102 ms)
+    ✓ MISSAO-B1-CADEIA-CRIPTOGRAFICA tem closureProof existente e assinado (100 ms)
+  demonstração de self-engineering — a prova é reproduzível (suíte declarada e existente)
+    ✓ DEF-TIMEBOMB-EVOSYNC-JANELA30D declara regressionTest que existe (101 ms)
+    ✓ DEF-WS-AUTH-POS-LOGIN declara regressionTest que existe (101 ms)
+    ✓ DEF-REMOVECHILD-HEADER-ENHANCEMENT declara regressionTest que existe (101 ms)
+    ✓ DEF-QUEUE-DELETE-DB-ONLY declara regressionTest que existe (101 ms)
+    ✓ MISSAO-B8-ESTADOS-FILA declara regressionTest que existe (100 ms)
+    ✓ MISSAO-B1-CADEIA-CRIPTOGRAFICA declara regressionTest que existe (100 ms)
+  demonstração de self-engineering — as duas classes opostas estão representadas
+    ✓ o time bomb (falha só com a passagem do tempo) tem prova com execução registrada (101 ms)
+    ✓ o fail-open do hook (estado desconhecido) tem suíte que exercita o validador (101 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       21 passed, 21 total
+Snapshots:   0 total
+Time:        2.31 s, estimated 3 s
+Ran all test suites matching /tests\/unit\/governance\/selfEngineeringDemonstration.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

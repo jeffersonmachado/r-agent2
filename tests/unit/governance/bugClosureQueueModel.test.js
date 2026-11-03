@@ -33,11 +33,17 @@ describe('fila oficial — "bloqueado" NÃO é fechado', () => {
   });
 
   it('validar() conta um item blocked como ABERTO', () => {
+    // CONTRATO ATUALIZADO (2026-10-21): a prova precisa ser ABRÍVEL — hash inexistente agora é
+    // `COMMIT_INEXISTENTE`. O fixture usa um commit REAL do repositório (antes era `abc1234`,
+    // que só passava porque o validador não olhava o git).
+    const commitReal = require('child_process')
+      .execFileSync('git', ['rev-parse', 'HEAD'], { cwd: process.cwd(), encoding: 'utf8' })
+      .trim();
     const fila = {
       items: [
         { id: 'P0-X', status: 'blocked', blocked_reason: 'sem acesso ao host' },
         { id: 'P0-Y', status: 'blocked_external', blocked_reason: 'terceiro' },
-        { id: 'P1-Z', status: 'verified', commit: 'abc1234', evidence: 'tests/unit/x.test.js' },
+        { id: 'P1-Z', status: 'verified', commit: commitReal, evidence: 'tests/unit/x.test.js' },
       ],
     };
     const r = validar(fila);

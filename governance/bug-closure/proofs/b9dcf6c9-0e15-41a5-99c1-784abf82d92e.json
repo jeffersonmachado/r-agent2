@@ -1,0 +1,85 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "b9dcf6c9-0e15-41a5-99c1-784abf82d92e",
+  "defectId": "HARDENING-ENG-GOV-RELEASE-MESH-EVIDENCE-POISONING",
+  "severityBefore": "P0",
+  "severityAfter": "P0",
+  "fromState": "RESOLVED",
+  "toState": "RESOLVED",
+  "evaluatedCommit": "c43614969fa7e5eafcf680b4028097b25143cd94",
+  "codeFingerprint": "330ad47b88702d47d7e21c625a1e77f0b4c8570f55d13be8e8dbc2fc64212ad6",
+  "requiredTests": [
+    "tests/unit/qa-mesh/failureIntelligenceLineage.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/qa-mesh/failureIntelligenceLineage.test.js",
+      "command": "npx jest tests/unit/qa-mesh/failureIntelligenceLineage.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-03T10:16:20.440Z",
+      "finishedAt": "2026-11-03T10:16:23.904Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103101609-e015b999/logs/HARDENING-ENG-GOV-RELEASE-MESH-EVIDENCE-POISONING.log",
+      "outputSha256": "7a16db50afa480cdefe977aca8e9c0282c5ef1c8c48ba10981637d65e3d49d4a"
+    }
+  ],
+  "negativeEvidence": [
+    {
+      "targetFile": "qa-mesh/intelligence/failureIntelligence.js",
+      "control": "execução SEM lineage volta a sobrescrever a evidência governada (latest.json)",
+      "mutatedFromSha256": "23decb2494cc949b2c91dcc6085f24ea484efc3c3772ab03038a2d3d4681498a",
+      "mutatedToSha256": "d4f163ff16ea9601d87f68c412d30634bf9f93286a744e59fef158f399bbc920",
+      "testPath": "tests/unit/qa-mesh/failureIntelligenceLineage.test.js",
+      "command": "npx jest tests/unit/qa-mesh/failureIntelligenceLineage.test.js --bail=1 --ci",
+      "baseline": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/HARDENING-ENG-GOV-RELEASE-MESH-EVIDENCE-POISONING-baseline-71a9c3b3.log",
+        "logSha256": "00d39285f9848fe8bac4e1a82f6ee70d6d5772dc4fb41eff2d470fb57d95fe88"
+      },
+      "mutated": {
+        "exitCode": 1,
+        "log": "AI_MEMORY/evidence/prova-negativa/HARDENING-ENG-GOV-RELEASE-MESH-EVIDENCE-POISONING-mutado-71a9c3b3.log",
+        "logSha256": "4f536c3a317c6e8136a6bf010da1b871e81c255c4953cff1b7d613cda20f86cf"
+      },
+      "restored": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/HARDENING-ENG-GOV-RELEASE-MESH-EVIDENCE-POISONING-restaurado-71a9c3b3.log",
+        "logSha256": "99b029049865f40b9edf1ead5a19b3dcedd3ef25f34d3bf6e2a89e4d5c8c0d09"
+      },
+      "capturedAt": "2026-11-02T16:08:31.583Z"
+    }
+  ],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/qa-mesh/failureIntelligenceLineage.test.js",
+      "sha256": "797b1fcf448ded2987d6971c5454e492d317fddb6dd59b40a017733ea4efb369"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": {
+    "channel": "VSCODE_AGENT",
+    "by": "platform-owner:jeffersonmachado",
+    "at": "2026-11-03T11:10:47.699Z",
+    "ref": "session:e92510ac-0f54-41c6-bb85-90f42042999c",
+    "agentSession": "e92510ac-0f54-41c6-bb85-90f42042999c"
+  },
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-03T10:16:23.911Z",
+  "proofHash": "29800c9f3006fd87e29de4dab2ea4258c0dc91e8486fe7dffc7f7698f4cbf2ec",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "SHtYq4vINDq7rBpj88AVyObUJy8tDBlOkMBoHoW0QismnixZSRQVAZtUBVxLJ8+lmbzHz+PCjFNWYEDVV9ktCw==",
+    "signedAt": "2026-11-03T11:11:20.640Z"
+  }
+}

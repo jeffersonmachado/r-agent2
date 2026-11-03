@@ -1,0 +1,8 @@
+{
+  "id": "MISSAO-DEMO-SELF-ENGINEERING",
+  "severity": "P3",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Demonstracao de self-engineering: o RAP encontrou defeitos reais que passaram por todos os gates",
+  "classe": "REQUER_DECISAO_HUMANA",
+  "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+}

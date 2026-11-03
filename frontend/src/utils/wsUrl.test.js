@@ -57,6 +57,60 @@ describe('wsUrl/buildWebSocketUrl', () => {
     expect(url).toBe('wss://app.exemplo.com/r-agent2/ws');
   });
 
+  // DEFEITO MEDIDO 2026-10-31 (browser real em /dev/qa-waves): o resolvedor tratava o PRIMEIRO
+  // SEGMENTO DO PATHNAME como prefixo de deployment. Servido na raiz, o pathname é a ROTA —
+  // `/dev/qa-waves` virava `ws://host/dev/ws` e `/login` virava `ws://host/login/ws`, caminhos que
+  // não existem (o servidor WS da API é `/ws`). Resultado: "WebSocket desconectado" em toda
+  // instalação servida na raiz. O prefixo correto é o `base` do build (Vite `BASE_URL`).
+  it('servido na RAIZ: rota não vira prefixo (usa /ws)', () => {
+    const url = buildWebSocketUrl({
+      env: { BASE_URL: '/', VITE_API_BASE_URL: '' },
+      location: {
+        href: 'http://127.0.0.1:5199/dev/qa-waves',
+        pathname: '/dev/qa-waves',
+        protocol: 'http:',
+        host: '127.0.0.1:5199',
+        hostname: '127.0.0.1',
+        port: '5199',
+      },
+    });
+
+    expect(url).toBe('ws://127.0.0.1:5199/ws');
+  });
+
+  it('servido na RAIZ em qualquer rota (login, workspace) → sempre /ws', () => {
+    for (const pathname of ['/login', '/workspace', '/dev/rpa-replays']) {
+      const url = buildWebSocketUrl({
+        env: { BASE_URL: '/', VITE_API_BASE_URL: '' },
+        location: {
+          href: `http://127.0.0.1:5199${pathname}`,
+          pathname,
+          protocol: 'http:',
+          host: '127.0.0.1:5199',
+          hostname: '127.0.0.1',
+          port: '5199',
+        },
+      });
+      expect(url).toBe('ws://127.0.0.1:5199/ws');
+    }
+  });
+
+  it('prefixo de deployment vem do BASE_URL do build (autoridade), não da rota', () => {
+    const url = buildWebSocketUrl({
+      env: { BASE_URL: '/r-agent2/', VITE_API_BASE_URL: '' },
+      location: {
+        href: 'https://app.exemplo.com/r-agent2/dev/qa-waves',
+        pathname: '/r-agent2/dev/qa-waves',
+        protocol: 'https:',
+        host: 'app.exemplo.com',
+        hostname: 'app.exemplo.com',
+        port: '',
+      },
+    });
+
+    expect(url).toBe('wss://app.exemplo.com/r-agent2/ws');
+  });
+
   it('faz fallback para /ws quando location nao estiver disponivel', () => {
     const url = buildWebSocketUrl({
       env: {

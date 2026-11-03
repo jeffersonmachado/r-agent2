@@ -95,7 +95,7 @@ describe('VerticalOperationalDashboardPage', () => {
     expect(screen.getByText('Consultas hoje:')).toBeInTheDocument();
     expect(screen.getByText('Risco de falta:')).toBeInTheDocument();
     expect(screen.getByText('Recalls enviados:')).toBeInTheDocument();
-    expect(screen.getByText('3')).toBeInTheDocument();
+    expect(await screen.findByText('3')).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Beauty' })).not.toBeInTheDocument();
   });
 
@@ -112,7 +112,7 @@ describe('VerticalOperationalDashboardPage', () => {
     expect(screen.getByText('Entregues hoje:')).toBeInTheDocument();
     expect(screen.getByText('Avaliações solicitadas:')).toBeInTheDocument();
     expect(screen.getByText('Campanhas de recompra:')).toBeInTheDocument();
-    expect(screen.getByText('9')).toBeInTheDocument();
+    expect(await screen.findByText('9')).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Beauty' })).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Fitness' })).not.toBeInTheDocument();
   });
@@ -137,8 +137,8 @@ describe('VerticalOperationalDashboardPage', () => {
     expect(screen.getByText('Taxa de recompra:')).toBeInTheDocument();
     expect(screen.getByText('Lembretes de reposição:')).toBeInTheDocument();
     expect(screen.getByText('Campanhas de fidelização:')).toBeInTheDocument();
-    expect(screen.getByText('18')).toBeInTheDocument();
-    expect(screen.getByText('33%')).toBeInTheDocument();
+    expect(await screen.findByText('18')).toBeInTheDocument();
+    expect(await screen.findByText('33%')).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Serviços' })).not.toBeInTheDocument();
   });
 
@@ -168,8 +168,8 @@ describe('VerticalOperationalDashboardPage', () => {
     expect(screen.getByText('Sobra:')).toBeInTheDocument();
     expect(screen.getByText('Rupturas:')).toBeInTheDocument();
     expect(screen.getByText('Acurácia da previsão:')).toBeInTheDocument();
-    expect(screen.getByText('120')).toBeInTheDocument();
-    expect(screen.getByText('88%')).toBeInTheDocument();
+    expect(await screen.findByText('120')).toBeInTheDocument();
+    expect(await screen.findByText('88%')).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Varejo' })).not.toBeInTheDocument();
   });
 
@@ -186,9 +186,9 @@ describe('VerticalOperationalDashboardPage', () => {
     expect(screen.getByText('Orçamentos aprovados:')).toBeInTheDocument();
     expect(screen.getByText('Taxa de aprovação:')).toBeInTheDocument();
     expect(screen.getByText('Tempo médio de decisão:')).toBeInTheDocument();
-    expect(screen.getByText('3')).toBeInTheDocument();
-    expect(screen.getByText('40%')).toBeInTheDocument();
-    expect(screen.getByText('2.5d')).toBeInTheDocument();
+    expect(await screen.findByText('3')).toBeInTheDocument();
+    expect(await screen.findByText('40%')).toBeInTheDocument();
+    expect(await screen.findByText('2.5d')).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Alimentação' })).not.toBeInTheDocument();
   });
 

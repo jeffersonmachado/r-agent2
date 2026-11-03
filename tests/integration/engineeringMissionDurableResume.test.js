@@ -43,6 +43,32 @@ let dbAvailable = false;
 let dbReason = null;
 const createdMissionIds = [];
 
+/**
+ * DIAGNÓSTICO de interferência (medido 2026-10-29, RELATORIO §11.19): a varredura de recovery é GLOBAL no
+ * banco e o servidor de dev na MESMA máquina/Postgres tem o loop ligado (tick default 5 min). Quando a
+ * missão do teste não aparece na NOSSA retomada, o log precisa dizer se outro worker já a pegou — senão a
+ * falha parece defeito do código de retomada. Nenhuma asserção muda: só publica QUEM tocou a missão.
+ */
+async function diagnosticarInterferencia(missionId, summary, esperado) {
+  const existeNaRetomada = (summary.items || []).some((i) => i.missionId === missionId);
+  if (existeNaRetomada === esperado) return;
+  let atual = null;
+  try { atual = await missionStore.getMission(missionId); } catch (_) { /* diagnóstico nunca derruba o teste */ }
+  // eslint-disable-next-line no-console
+  console.warn('[durable-resume] missão divergente da NOSSA retomada', JSON.stringify({
+    missionId,
+    esperadoNoResumo: esperado,
+    statusAtual: atual && atual.status,
+    leaseWorker: atual && atual.lease_worker_instance_id,
+    leaseHost: atual && atual.lease_host,
+    leaseExpiraEm: atual && atual.lease_expires_at,
+    atualizadoEm: atual && atual.updated_at,
+    itensNoResumo: (summary.items || []).length,
+    meuHost: require('os').hostname(),
+    meuPid: process.pid,
+  }));
+}
+
 function skipIfNoDatabase() {
   if (dbAvailable) return false;
   // Porta ÚNICA de infraestrutura (§11/§12): em RELEASE_AUTHORITATIVE=1 isto LANÇA INFRA_ERROR
@@ -50,7 +76,21 @@ function skipIfNoDatabase() {
   return require('../helpers/infraGate').skipOrFail({ suite: 'engineering-mission-resume', available: dbAvailable, reason: dbReason, requirement: 'postgres' });
 }
 
+// BANCO PRÓPRIO DA SUÍTE (medido 2026-10-30): no Postgres de dev COMPARTILHADO esta suíte flakava —
+// 1/3 execuções na base e 2/2 em lotes — porque a varredura de recovery é GLOBAL e um servidor vivo no
+// mesmo banco retomava as missões que o teste estava montando. Isolamento por banco descartável elimina a
+// variável sem tocar em dado de ninguém (o banco criado aqui é destruído no afterAll).
+let bancoDaSuite = null;
+
 beforeAll(async () => {
+  try {
+    const { provisionSuiteDatabase } = require('../helpers/suiteDatabase');
+    bancoDaSuite = await provisionSuiteDatabase('mission-durable-resume');
+  } catch (error) {
+    dbAvailable = false;
+    dbReason = `provisionamento de banco falhou: ${error.message}`;
+    return;
+  }
   try {
     await sequelizeModule.connect(2, 250);
     dbAvailable = true;
@@ -58,10 +98,16 @@ beforeAll(async () => {
     dbAvailable = false;
     dbReason = error.message;
   }
-}, 20000);
+  // Timeout do HOOK é o do provisionamento (CREATE DATABASE + 234 migrations = dezenas de segundos),
+  // não os 20 s herdados do `connect`. Medido 2026-10-30: isolada cabia nos 20 s, no lote L0b
+  // estourava o hook e as 6 asserções falhavam como "Exceeded timeout of 20000 ms for a hook".
+}, 300000);
 
 afterAll(async () => {
-  if (!dbAvailable) return;
+  if (!dbAvailable) {
+    if (bancoDaSuite) await bancoDaSuite.cleanup().catch(() => {});
+    return;
+  }
   const getModels = require('../../api/db/models');
   try {
     if (createdMissionIds.length > 0) {
@@ -83,6 +129,11 @@ afterAll(async () => {
     }
   } catch (_) { /* best-effort */ }
   await sequelizeModule.close().catch(() => {});
+
+  // O banco desta suíte é descartável: destruí-lo É o isolamento (não é limpeza global).
+  if (bancoDaSuite) {
+    await bancoDaSuite.cleanup().catch(() => {});
+  }
 }, 20000);
 
 describe('Engineering Mission — durable resume e idempotência', () => {
@@ -110,6 +161,7 @@ describe('Engineering Mission — durable resume e idempotência', () => {
     const versionsBefore = await missionStore.listVersions(mission.id);
     const summary = await orchestrator.resumeInterruptedMissions({ tenantId: 'system', autoStart: false });
 
+    await diagnosticarInterferencia(mission.id, summary, true);
     expect(summary.items.some((i) => i.missionId === mission.id && i.action === 'ENRICHED')).toBe(true);
     const after = await missionStore.getMission(mission.id);
     expect(after.status).toBe('AWAITING_APPROVAL');
@@ -151,6 +203,7 @@ describe('Engineering Mission — durable resume e idempotência', () => {
 
     const summary = await orchestrator.resumeInterruptedMissions({ tenantId: 'system', autoStart: false });
     // Missões em AWAITING_APPROVAL não são "retomáveis" por execução nem re-enriquecidas.
+    await diagnosticarInterferencia(mission.id, summary, false);
     expect(summary.items.some((i) => i.missionId === mission.id)).toBe(false);
 
     const after = await missionStore.getMission(mission.id);
@@ -173,6 +226,7 @@ describe('Engineering Mission — durable resume e idempotência', () => {
 
     // Crash logo após aprovar (nenhuma task criada). Retomada real:
     const summary = await orchestrator.resumeInterruptedMissions({ tenantId: 'system', autoStart: false });
+    await diagnosticarInterferencia(mission.id, summary, true);
     expect(summary.items.some((i) => i.missionId === mission.id)).toBe(true);
 
     const detail = await compiler.getMissionDetail(mission.id);
@@ -226,4 +280,5 @@ describe('Engineering Mission — durable resume e idempotência', () => {
     await approvalService.approve(mission.id, { actor: 'jest-resume' });
     expect((await missionStore.listApprovals(mission.id)).length).toBe(1);
   }, 60000);
+
 });

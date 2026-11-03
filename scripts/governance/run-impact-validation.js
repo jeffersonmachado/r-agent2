@@ -261,16 +261,51 @@ function main(argv = process.argv.slice(2)) {
   // teste SEM tocar o artefato real de `reports/`.
   const grafoPath = arg('--graph', GRAFO);
 
+  /**
+   * REGISTRA A RECUSA NO PRÓPRIO ARTEFATO (medido 2026-10-21, checkout limpo).
+   *
+   * Todos os caminhos de escalação anteriores saíam SEM escrever `reports/impact-validation-report.json`.
+   * Consequência real: o arquivo de uma execução ANTERIOR permanecia no disco e consumidores
+   * (testes unitários e gates que leem o relatório) liam um resultado que não era desta execução —
+   * evidência de outro momento apresentada como atual. Recusa também é resultado: sobrescreve.
+   */
+  const registrarRecusa = ({ base, changedFiles = [], motivo }) => {
+    const relatorio = {
+      schemaVersion: 1,
+      kind: 'impact-validation',
+      level: 'L1',
+      base,
+      changedFiles,
+      decision: { escalate: true, escalateReason: motivo, unclassified: changedFiles },
+      selection: {
+        totalTests: 0,
+        tests: [],
+        journeys: [],
+        meshScenarios: [],
+        byLayer: { transitive: 0, journey: 0, neighborhood: 0 },
+      },
+      execution: null,
+      refused: { reason: motivo, at: new Date().toISOString() },
+    };
+    fs.mkdirSync(path.dirname(out), { recursive: true });
+    fs.writeFileSync(out, JSON.stringify(relatorio, null, 1), 'utf8');
+    process.stdout.write(`[L1] relatório em ${path.relative(RAIZ, out)} (recusa registrada)\n`);
+  };
+
   // 1. grafo — existência, INTEGRIDADE e VÍNCULO com o source analisado (P0-5).
   if (!fs.existsSync(grafoPath)) {
-    process.stderr.write(`[L1] ERRO: artefato do grafo ausente. Rode: node scripts/governance/build-impact-graph.js\n`);
+    const motivo = 'artefato do grafo ausente (rode: node scripts/governance/build-impact-graph.js)';
+    process.stderr.write(`[L1] ERRO: ${motivo}\n`);
+    registrarRecusa({ base: 'GRAPH_ABSENT', motivo });
     return EXIT.INFRA;
   }
   let grafo;
   try {
     grafo = JSON.parse(fs.readFileSync(grafoPath, 'utf8'));
   } catch (err) {
-    process.stderr.write(`[L1] ESCALATE: artefato do grafo ilegível (${err.message}) — rode: npm run impact:build\n`);
+    const motivo = `artefato do grafo ilegível (${err.message}) — rode: npm run impact:build`;
+    process.stderr.write(`[L1] ESCALATE: ${motivo}\n`);
+    registrarRecusa({ base: 'GRAPH_UNREADABLE', motivo });
     return EXIT.ESCALATE;
   }
   // DEFEITO CORRIGIDO (P0-5, medido 2026-10-16): o artefato era lido e usado sem
@@ -300,6 +335,7 @@ function main(argv = process.argv.slice(2)) {
   if (problemasGrafo.length > 0) {
     for (const p of problemasGrafo) process.stderr.write(`[L1] ESCALATE: ${p}\n`);
     process.stderr.write('[L1] o grafo precisa descrever o source ATUAL — rode: npm run impact:build\n');
+    registrarRecusa({ base: 'GRAPH_STALE', motivo: problemasGrafo.join('; ') });
     return EXIT.ESCALATE;
   }
 
@@ -310,7 +346,9 @@ function main(argv = process.argv.slice(2)) {
     : arquivosAlterados(base);
 
   if (deteccao.degraded) {
-    process.stderr.write(`[L1] ESCALATE: ${deteccao.reason}\n`);
+    const motivo = deteccao.reason || 'detecção de alterações degradada';
+    process.stderr.write(`[L1] ESCALATE: ${motivo}\n`);
+    registrarRecusa({ base: 'DEGRADED', changedFiles: deteccao.files || [], motivo });
     return EXIT.ESCALATE;
   }
 
@@ -349,8 +387,11 @@ function main(argv = process.argv.slice(2)) {
     execution: null,
   };
 
+  // Defensivo: a formatação do resumo NUNCA pode derrubar o runner (um crash aqui não grava o
+  // relatório e o artefato fica ausente para os consumidores).
+  const arquivosSelecionados = Array.isArray(selecao.changedFiles) ? selecao.changedFiles : [];
   process.stdout.write(
-    `[L1] alterados=${selecao.changedFiles.length} testes=${selecao.totalTests} ` +
+    `[L1] alterados=${arquivosSelecionados.length} testes=${selecao.totalTests} ` +
       `camadas(t/j/v)=${selecao.layers.transitiva.length}/${selecao.layers.jornada.length}/${selecao.layers.vizinhanca.length}`
   );
   if (selecao.escalate) process.stdout.write(` → ESCALATE (${selecao.escalateReason})`);

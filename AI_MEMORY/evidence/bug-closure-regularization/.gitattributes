@@ -1,0 +1,2 @@
+# Saídas reais de teste: preservar bytes exatos para o sha256 da prova continuar conferindo.
+*.log -text -diff

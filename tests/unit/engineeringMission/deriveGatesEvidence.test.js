@@ -37,7 +37,7 @@ const comEvidencia = {
   ],
   // `attempt_id` é obrigatório no banco (FK para a tentativa): sem ele a revisão não
   // pertence a tentativa nenhuma e o gate não pode aceitá-la como APPROVE da corrente.
-  reviews: [{ attempt_id: 'a1', decision: 'APPROVE', reviewer_provider: 'anthropic', independent_of_coder: true }],
+  reviews: [{ attempt_id: 'a1', decision: 'APPROVE', reviewer_provider: 'anthropic', reviewer_model: 'claude-sonnet', independent_of_coder: true }],
   regressionRuns: [],
   greenAttempt: {
     id: 'a1',

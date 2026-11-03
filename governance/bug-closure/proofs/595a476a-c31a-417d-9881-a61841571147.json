@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "595a476a-c31a-417d-9881-a61841571147",
+  "defectId": "MISSAO-A-L2-L3-ORQUESTRADOR",
+  "severityBefore": "P3",
+  "severityAfter": "P3",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "68a1da1922d793a5937fcfa9a0c4441a7d734594",
+  "codeFingerprint": "f11b8df06b0649b60593c1dfdf19732315a805dad802c1669dfdd11de376e649",
+  "requiredTests": [
+    "tests/unit/coverage/impactRunner.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/coverage/impactRunner.test.js",
+      "command": "npx jest tests/unit/coverage/impactRunner.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-01T06:57:07.076Z",
+      "finishedAt": "2026-11-01T06:57:10.244Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101065707-6738559c/logs/MISSAO-A-L2-L3-ORQUESTRADOR.log",
+      "outputSha256": "0045f107b0306240bfc8848028b53baeac0950f050f8453d794abe650c0448f3"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/coverage/impactRunner.test.js",
+      "sha256": "b464454abc0f1043c0d4b71217e6c1d535d7ef3914ca6250d8f50a841fc594b1"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+  },
+  "createdAt": "2026-11-01T06:57:10.252Z",
+  "proofHash": "b3ff577f7fa4b8daa2fd494c6a91e5fb375519569221e6312de680b7aaa77ecc",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "Ojrzw+xXw9dM/axQo/YDyynR4l6k3oeQW/1UJQS2vItEGoHiKnrUzT71suhly+r9o3Lom4F7oKDPRxiVVAJaCw==",
+    "signedAt": "2026-11-01T06:57:23.715Z"
+  }
+}

@@ -1,0 +1,79 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "74757050-543f-4dc5-bc72-4a00e02a9f6a",
+  "defectId": "L1-WORKTREE-MUTILACAO-RECORRENTE",
+  "severityBefore": "P0",
+  "severityAfter": "P0",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "c43614969fa7e5eafcf680b4028097b25143cd94",
+  "codeFingerprint": "330ad47b88702d47d7e21c625a1e77f0b4c8570f55d13be8e8dbc2fc64212ad6",
+  "requiredTests": [
+    "tests/unit/governance/worktreeIntegrity.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/worktreeIntegrity.test.js",
+      "command": "npx jest tests/unit/governance/worktreeIntegrity.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-03T10:17:17.499Z",
+      "finishedAt": "2026-11-03T10:17:23.069Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103101609-e015b999/logs/L1-WORKTREE-MUTILACAO-RECORRENTE.log",
+      "outputSha256": "d50fbab43d9cb16f98daf7ec11bad41e6d5469cd54653281799284faab5065b2"
+    }
+  ],
+  "negativeEvidence": [
+    {
+      "targetFile": "governance/worktree-integrity.js",
+      "control": "remoção de casos de teste deixa de ser violação (worktree mutilado passa como PASS)",
+      "mutatedFromSha256": "5b54034062f3706a622f6a33843e8bdccf5f51c2842847a6ac1116529c5f72ec",
+      "mutatedToSha256": "d66c7623dc54734eed08a8562d66cb43a4f04817badb2a9f1d63ae95a48ec5a3",
+      "testPath": "tests/unit/governance/worktreeIntegrity.test.js",
+      "command": "npx jest tests/unit/governance/worktreeIntegrity.test.js --bail=1 --ci",
+      "baseline": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/L1-WORKTREE-MUTILACAO-RECORRENTE-baseline-99541c10.log",
+        "logSha256": "8ab1d08b061c6199b3bb9b7a378da89ff0a9e2e3553c4134415f1e98371e3b80"
+      },
+      "mutated": {
+        "exitCode": 1,
+        "log": "AI_MEMORY/evidence/prova-negativa/L1-WORKTREE-MUTILACAO-RECORRENTE-mutado-99541c10.log",
+        "logSha256": "a4306b63640086e0afe9e3c0a11af6bd2119e055a2f8299fa32ed97d426b98a8"
+      },
+      "restored": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/L1-WORKTREE-MUTILACAO-RECORRENTE-restaurado-99541c10.log",
+        "logSha256": "93c522c0db1150c8e4cfe069dc4121449c6144545ab6bae44a9fbfbfd4d9a642"
+      },
+      "capturedAt": "2026-11-02T16:09:21.539Z"
+    }
+  ],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/worktreeIntegrity.test.js",
+      "sha256": "d863a97c934cc903bc49d0277f4f89aa73cd0210a946a7cc6ffdc2d094dfc535"
+    }
+  ],
+  "actor": {
+    "id": "owner@results.invalid",
+    "kind": "humano"
+  },
+  "humanAuthorization": {
+    "channel": "VSCODE_AGENT",
+    "by": "platform-owner:jeffersonmachado",
+    "at": "2026-11-03T11:10:47.699Z",
+    "ref": "session:e92510ac-0f54-41c6-bb85-90f42042999c",
+    "agentSession": "e92510ac-0f54-41c6-bb85-90f42042999c"
+  },
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-03T10:17:23.078Z",
+  "proofHash": "15350c6c95c5791b1d97cfdff51744cf721323005adb60e2ca183d41dcbfd8ef"
+}

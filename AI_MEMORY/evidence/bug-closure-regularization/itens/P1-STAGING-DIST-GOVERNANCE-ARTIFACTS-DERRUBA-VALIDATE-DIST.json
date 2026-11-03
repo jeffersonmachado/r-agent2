@@ -1,0 +1,14 @@
+{
+  "id": "P1-STAGING-DIST-GOVERNANCE-ARTIFACTS-DERRUBA-VALIDATE-DIST",
+  "severity": "P1",
+  "estadoPersistido": "RESOLVED",
+  "titulo": "Certificacao deixa staging transitorio em dist/ e o agregado falha em validate:dist",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "COMMIT_DO_FIX",
+  "teste": "tests/unit/governance/devBranchCiGate.test.js",
+  "transicao": "RESOLVED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-STAGING-DIST-GOVERNANCE-ARTIFACTS-DERRUBA-VALIDATE-DIST.log",
+  "draft": "governance/bug-closure/proofs-drafts/P1-STAGING-DIST-GOVERNANCE-ARTIFACTS-DERRUBA-VALIDATE-DIST.json",
+  "camposParaAssinar": 18
+}

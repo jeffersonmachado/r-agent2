@@ -196,6 +196,136 @@ describe('ciclo de bug — detecção, reprodução e deduplicação', () => {
     expect(result.finding.evidence_refs.length).toBeGreaterThanOrEqual(2);
   });
 
+
+  /**
+   * BUG-03b — CONCORRÊNCIA REAL ENTRE A VARREDURA E UMA TENTATIVA EM CURSO.
+   *
+   * DEFEITO MEDIDO (checkout limpo de 2026-10-25, `L0b-integracao-engenheiro`): a suíte falhou com
+   *   `transição concorrente rejeitada: finding … está em SUSPECTED (tentativa REPRODUCING → CONFIRMED)`
+   * e a MESMA suíte passou 12/12 isolada. Causa: `reproduce()` NÃO toma o lease do finding — só a
+   * varredura (`runBugLoopSweep`) o toma. A varredura de outro processo (o runner vivo do harness)
+   * pega o mesmo finding em REPRODUCING, roda uma reprodução própria, recebe INCONCLUSIVE e o devolve
+   * para SUSPECTED — atropelando a tentativa em curso, que então falha no CAS ao confirmar.
+   *
+   * Prova aqui, sem depender de sorte de agendamento: duas reproduções concorrentes do MESMO finding,
+   * com a primeira parada dentro do runner. A segunda tem de ser RECUSADA por lease, e a primeira tem
+   * de terminar CONFIRMED.
+   */
+  test('BUG-03b: segunda reprodução concorrente do mesmo finding é recusada (lease), não atropela', async () => {
+    if (skipIfNoDatabase()) return;
+    const finding = await registerConfirmed({ title: 'BUG-03b concorrente' });
+
+    // O teste SEGURA o lease (como a varredura faz) para que nenhum sweep externo — o runner vivo do
+    // harness usa o MESMO banco — interfira na medição. Sem isso o experimento depende de quem chega
+    // primeiro, e o próprio teste vira flaky (medido: 1 falha em 4 execuções do arquivo completo).
+    let lease = null;
+    for (let tentativa = 0; tentativa < 50 && !lease; tentativa += 1) {
+      try {
+        lease = await bugFindingService.acquireFindingLease(finding.id, { workerInstanceId: 'worker-dono-do-teste' });
+      } catch (err) {
+        if (err.code !== 'FINDING_LEASE_HELD_BY_OTHER_WORKER') throw err;
+        await new Promise((resolve) => { setTimeout(resolve, 100); });
+      }
+    }
+    expect(lease).not.toBeNull();
+
+    try {
+      let liberar;
+      const bloqueio = new Promise((resolve) => { liberar = resolve; });
+      let entrouNoRunner;
+      const entrou = new Promise((resolve) => { entrouNoRunner = resolve; });
+
+      const runnerLento = runnerReturning('FAIL');
+      runnerLento.runCommands = jest.fn(async ({ commands }) => {
+        entrouNoRunner();
+        await bloqueio;
+        return {
+          allPass: false,
+          outcome: 'FAIL',
+          results: commands.map((command) => ({ command, status: 'FAIL', outcome: 'FAIL', exitCode: 1, durationMs: 12 })),
+        };
+      });
+
+      const primeira = bugReproductionService.reproduce(finding.id, { runner: runnerLento, actor: 'TEST', lease });
+      await entrou; // a tentativa 1 está DENTRO do runner, com o finding em REPRODUCING
+
+      const segunda = await bugReproductionService.reproduce(finding.id, {
+        runner: runnerReturning('FAIL'), actor: 'SWEEP', workerInstanceId: 'worker-concorrente',
+      });
+      // Recusa explícita, com motivo — nunca execução paralela silenciosa.
+      expect(segunda.outcome).toBe('SKIPPED_LEASE_HELD');
+      expect(segunda.skipped).toBe(true);
+
+      liberar();
+      const r1 = await primeira;
+      expect(r1.outcome).toBe('REPRODUCED');
+      expect(r1.finding.status).toBe('CONFIRMED');
+    } finally {
+      await bugFindingService.releaseFindingLease(finding.id, { token: lease.token }).catch(() => {});
+    }
+
+    // E o lease não fica preso depois da tentativa.
+    const depois = await bugFindingService.getFinding(finding.id);
+    expect(depois.lease_token).toBeNull();
+  });
+
+  /**
+   * BUG-03c — A VARREDURA respeita a posse: finding sob lease de outro worker é PULADO, não reprocessado.
+   *
+   * É a metade que faltava do mesmo defeito (BUG-03b): o dono não segura o lease, e a varredura não
+   * checa. Aqui o lease é tomado por um ator externo (como o runner faria) e a varredura tem de
+   * pular o finding com motivo, sem tocar no estado.
+   */
+  test('BUG-03c: varredura pula finding sob lease de outro worker (SKIPPED_LEASE_HELD)', async () => {
+    if (skipIfNoDatabase()) return;
+    const finding = await registerConfirmed({ title: 'BUG-03c posse pela varredura' });
+
+    const lease = await bugFindingService.acquireFindingLease(finding.id, { workerInstanceId: 'worker-externo' });
+    try {
+      // Escopo explícito: uma varredura GLOBAL com `runner: FAIL` CONFIRMARIA findings de outras
+      // suítes (efeito colateral fora do teste) e pagaria o custo da tabela inteira.
+      const sweep = await bugLoop.runBugLoopSweep({
+        limit: 200, autoFix: false, workerInstanceId: 'worker-varredura', runner: runnerReturning('FAIL'),
+        findingIds: [finding.id],
+      });
+      const item = (sweep.items || []).find((i) => i.findingId === finding.id);
+      expect(item).toEqual(expect.objectContaining({ action: 'SKIPPED_LEASE_HELD' }));
+
+      const depois = await bugFindingService.getFinding(finding.id);
+      expect(depois.status).toBe(finding.status); // estado intocado pela varredura
+    } finally {
+      await bugFindingService.releaseFindingLease(finding.id, { token: lease.token }).catch(() => {});
+    }
+  });
+
+
+  /**
+   * BUG-03d — O FIX NÃO PODE SER EXECUTADO DUAS VEZES (duplicação de efeitos).
+   *
+   * DEFEITO OBSERVADO E DEPOIS PROVADO POR CONSTRUÇÃO (2026-10-25): depois do aval humano o coder foi
+   * executado TRÊS vezes onde o correto é UMA. `runFixLoop` chegava por `handleAnomaly` SEM posse do
+   * finding, então a varredura podia pegar o mesmo finding e rodar o fix em paralelo. A primeira
+   * observação veio de um lote de integração em paralelo — forma de execução que o contrato de estado
+   * global (`config/canonical-release-suites.json`) não autoriza —, portanto o defeito NÃO é aceito com
+   * base naquela rodada: aqui a prova é direta e independente de carga, com o finding sob posse de outro
+   * worker e recusa explícita.
+   */
+  test('BUG-03d: fix loop recusa rodar sem a posse do finding (lease de outro worker)', async () => {
+    if (skipIfNoDatabase()) return;
+    const finding = await registerConfirmed({ title: 'BUG-03d posse do fix' });
+
+    const lease = await bugFindingService.acquireFindingLease(finding.id, { workerInstanceId: 'worker-dono' });
+    try {
+      const fix = await bugLoop.runFixLoop(finding.id, { actor: 'TEST', findingLease: null, workerInstanceId: 'worker-intruso' });
+      expect(fix.fixed).toBe(false);
+      expect(fix.blocked).toBe(true);
+      expect(fix.code).toBe('FINDING_LEASE_HELD_BY_OTHER_WORKER');
+      expect(fix.stage).toBe('LEASE_HELD_BY_OTHER_WORKER');
+    } finally {
+      await bugFindingService.releaseFindingLease(finding.id, { token: lease.token }).catch(() => {});
+    }
+  });
+
   test('BUG-02: missão de VERIFICAÇÃO/teste gera finding auditável, mas não vira item de correção', async () => {
     if (skipIfNoDatabase()) return;
     const { finding } = await bugFindingService.registerFinding({
@@ -220,7 +350,9 @@ describe('ciclo de bug — detecção, reprodução e deduplicação', () => {
 
     // A varredura do laço NÃO transforma isso em correção: o finding continua auditável, mas não
     // vira trabalho — corrigir uma missão de prova seria trabalho sobre um artefato de verificação.
-    const sweep = await bugLoop.runBugLoopSweep({ limit: 50, actor: 'TEST', autoFix: false });
+    // ESCOPO EXPLÍCITO: a varredura sem `findingIds` é GLOBAL e reprocessa toda a tabela acumulada
+    // (medido: 53,8 s de um orçamento de 60 s). Aqui interessa SÓ o finding deste teste.
+    const sweep = await bugLoop.runBugLoopSweep({ limit: 50, actor: 'TEST', autoFix: false, findingIds: [finding.id] });
     const item = sweep.items.find((i) => i.findingId === finding.id);
     expect(item).toBeTruthy();
     expect(item.action).toBe('SKIPPED_VERIFICATION_PROVENANCE');
@@ -230,7 +362,7 @@ describe('ciclo de bug — detecção, reprodução e deduplicação', () => {
 
     // Finding de trabalho real (WORK) continua elegível.
     const work = await registerConfirmed({ title: 'BUG-02 trabalho real elegível' });
-    const workSweep = await bugLoop.runBugLoopSweep({ limit: 50, actor: 'TEST', autoFix: false });
+    const workSweep = await bugLoop.runBugLoopSweep({ limit: 50, actor: 'TEST', autoFix: false, findingIds: [work.id] });
     const workItem = workSweep.items.find((i) => i.findingId === work.id);
     expect(workItem?.action).not.toBe('SKIPPED_VERIFICATION_PROVENANCE');
   });
@@ -800,5 +932,268 @@ describe('ciclo de bug — self-modification (BUG-16, BUG-19, BUG-20)', () => {
     for (const failure of rejected) {
       expect(['FINDING_STATE_CONFLICT', 'INVALID_FINDING_TRANSITION']).toContain(failure.reason.code);
     }
+  });
+});
+
+/**
+ * REGRESSÕES DA REVISÃO ADVERSARIAL (2026-10-25) — contrato e escopo.
+ *
+ * A posse por lease criou duas bordas que a revisão independente mediu: (1) finding INEXISTENTE
+ * passou a responder "posse de outro worker" (o UPDATE casa 0 linhas nos dois casos), apagando o 404;
+ * (2) o lease herdado era aceito sem vínculo com o finding, então um lease de OUTRO finding rodava a
+ * operação sem posse nenhuma. E o escopo novo (`findingIds`) era fail-open: lista vazia virava
+ * varredura global.
+ */
+describe('ciclo de bug — contrato de posse e escopo da varredura (revisão adversarial)', () => {
+  const ID_INEXISTENTE = '00000000-0000-4000-8000-000000000000';
+
+  test('finding inexistente é NOT_FOUND nos três caminhos (nunca "posse de outro worker")', async () => {
+    if (skipIfNoDatabase()) return;
+
+    const confirm = await bugFindingService
+      .confirmFinding(ID_INEXISTENTE, { basis: 'UNEQUIVOCAL_EVIDENCE', evidence: [{ type: 'ARTIFACT', ref: 'x' }], actor: 'TEST' })
+      .then((r) => ({ resolved: r }), (e) => ({ error: e.code }));
+    expect(confirm.error).toBe('not_found');
+
+    const repro = await bugReproductionService
+      .reproduce(ID_INEXISTENTE, { runner: runnerReturning('FAIL'), actor: 'TEST' })
+      .then((r) => ({ resolved: r }), (e) => ({ error: e.code }));
+    expect(repro.error).toBe('not_found');
+
+    const fix = await bugLoop
+      .runFixLoop(ID_INEXISTENTE, { actor: 'TEST' })
+      .then((r) => ({ resolved: r }), (e) => ({ error: e.code }));
+    expect(fix.error).toBe('not_found');
+  });
+
+  test('lease de OUTRO finding não é aceito como posse (FINDING_LEASE_MISMATCH)', async () => {
+    if (skipIfNoDatabase()) return;
+    const alvo = await registerConfirmed({ title: 'mismatch alvo do lease' });
+    const outro = await registerConfirmed({ title: 'mismatch dono do lease' });
+
+    const leaseDoOutro = await bugFindingService.acquireFindingLease(outro.id, { workerInstanceId: 'worker-dono' });
+    try {
+      await expect(bugFindingService.withFindingLeaseOwned(alvo.id, { lease: leaseDoOutro }, async () => 'nunca'))
+        .rejects.toMatchObject({ code: 'FINDING_LEASE_MISMATCH' });
+    } finally {
+      await bugFindingService.releaseFindingLease(outro.id, { token: leaseDoOutro.token }).catch(() => {});
+    }
+  });
+
+  test('escopo vazio não vira varredura global e tipo inválido é erro de contrato', async () => {
+    if (skipIfNoDatabase()) return;
+
+    const vazio = await bugLoop.runBugLoopSweep({ findingIds: [], actor: 'TEST', autoFix: false });
+    expect(vazio.scanned).toBe(0);
+    expect(vazio.items).toEqual([]);
+
+    await expect(bugLoop.runBugLoopSweep({ findingIds: 'id-solto', actor: 'TEST', autoFix: false }))
+      .rejects.toMatchObject({ code: 'INVALID_SWEEP_SCOPE' });
+  });
+
+  /**
+   * FENCING DO LEASE — regressão de 2026-10-26.
+   *
+   * `lease_fence` era incrementado na aquisição e NUNCA validado por nenhuma escrita: um worker cujo
+   * lease expirou e foi tomado por outro continuava gravando ("perdeu a posse, mas escreve"). O fence
+   * agora entra no MESMO `UPDATE` da transição (predicado atômico, sem TOCTOU entre checar e gravar).
+   */
+  test('escrita com fence VELHO é recusada (FINDING_LEASE_LOST) e não altera o estado', async () => {
+    if (skipIfNoDatabase()) return;
+    const registrado = await registerConfirmed({ title: 'fencing fence velho' });
+    await bugFindingService.confirmFinding(registrado.id, {
+      basis: 'UNEQUIVOCAL_EVIDENCE', evidence: [{ type: 'ARTIFACT', ref: 'fence:test' }], actor: 'TEST',
+    });
+    expect((await bugFindingService.getFinding(registrado.id)).status).toBe('CONFIRMED');
+
+    const lease = await bugFindingService.acquireFindingLease(registrado.id, { workerInstanceId: 'worker-dono-fence' });
+    try {
+      // A posse avançou: quem apresenta um fence que não é o corrente perdeu a posse e NÃO escreve.
+      await expect(bugFindingService.transitionFinding(registrado.id, 'FIXING', {
+        actor: 'worker-antigo', lease: { token: lease.token, fence: Number(lease.fence) + 7 },
+      })).rejects.toMatchObject({ code: 'FINDING_LEASE_LOST' });
+
+      expect((await bugFindingService.getFinding(registrado.id)).status).toBe('CONFIRMED');
+
+      // Controle POSITIVO: com o fence corrente a transição passa.
+      const ok = await bugFindingService.transitionFinding(registrado.id, 'FIXING', {
+        actor: 'worker-dono-fence', lease,
+      });
+      expect(ok.finding.status).toBe('FIXING');
+    } finally {
+      await bugFindingService.releaseFindingLease(registrado.id, { token: lease.token }).catch(() => {});
+    }
+  });
+
+  /**
+   * FENCING PROPAGADO AO FIX LOOP E À TRILHA DE TENTATIVAS — regressão de 2026-10-28.
+   *
+   * A revisão adversarial mediu que o fencing só existia em `transitionFinding`: as escritas do fix
+   * loop (`markFixed`/`markRegressionValidated`/`closeFinding`/`blockFinding`) e a persistência da
+   * tentativa de reprodução escreviam sob posse SEM declarar o fence — e nenhum teste pegava a
+   * mutação. Estes dois provam o caminho REAL: posse perdida (fence avançado) ⇒ escrita recusada.
+   */
+  test('markFixed com fence VELHO é recusado (posse perdida no fix loop não declara FIXED)', async () => {
+    if (skipIfNoDatabase()) return;
+    const registrado = await registerConfirmed({ title: 'fencing no fix loop' });
+    await bugFindingService.confirmFinding(registrado.id, {
+      basis: 'UNEQUIVOCAL_EVIDENCE', evidence: [{ type: 'ARTIFACT', ref: 'fence:fix' }], actor: 'TEST',
+    });
+
+    // Posse original (fence f) avançando o finding para FIXING — de CONFIRMED não se declara FIXED
+    // direto (a máquina de estados exige passar por FIXING).
+    const antigo = await bugFindingService.acquireFindingLease(registrado.id, { workerInstanceId: 'worker-original' });
+    await bugFindingService.transitionFinding(registrado.id, 'FIXING', { actor: 'worker-original', lease: antigo });
+
+    // A posse é PERDIDA: liberada e retomada por outro worker (fence f+1).
+    await bugFindingService.releaseFindingLease(registrado.id, { token: antigo.token });
+    const atual = await bugFindingService.acquireFindingLease(registrado.id, { workerInstanceId: 'worker-novo' });
+    try {
+      expect(Number(atual.fence)).toBeGreaterThan(Number(antigo.fence));
+
+      // O dono ANTIGO tenta declarar FIXED: o fence dele não é mais o corrente ⇒ recusa explícita.
+      await expect(bugFindingService.markFixed(registrado.id, {
+        actor: 'worker-original',
+        reproductionPassed: true, targetedTestsPassed: true, reviewPassed: true,
+        lease: antigo,
+      })).rejects.toMatchObject({ code: 'FINDING_LEASE_LOST' });
+
+      // O estado NÃO mentiu: continua FIXING (nunca FIXED).
+      expect((await bugFindingService.getFinding(registrado.id)).status).toBe('FIXING');
+
+      // Controle POSITIVO: o dono atual declara FIXED com o próprio fence.
+      const ok = await bugFindingService.markFixed(registrado.id, {
+        actor: 'worker-novo',
+        reproductionPassed: true, targetedTestsPassed: true, reviewPassed: true,
+        lease: atual,
+      });
+      expect(ok.finding.status).toBe('FIXED');
+    } finally {
+      await bugFindingService.releaseFindingLease(registrado.id, { token: atual.token }).catch(() => {});
+    }
+  });
+
+  test('tentativa de reprodução sob posse perdida NÃO é persistida (persistAttempt com fence)', async () => {
+    if (skipIfNoDatabase()) return;
+    const registrado = await registerConfirmed({ title: 'fencing na trilha de tentativas' });
+    await bugFindingService.confirmFinding(registrado.id, {
+      basis: 'UNEQUIVOCAL_EVIDENCE', evidence: [{ type: 'ARTIFACT', ref: 'fence:attempt' }], actor: 'TEST',
+    });
+    const antes = await bugFindingService.getFinding(registrado.id);
+    const tentativasAntes = Array.isArray(antes.reproduction_attempts) ? antes.reproduction_attempts.length : 0;
+
+    const antigo = await bugFindingService.acquireFindingLease(registrado.id, { workerInstanceId: 'worker-antigo' });
+    await bugFindingService.releaseFindingLease(registrado.id, { token: antigo.token });
+    const atual = await bugFindingService.acquireFindingLease(registrado.id, { workerInstanceId: 'worker-atual' });
+    try {
+      // `reproduce` aceita o lease herdado sem readquirir (reentrância): com o fence velho, a escrita
+      // da tentativa tem de ser recusada — a trilha do dono atual não pode ser sobrescrita.
+      await expect(bugReproductionService.reproduce(registrado.id, {
+        actor: 'worker-antigo', runner: runnerReturning('FAIL'), lease: antigo,
+      })).rejects.toMatchObject({ code: 'FINDING_LEASE_LOST' });
+
+      const depois = await bugFindingService.getFinding(registrado.id);
+      const tentativasDepois = Array.isArray(depois.reproduction_attempts) ? depois.reproduction_attempts.length : 0;
+      expect(tentativasDepois).toBe(tentativasAntes);
+    } finally {
+      await bugFindingService.releaseFindingLease(registrado.id, { token: atual.token }).catch(() => {});
+    }
+  });
+
+  test('varredura com identidade declara posse de fato (delegação única do ciclo de lease)', async () => {
+    if (skipIfNoDatabase()) return;
+    const registrado = await registerConfirmed({ title: 'varredura com posse delegada' });
+
+    // A prova da DELEGAÇÃO é o espião: a implementação antiga (cópia local do ciclo) satisfazia todas
+    // as asserções de efeito abaixo, então só a chamada à autoridade única distingue as duas.
+    const espiao = jest.spyOn(bugFindingService, 'withFindingLeaseOwned');
+
+    // Com a posse TOMADA por outro worker, a varredura com identidade é recusada — a delegação em
+    // `withFindingLeaseOwned` mantém a exclusividade que a segunda implementação podia perder.
+    const lease = await bugFindingService.acquireFindingLease(registrado.id, { workerInstanceId: 'worker-dono-varredura' });
+    try {
+      const comPosse = await bugLoop.runBugLoopSweep({
+        findingIds: [registrado.id], autoFix: false, actor: 'TEST', workerInstanceId: 'worker-intruso', runner: runnerReturning('FAIL'),
+      });
+      expect(comPosse.items.find((i) => i.findingId === registrado.id).action).toBe('SKIPPED_LEASE_HELD');
+    } finally {
+      await bugFindingService.releaseFindingLease(registrado.id, { token: lease.token }).catch(() => {});
+    }
+
+    // Sem posse tomada, a varredura COM identidade processa (adquire o próprio lease e libera).
+    const semConcorrente = await bugLoop.runBugLoopSweep({
+      findingIds: [registrado.id], autoFix: false, actor: 'TEST', workerInstanceId: 'worker-varredura', runner: runnerReturning('FAIL'),
+    });
+    const item = semConcorrente.items.find((i) => i.findingId === registrado.id);
+    expect(item).toBeTruthy();
+    expect(item.action).not.toBe('SKIPPED_LEASE_HELD');
+    // E o lease não fica preso depois do ciclo.
+    expect((await bugFindingService.getFinding(registrado.id)).lease_token).toBeNull();
+
+    expect(espiao).toHaveBeenCalled();
+    const chamada = espiao.mock.calls.find(([id]) => id === registrado.id);
+    expect(chamada).toBeTruthy();
+    espiao.mockRestore();
+  });
+
+  test('escopo explícito não é truncado por `limit` (nem pelo teto de 200)', async () => {
+    if (skipIfNoDatabase()) return;
+    const a = await registerConfirmed({ title: 'escopo não truncado A' });
+    const b = await registerConfirmed({ title: 'escopo não truncado B' });
+    const c = await registerConfirmed({ title: 'escopo não truncado C' });
+
+    const rows = await bugFindingService.listFindings({ ids: [a.id, b.id, c.id], limit: 1 });
+    expect(rows).toHaveLength(3);
+    expect(rows.map((r) => r.id).sort()).toEqual([a.id, b.id, c.id].sort());
+  });
+});
+
+/**
+ * PROVENIÊNCIA DA REPRODUÇÃO — regressão de 2026-10-26.
+ *
+ * DEFEITO MEDIDO: a primeira tentativa de reprodução gravava o PLANO DERIVADO no campo
+ * `reproduction`, apagando o que o finding havia DECLARADO (`strategy`, `source`, comando declarado).
+ * Um finding de revisão adversarial que declarava `strategy: DECLARED_TEST_COMMAND` passava a não ter
+ * `strategy` nenhum — e isso acontecia mesmo quando quem reproduzia era OUTRO processo (o laço global
+ * do runner), o que tornava o registro não auditável de forma intermitente.
+ *
+ * A prova aqui é direta e não depende de quem reproduz: reproduzido ou não, o registro de origem
+ * sobrevive; o plano entra por cima do que ele deriva.
+ */
+describe('ciclo de bug — proveniência da reprodução sobrevive à tentativa', () => {
+  const REPRODUCTION = { command: REPRODUCTION_COMMAND, expect: 'FAIL', strategy: 'DECLARED_TEST_COMMAND', source: 'ADVERSARIAL_CASE' };
+
+  test('tentativa INCONCLUSIVA preserva strategy/source declarados', async () => {
+    // ESTE é o caminho que prova a correção: INCONCLUSIVE devolve o finding para SUSPECTED com o que
+    // `markReproducing` gravou, SEM passar pelo spread de `confirmFinding`. No código antigo (plano
+    // gravado como se fosse a reprodução) `strategy`/`source` ficavam nulos aqui — o teste REPRODUZIDO
+    // que existia antes era vacuoso, porque o CONFIRMED já reespalhava o declarado.
+    if (skipIfNoDatabase()) return;
+    const finding = await registerConfirmed({
+      title: 'proveniencia inconclusiva', source: 'ADVERSARIAL_REVIEW', reproduction: REPRODUCTION,
+    });
+
+    const result = await bugReproductionService.reproduce(finding.id, { runner: runnerReturning('TIMEOUT'), actor: 'TEST' });
+    expect(result.outcome).toBe('INCONCLUSIVE');
+    expect(result.finding.status).toBe('SUSPECTED');
+
+    const depois = await bugFindingService.getFinding(finding.id);
+    expect(depois.status).toBe('SUSPECTED');
+    expect(depois.reproduction.strategy).toBe('DECLARED_TEST_COMMAND');
+    expect(depois.reproduction.source).toBe('ADVERSARIAL_CASE');
+  });
+
+  test('tentativa NOT_REPRODUCED também preserva a proveniência', async () => {
+    if (skipIfNoDatabase()) return;
+    const finding = await registerConfirmed({
+      title: 'proveniencia nao reproduzida', source: 'ADVERSARIAL_REVIEW', reproduction: REPRODUCTION,
+    });
+
+    const result = await bugReproductionService.reproduce(finding.id, { runner: runnerReturning('PASS'), actor: 'TEST' });
+    expect(result.outcome).toBe('NOT_REPRODUCED');
+
+    const depois = await bugFindingService.getFinding(finding.id);
+    expect(depois.reproduction.strategy).toBe('DECLARED_TEST_COMMAND');
+    expect(depois.reproduction.source).toBe('ADVERSARIAL_CASE');
   });
 });

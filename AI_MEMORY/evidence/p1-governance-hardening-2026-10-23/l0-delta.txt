@@ -1,0 +1,5 @@
+=== os 4 que falham só na minha árvore, executados ISOLADOS (nova vs base) ===
+backupImportExportEndpoints isolado -> nova exit=0 base exit=0
+governance/benchmarkCertificationAuthority isolado -> nova exit=0 base exit=0
+governance/benchmarkSemanticVersionGate isolado -> nova exit=0 base exit=0
+publicStorefrontPhysicalEndpoints isolado -> nova exit=0 base exit=0

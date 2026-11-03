@@ -1,0 +1,17 @@
+[jest-global-setup] .env carregado (0 chave(s) aplicada(s); ambiente explícito vence)
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/queueModuleRoutes.test.js
+  queue module
+    ✓ router nativo monta rotas esperadas (105 ms)
+    ✓ controller list faz merge de filas legadas e persistidas (110 ms)
+    ✓ controller remove desativa a definição persistida (regressão: fila reaparecia após exclusão) (108 ms)
+    ✓ DEFEITO: legado NÃO encontra a fila mas a definição persistida é desativada (fila sai da listagem) (105 ms)
+    ✓ não reporta sucesso quando NADA foi removido (sem legado e sem definição persistida) (105 ms)
+    ✓ controller create preserva auditoria e status 201 (105 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       6 passed, 6 total
+Snapshots:   0 total
+Time:        1.008 s, estimated 2 s
+Ran all test suites matching /tests\/unit\/queueModuleRoutes.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

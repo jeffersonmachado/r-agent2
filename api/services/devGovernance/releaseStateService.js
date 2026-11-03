@@ -34,6 +34,31 @@ const DEFAULT_ROOT = path.join(__dirname, '..', '..', '..');
  * Regra cardinal: DESCONHECIDO NÃO É BLOQUEIO. Só vira bloqueio o que o próprio
  * relatório declara como não-ok.
  */
+/**
+ * Vocabulário canônico da ENTREGA verificada.
+ *
+ * Fonte única real: `scripts/governance/lib/delivery-verification.js`
+ * (`DECISOES_ENTREGA_PERMITIDAS = ['DELIVERED_RELEASE_VERIFIED']`), que também declara
+ * `DELIVERED_PENDING_SCORECARD` como ESTADO PRÉ-PACOTE — não é entrega. A lista é replicada
+ * aqui apenas porque `api/` não pode depender de `scripts/`; a divergência é impedida por teste
+ * (`tests/unit/governance/releaseStateService.test.js` compara as duas listas).
+ *
+ * DEFEITO MEDIDO (L-1, 2026-10-20): o predicado anterior era `/VERIFIED/i.test(decision)` —
+ * casamento por SUBSTRING. `NOT_VERIFIED`, `UNVERIFIED` e `NOT_VERIFIED_BY_AUDIT` passavam como
+ * "entrega verificada" porque contêm a palavra. Julgar veredito por substring é exatamente o
+ * falso GO que a governança deste repo já corrigiu em outros pontos (P0 "fim da comparação por
+ * substring"). Agora: pertinência EXATA ao conjunto permitido.
+ */
+const DELIVERED_VERIFIED_DECISIONS = Object.freeze(['DELIVERED_RELEASE_VERIFIED']);
+
+/** Decisão declarada pelo relatório de entrega (mesma precedência do juiz canônico). */
+function deliveredDecisionOf(report) {
+  if (!report || typeof report !== 'object') return null;
+  const raw = report.decision || report.status || report.finalDecision || report.delivered || null;
+  const text = raw === null || raw === undefined ? '' : String(raw).trim().toUpperCase();
+  return text === '' ? null : text;
+}
+
 const DECISION_REPORTS = Object.freeze([
   {
     code: 'final_consistency',
@@ -50,14 +75,22 @@ const DECISION_REPORTS = Object.freeze([
   {
     code: 'delivered_release',
     title: 'Verificação do release entregue',
-    file: path.join('reports', 'delivered-release-verification-report.json'),
-    decisionOf: (report) => report.delivered || report.finalDecision || report.status || null,
-    isOk: (report) => /VERIFIED/i.test(String(report.delivered || report.finalDecision || '')),
+    // CAMINHO CANÔNICO DO PRODUTOR (`governance/verify-delivered-release.js`). O valor anterior
+    // (`reports/delivered-release-verification-report.json`) nunca existiu em disco: o serviço
+    // lia um arquivo inexistente e declarava a evidência "ausente" para sempre — enquanto o
+    // veredito positivo era concedido sem consultar coisa nenhuma.
+    file: path.join('governance', 'delivered-release-verification-report.json'),
+    decisionOf: (report) => deliveredDecisionOf(report),
+    isOk: (report) => DELIVERED_VERIFIED_DECISIONS.includes(deliveredDecisionOf(report)),
     whyOf: (report) => {
       const failed = Array.isArray(report.failedGates) ? report.failedGates : [];
-      return failed.length > 0
-        ? `${failed.length} gate(s) falho(s): ${failed.slice(0, 4).map((gate) => (typeof gate === 'string' ? gate : gate.name || gate.code || '?')).join(', ')}`
-        : 'o release entregue não foi verificado';
+      if (failed.length > 0) {
+        return `${failed.length} gate(s) falho(s): ${failed.slice(0, 4).map((gate) => (typeof gate === 'string' ? gate : gate.name || gate.code || '?')).join(', ')}`;
+      }
+      const decision = deliveredDecisionOf(report);
+      return decision
+        ? `decisão da entrega não é \`DELIVERED_RELEASE_VERIFIED\` (${decision})`
+        : 'relatório de entrega sem decisão declarada';
     },
   },
   {
@@ -99,6 +132,21 @@ function collectReleaseBlockers(rootDir) {
     });
   }
   return { blockers, unavailable };
+}
+
+/**
+ * Predicado CANÔNICO de "a entrega está verificada".
+ *
+ * L-1 (2026-10-20): o modelo puro recebia `deliveredVerdict` (o TOKEN gravado) e nunca o
+ * consultava — `DELIVERED_VERIFIED` era decidido só pela existência do arquivo em
+ * `dist/release`. Aqui a positividade é decidida pela MESMA autoridade que já classifica
+ * bloqueio (`DECISION_REPORTS.delivered_release.isOk`), e o modelo puro passa a exigir o
+ * RESULTADO (`deliveredOk`). Nenhuma segunda cópia do vocabulário é criada.
+ */
+function deliveredReportOk(report) {
+  if (!report) return false;
+  const entry = DECISION_REPORTS.find((item) => item.code === 'delivered_release');
+  return Boolean(entry && entry.isOk(report));
 }
 
 function readJsonSafe(absPath) {
@@ -200,10 +248,12 @@ async function getReleaseState({ rootDir = DEFAULT_ROOT } = {}) {
   const artifacts = listArtifacts(rootDir);
   const guard = readPushGuard(rootDir);
   const releaseName = deriveReleaseName(artifacts);
-  const deliveredReport = readJsonSafe(path.join(rootDir, 'reports', 'delivered-release-verification-report.json'));
-  const deliveredVerdict = deliveredReport
-    ? (deliveredReport.delivered || deliveredReport.finalDecision || deliveredReport.status || null)
-    : null;
+  // CAMINHO VINDO DA MESMA ENTRADA DE `DECISION_REPORTS` que classifica bloqueio: uma única
+  // definição de onde está o relatório da entrega (antes havia DUAS — `reports/` aqui e
+  // `governance/` no produtor canônico — e nenhuma delas coincidia com o arquivo real).
+  const deliveredEntry = DECISION_REPORTS.find((item) => item.code === 'delivered_release');
+  const deliveredReport = readJsonSafe(path.join(rootDir, deliveredEntry.file));
+  const deliveredVerdict = deliveredDecisionOf(deliveredReport);
   const { blockers, unavailable } = collectReleaseBlockers(rootDir);
 
   return deriveReleaseState({
@@ -214,15 +264,19 @@ async function getReleaseState({ rootDir = DEFAULT_ROOT } = {}) {
     blockers,
     releaseName,
     deliveredVerdict: deliveredVerdict ? String(deliveredVerdict) : null,
+    deliveredOk: deliveredReportOk(deliveredReport),
     evidenceUnavailable: unavailable,
   });
 }
 
 module.exports = {
   DECISION_REPORTS,
+  DELIVERED_VERIFIED_DECISIONS,
   DEFAULT_ROOT,
   getReleaseState,
   collectReleaseBlockers,
+  deliveredDecisionOf,
+  deliveredReportOk,
   deriveReleaseName,
   readPushGuard,
   readHead,

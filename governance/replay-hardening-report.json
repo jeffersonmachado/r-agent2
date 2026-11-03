@@ -1,10 +1,10 @@
 {
-  "generatedAt": "2026-10-20T14:07:13.430Z",
+  "generatedAt": "2026-11-03T12:48:18.534Z",
   "engine": "replay-hardening-engine/v2",
   "pass": true,
   "decision": "REPLAY_HARDENING_GO",
-  "totalReplaysAnalyzed": 11,
-  "hardenedReplays": 11,
+  "totalReplaysAnalyzed": 10,
+  "hardenedReplays": 10,
   "hashOnlyReplays": 0,
   "violations": 0,
   "uiViolations": 0,
@@ -120,19 +120,6 @@
       "replayEvidenceHash": "121d58a18300a1253615b043ea8e8bb790f6c10aa28d0250d0b47cdb4b925b58"
     },
     {
-      "journeyId": "omnichannel_email",
-      "source": "qa/smoke/prod-like/omnichannel_email-replay.json",
-      "status": "GO",
-      "failedStepCount": 0,
-      "stepCount": 1,
-      "isVisualCritical": false,
-      "violations": [],
-      "hardened": true,
-      "replayDeterministicHash": "e990564bada277dc954c98d3e66139b0fa3ddbebf2641a5f395ffe57af31504a",
-      "replayExecutionHash": "cc8ae37ec8bc52f827fa9c66d0e2e65fccb070bd67062aa656f8494cd1fa6b23",
-      "replayEvidenceHash": "7ede1466014bbb7560e69d04dcdc52c7d11e55743277f4a912994e2c406cfd29"
-    },
-    {
       "journeyId": "qa/enterprise/human-handoff-full-validation.json",
       "source": "qa/enterprise/human-handoff-full-validation.json",
       "failedStepCount": 0,
@@ -146,10 +133,10 @@
     }
   ],
   "allViolations": [],
-  "summary": "Todos os 11 replays passaram no hardening.",
-  "runId": "rap-governed-20261020122113664-db420779",
-  "sourceFingerprint": "5b66077f911c228d8af1912ec7479ec12b2b58d571da7f24729e67b0db7621ed",
-  "sourceCommit": "44dca4f55645a7bd4f1ef1a83d910d51c492287b",
+  "summary": "Todos os 10 replays passaram no hardening.",
+  "runId": "rap-governed-20261103101550258-3dac3e2d",
+  "sourceFingerprint": "330ad47b88702d47d7e21c625a1e77f0b4c8570f55d13be8e8dbc2fc64212ad6",
+  "sourceCommit": "c43614969fa7e5eafcf680b4028097b25143cd94",
   "artifactType": "replay-hardening-report",
   "artifactVersion": "1.0.0"
 }

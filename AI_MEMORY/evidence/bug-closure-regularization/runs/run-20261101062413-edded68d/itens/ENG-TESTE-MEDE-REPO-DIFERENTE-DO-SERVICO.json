@@ -1,0 +1,25 @@
+{
+  "id": "ENG-TESTE-MEDE-REPO-DIFERENTE-DO-SERVICO",
+  "severity": "P2",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Testes de promocao/runner mediam o repositorio pelo __dirname; o servico usa ROOT (HOST_REPO_ROOT)",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+  "teste": "tests/integration/engineeringPromotionService.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [
+    "ASSINATURA_INVALIDA"
+  ],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101062413-edded68d/logs/ENG-TESTE-MEDE-REPO-DIFERENTE-DO-SERVICO.log",
+  "draft": "governance/bug-closure/proofs-drafts/ENG-TESTE-MEDE-REPO-DIFERENTE-DO-SERVICO.json",
+  "camposParaAssinar": 18,
+  "runId": "run-20261101062413-edded68d",
+  "identidade": {
+    "commit": "68a1da1922d793a5937fcfa9a0c4441a7d734594",
+    "sourceFingerprint": "f11b8df06b0649b60593c1dfdf19732315a805dad802c1669dfdd11de376e649",
+    "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+    "hardeningQueueFingerprint": "5e58aa7b11a8dfbe16b5a6a14167475f5502d31bf6d600cec6dbc6fd50904cf2",
+    "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+  },
+  "artifactSha256": "b5fae4df97fea68d3ac66b0fc8fc0262ba1c07e0a08a44854a26da375ff1e289"
+}

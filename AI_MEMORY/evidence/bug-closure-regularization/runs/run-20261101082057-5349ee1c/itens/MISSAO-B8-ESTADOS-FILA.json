@@ -1,0 +1,25 @@
+{
+  "id": "MISSAO-B8-ESTADOS-FILA",
+  "severity": "P2",
+  "estadoPersistido": "RESOLVED",
+  "titulo": "B8: modelo de estados da fila com hook fail-closed e validador",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+  "teste": "tests/unit/governance/hardeningQueueStates.test.js",
+  "transicao": "RESOLVED → RESOLVED",
+  "provasAusentes": [
+    "ASSINATURA_INVALIDA"
+  ],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101082057-5349ee1c/logs/MISSAO-B8-ESTADOS-FILA.log",
+  "draft": "governance/bug-closure/proofs-drafts/MISSAO-B8-ESTADOS-FILA.json",
+  "camposParaAssinar": 18,
+  "runId": "run-20261101082057-5349ee1c",
+  "identidade": {
+    "commit": "36606cf05442ef933fca1cf1c27901168aea445a",
+    "sourceFingerprint": "f11b8df06b0649b60593c1dfdf19732315a805dad802c1669dfdd11de376e649",
+    "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+    "hardeningQueueFingerprint": "38cd6bf08ee052d1eaf312c4c88c5579f155073eaff15bcf730f8b52f0d8fb1d",
+    "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+  },
+  "artifactSha256": "25a5be464d86917c423ee16451c88fa27b8d8d395ef9c4d5d99aab3858905b39"
+}

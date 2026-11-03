@@ -1,0 +1,20 @@
+{
+  "id": "MISSAO-A-L2-L3-ORQUESTRADOR",
+  "severity": "P3",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "L2/L3 + EngineeringValidationOrchestrator sobre o L1",
+  "classe": "AMBIENTE_INDISPONIVEL",
+  "teste": "tests/unit/coverage/impactRunner.test.js",
+  "exitCode": 1,
+  "motivo": "teste exige infraestrutura ausente neste ambiente — não é veredito sobre o defeito",
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101091502-3f7f94bc/logs/MISSAO-A-L2-L3-ORQUESTRADOR.log",
+  "runId": "run-20261101091502-3f7f94bc",
+  "identidade": {
+    "commit": "d1b052e33910a2936d0095a5bd061a77c561210c",
+    "sourceFingerprint": "ba0673e3cf2795172599b93da74b6d875c8d0f36c7fa569b0953fd34c7154bed",
+    "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+    "hardeningQueueFingerprint": "6fe5c2627b547625e2a18f8f76598f189cdb5f88b85ef670fdea749c6fab23cb",
+    "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+  },
+  "artifactSha256": "67ff9c4b1dcf69297ab9f0e10c3b147709d5b667a0ac103c12b3c8be1c564589"
+}

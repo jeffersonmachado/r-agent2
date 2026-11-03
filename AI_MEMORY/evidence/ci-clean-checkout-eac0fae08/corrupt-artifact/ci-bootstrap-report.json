@@ -1,0 +1,209 @@
+{
+  "artifactType": "ci-bootstrap-report",
+  "artifactVersion": 1,
+  "generatedAt": "2026-10-25T14:40:52.406Z",
+  "veredito": "READY",
+  "modo": "completo",
+  "fonteDeVerdadeDeGate": "reports/governance-score.json / validadores canônicos — nunca este arquivo",
+  "raiz": "/tmp/rap-ci-clean-UodDGf/ria/r-agent2",
+  "raizOverride": false,
+  "nodeVersion": "22.12.0",
+  "passos": [
+    {
+      "id": "preflight",
+      "comando": "(verificação interna)",
+      "exitCode": 0,
+      "veredito": "PASS",
+      "ok": true,
+      "duracaoMs": 0,
+      "saida": "",
+      "ambiente": {
+        "node": "22.12.0",
+        "npm": "10.9.0",
+        "jest": null,
+        "docker": "Docker version 27.3.1, build ce12230",
+        "psql": "psql (PostgreSQL) 16.15 (Ubuntu 16.15-0ubuntu0.24.04.1)",
+        "redisCli": "redis-cli 7.0.15"
+      }
+    },
+    {
+      "id": "identidade-git",
+      "comando": "git config --get user.email/user.name (cria --global só quando ausente)",
+      "exitCode": 0,
+      "veredito": "PASS",
+      "ok": true,
+      "duracaoMs": 0,
+      "saida": "efetiva: user.email=jefferso@results.com.br user.name=Jefferson Carlos Machado",
+      "ambiente": {
+        "identidadeEfetiva": "user.email=jefferso@results.com.br user.name=Jefferson Carlos Machado"
+      }
+    },
+    {
+      "id": "pacotes-irmaos",
+      "comando": "(materialização de vendor/ → irmãos declarados no package.json)",
+      "exitCode": 0,
+      "veredito": "PASS",
+      "ok": true,
+      "duracaoMs": 0,
+      "saida": "@results/auth: materializado de vendor/ em /tmp/rap-ci-clean-UodDGf/packages/auth\n@results/whatsapp-qr-bridge: materializado de vendor/ em /tmp/rap-ci-clean-UodDGf/ria/packages/whatsapp-qr-bridge"
+    },
+    {
+      "id": "system-bootstrap",
+      "comando": "npm run -s system:bootstrap",
+      "exitCode": 0,
+      "veredito": "PASS",
+      "ok": true,
+      "duracaoMs": 116482,
+      "saida": "m │ gzip:  11.16 kB\u001b[22m\n\u001b[2mdist/\u001b[22m\u001b[2massets/\u001b[22m\u001b[36mDevDashboardPage-D1axA8TF.js                  \u001b[39m\u001b[1m\u001b[2m   97.40 kB\u001b[22m\u001b[1m\u001b[22m\u001b[2m │ gzip:  14.04 kB\u001b[22m\n\u001b[2mdist/\u001b[22m\u001b[2massets/\u001b[22m\u001b[36mMarketingPage-Db9bXW92.js                     \u001b[39m\u001b[1m\u001b[2m  110.27 kB\u001b[22m\u001b[1m\u001b[22m\u001b[2m │ gzip:  13.36 kB\u001b[22m\n\u001b[2mdist/\u001b[22m\u001b[2massets/\u001b[22m\u001b[36mSupportPage-Dqzhq0lz.js                       \u001b[39m\u001b[1m\u001b[2m  127.38 kB\u001b[22m\u001b[1m\u001b[22m\u001b[2m │ gzip:  26.13 kB\u001b[22m\n\u001b[2mdist/\u001b[22m\u001b[2massets/\u001b[22m\u001b[36mQaWavesPage-Dl7_Uia1.js                       \u001b[39m\u001b[1m\u001b[2m  138.65 kB\u001b[22m\u001b[1m\u001b[22m\u001b[2m │ gzip:  23.65 kB\u001b[22m\n\u001b[2mdist/\u001b[22m\u001b[2massets/\u001b[22m\u001b[36mCrmDashboardPage-96nTGqw8.js                  \u001b[39m\u001b[1m\u001b[2m  155.17 kB\u001b[22m\u001b[1m\u001b[22m\u001b[2m │ gzip:  20.22 kB\u001b[22m\n\u001b[2mdist/\u001b[22m\u001b[2massets/\u001b[22m\u001b[36mOperationsDashboardPage-CT5ckUmz.js           \u001b[39m\u001b[1m\u001b[2m  157.44 kB\u001b[22m\u001b[1m\u001b[22m\u001b[2m │ gzip:  17.02 kB\u001b[22m\n\u001b[2mdist/\u001b[22m\u001b[2massets/\u001b[22m\u001b[36mAnalyticsPage-DgTfaLHB.js                     \u001b[39m\u001b[1m\u001b[2m  179.15 kB\u001b[22m\u001b[1m\u001b[22m\u001b[2m │ gzip:  19.31 kB\u001b[22m\n\u001b[2mdist/\u001b[22m\u001b[2massets/\u001b[22m\u001b[36mConfigPage-DIzHIl6u.js                        \u001b[39m\u001b[1m\u001b[2m  180.15 kB\u001b[22m\u001b[1m\u001b[22m\u001b[2m │ gzip:  24.95 kB\u001b[22m\n\u001b[2mdist/\u001b[22m\u001b[2massets/\u001b[22m\u001b[36mRpaReplaysPage-XLEimwWS.js                    \u001b[39m\u001b[1m\u001b[2m  194.34 kB\u001b[22m\u001b[1m\u001b[22m\u001b[2m │ gzip:  26.87 kB\u001b[22m\n\u001b[2mdist/\u001b[22m\u001b[2massets/\u001b[22m\u001b[36mRAGDocumentsPage-C_JICz7E.js                  \u001b[39m\u001b[1m\u001b[2m  201.44 kB\u001b[22m\u001b[1m\u001b[22m\u001b[2m │ gzip:  32.74 kB\u001b[22m\n\u001b[2mdist/\u001b[22m\u001b[2massets/\u001b[22m\u001b[36mGenerateSystemPage-BoTm_bNb.js                \u001b[39m\u001b[1m\u001b[2m  299.68 kB\u001b[22m\u001b[1m\u001b[22m\u001b[2m │ gzip:  51.94 kB\u001b[22m\n\u001b[2mdist/\u001b[22m\u001b[2massets/\u001b[22m\u001b[36mreact-vendor-eqoXmMY7.js                      \u001b[39m\u001b[1m\u001b[2m  326.74 kB\u001b[22m\u001b[1m\u001b[22m\u001b[2m │ gzip:  99.31 kB\u001b[22m\n\u001b[2mdist/\u001b[22m\u001b[2massets/\u001b[22m\u001b[36mpdf-vendor-Ca0s_dWT.js                        \u001b[39m\u001b[1m\u001b[2m  334.10 kB\u001b[22m\u001b[1m\u001b[22m\u001b[2m │ gzip:  98.44 kB\u001b[22m\n\u001b[2mdist/\u001b[22m\u001b[2massets/\u001b[22m\u001b[36mFlowEditorPage-CsfojFVW.js                    \u001b[39m\u001b[1m\u001b[2m  378.79 kB\u001b[22m\u001b[1m\u001b[22m\u001b[2m │ gzip:  74.42 kB\u001b[22m\n\u001b[2mdist/\u001b[22m\u001b[2massets/\u001b[22m\u001b[36mindex-CX_23oba.js                             \u001b[39m\u001b[1m\u001b[2m  413.56 kB\u001b[22m\u001b[1m\u001b[22m\u001b[2m │ gzip:  97.82 kB\u001b[22m\n\u001b[2mdist/\u001b[22m\u001b[2massets/\u001b[22m\u001b[36mPbxPage-De5dCi7J.js                           \u001b[39m\u001b[1m\u001b[2m  496.00 kB\u001b[22m\u001b[1m\u001b[22m\u001b[2m │ gzip:  62.86 kB\u001b[22m\n\u001b[2mdist/\u001b[22m\u001b[2massets/\u001b[22m\u001b[36mbpmn-vendor-Bt7Za-tz.js                       \u001b[39m\u001b[1m\u001b[2m  557.15 kB\u001b[22m\u001b[1m\u001b[22m\u001b[2m │ gzip: 161.37 kB\u001b[22m\n\u001b[2mdist/\u001b[22m\u001b[2massets/\u001b[22m\u001b[36mrete-vendor-CrRGd27P.js                       \u001b[39m\u001b[1m\u001b[2m1,498.51 kB\u001b[22m\u001b[1m\u001b[22m\u001b[2m │ gzip: 457.35 kB\u001b[22m\n\u001b[32m✓ built in 51.58s\u001b[39m\n\nPWA v1.2.0\nmode      generateSW\nprecache  12 entries (1025.67 KiB)\nfiles generated\n  dist/sw.js\n  dist/workbox-5b9a115f.js\n\u001b[0;32m  ✓ Frontend buildado\u001b[0m\n\u001b[0;34m[bootstrap:official] Subindo backend para validação determinística\u001b[0m\n\u001b[0;32m  ✓ API respondeu em http://127.0.0.1:13001/health\u001b[0m\n\u001b[0;32m  ✓ Health ready validado\u001b[0m\n\u001b[0;32m  ✓ Selftest validado\u001b[0m\n\u001b[0;34m[bootstrap:official] Subindo frontend preview para validação determinística\u001b[0m\n\u001b[0;32m  ✓ Frontend preview respondeu em http://127.0.0.1:36187/\u001b[0m\n\u001b[0;34m[bootstrap:official] Validando serviços essenciais via selftest\u001b[0m\n\u001b[0;32m  ✓ Banco validado\u001b[0m\n\u001b[0;32m  ✓ Redis validado\u001b[0m\n\u001b[1;33m  ! Validacao de RAG no bootstrap oficial e informativa e nao bloqueante\u001b[0m\n\u001b[0;32m  ✓ Bootstrap oficial concluído com ambiente validado de forma explícita\u001b[0m\n\u001b[1;33m  ! porta 14173 (SYSTEM_BOOTSTRAP_FRONTEND_PORT) estava em uso; usando 36187 (efêmera livre)\u001b[0m\n(sequelize) Warning: PostgreSQL does not support BLOB (BYTEA) with options. Plain `BYTEA` will be used instead. \n>> Check: http://www.postgresql.org/docs/9.4/static/datatype.html\nBrowserslist: browsers data (caniuse-lite) is 10 months old. Please run:\n  npx update-browserslist-db@latest\n  Why you should do it regularly: https://github.com/browserslist/update-db#readme\n"
+    },
+    {
+      "id": "conectividade-infra",
+      "comando": "node --env-file=.env -e <sonda sequelize + rateLimitClient>",
+      "exitCode": 0,
+      "veredito": "PASS",
+      "ok": true,
+      "duracaoMs": 0,
+      "saida": "[2026-10-25T14:40:40.725Z] [INFO] [Sequelize] Conectado ao PostgreSQL com sucesso\n[2026-10-25T14:40:40.731Z] [INFO] [Sequelize] Conexão fechada\n[2026-10-25T14:40:40.765Z] [INFO] [RateLimit] Conectado ao Redis\n[2026-10-25T14:40:40.768Z] [INFO] [RateLimit] Redis pronto para uso\npostgres: conectado; redis: conectado"
+    },
+    {
+      "id": "seed-sintetico",
+      "comando": "node api/db/seed.js",
+      "exitCode": 0,
+      "veredito": "PASS",
+      "ok": true,
+      "duracaoMs": 354,
+      "saida": "[2026-10-25T14:40:41.077Z] [INFO] [Seed] Iniciando seed...\n[2026-10-25T14:40:41.079Z] [INFO] [Seed] Iniciando seed...\n[2026-10-25T14:40:41.183Z] [INFO] [Sequelize] Conectado ao PostgreSQL com sucesso\n[2026-10-25T14:40:41.184Z] [INFO] [Seed] Verificando tenant \"system\"...\n[2026-10-25T14:40:41.186Z] [INFO] [Seed] Tenant \"system\" já existe\n[2026-10-25T14:40:41.188Z] [INFO] [Seed] Garantindo usuários bootstrap (admin/systemadmin)...\n[2026-10-25T14:40:41.188Z] [INFO] [Seed] Garantindo usuários bootstrap (admin/systemadmin)...\n[2026-10-25T14:40:41.199Z] [INFO] [Seed] Senha do admin (admin@exemplo.com) foi atualizada via env (salve em local seguro!)\n[2026-10-25T14:40:41.207Z] [INFO] [Seed] Senha do systemadmin (systemadmin@exemplo.com) foi atualizada via env (salve em local seguro!)\n[2026-10-25T14:40:41.207Z] [INFO] [Seed] Usuários bootstrap garantidos\n[2026-10-25T14:40:41.207Z] [INFO] [Seed] ✅ Usuários bootstrap garantidos\n[2026-10-25T14:40:41.207Z] [INFO] [Seed] Garantindo superadmin: systemadmin@exemplo.com...\n[2026-10-25T14:40:41.207Z] [INFO] [Seed] Garantindo superadmin: systemadmin@exemplo.com...\n[2026-10-25T14:40:41.215Z] [INFO] [Seed] Senha do superadmin (systemadmin@exemplo.com) foi atualizada via env (salve em local seguro!)\n[2026-10-25T14:40:41.215Z] [INFO] [Seed] Superadmin garantido\n[2026-10-25T14:40:41.215Z] [INFO] [Seed] ✅ Superadmin garantido\n[2026-10-25T14:40:41.215Z] [INFO] [Seed] Seed concluído com sucesso\n[2026-10-25T14:40:41.215Z] [INFO] [Seed] ✅ Seed concluído com sucesso\n[2026-10-25T14:40:41.219Z] [INFO] [Sequelize] Conexão fechada\n[2026-10-25T14:40:41.199Z] [WARN] [Seed] ⚠️  Senha do admin (admin@exemplo.com) foi atualizada via env (salve em local seguro!)\n[2026-10-25T14:40:41.207Z] [WARN] [Seed] ⚠️  Senha do systemadmin (systemadmin@exemplo.com) foi atualizada via env (salve em local seguro!)\n[2026-10-25T14:40:41.215Z] [WARN] [Seed] ⚠️  Senha do superadmin (systemadmin@exemplo.com) foi atualizada via env (salve em local seguro!)\n"
+    },
+    {
+      "id": "mesh-registry",
+      "comando": "npm run -s qa:mesh:refresh",
+      "exitCode": 0,
+      "veredito": "PASS",
+      "ok": true,
+      "duracaoMs": 1376,
+      "saida": "Mesh registry atualizado: 143 cenários\n[pipeline/entrypoints/runQaMesh] Operação de MANUTENÇÃO DE ÍNDICE (--refresh-registry):\nnão executa cenários nem produz evidência canônica — Bug Closure First não se aplica.\n[pipeline/entrypoints/runQaMesh] SEM run governado ativo: o relatório do mesh\nserá gravado sem runId/sourceFingerprint (validate:qa-evidence-same-run =>\nQA_EVIDENCE_LINEAGE_MISSING). Para evidência governada, crie o run antes:\nnode scripts/governance/create-governed-run.js\n"
+    },
+    {
+      "id": "impact-graph",
+      "comando": "node scripts/governance/build-impact-graph.js",
+      "exitCode": 0,
+      "veredito": "PASS",
+      "ok": true,
+      "duracaoMs": 852,
+      "saida": "[impact-graph] nós=4319 arestas=9652 produção=2825 testes=1494\n[impact-graph] arquivos de produção com dependentes: 2181 (77.2%)\n[impact-graph] escrito em reports/impact-graph.json (1237 kB)\n"
+    },
+    {
+      "id": "coverage-completeness",
+      "comando": "npm run -s validate:coverage-completeness",
+      "exitCode": 0,
+      "veredito": "PASS",
+      "ok": true,
+      "duracaoMs": 708,
+      "saida": "[coverage-completeness] Validando cobertura completa da plataforma...\n\n📊 Coletando fontes de verdade...\n  Frontend: 108 rotas\n  API:      91 módulos\n  Caps:     19 capabilities\n  QA:       143 cenários\n\n🔀 Cruzando referências...\n═══ Cobertura da Plataforma ═══\n  Rotas frontend:    108/108 cobertas (100%) — 51 diretas (47%)\n  Módulos API:       91/91 cobertos (100%) — 41 diretos (45%)\n  Capabilities:      19/19 (100%)\n  ─────────────────────────────\n  Completude nominal: 100%\n  Completude real:    64% (cobertura direta por cenário)\n  Cenários QA:        143\n  Issues:             0 críticos, 0 erros, 1 avisos\n\n═══ Análise de Negócio por Domínio ═══\n  🔴 beauty           33% | 12 cenários | 7 rotas | 2 APIs | 0 caps\n  ⚠️ omnichannel      58% | 3 cenários | 4 rotas | 4 APIs | 0 caps\n  ⚠️ core             65% | 90 cenários | 81 rotas | 75 APIs | 3 caps\n  ⚠️ bpmn             67% | 1 cenários | 1 rotas | 1 APIs | 0 caps\n  ⚠️ fitness          67% | 14 cenários | 3 rotas | 0 APIs | 13 caps\n  ⚠️ pbx              73% | 4 cenários | 5 rotas | 2 APIs | 0 caps\n  ✅ market           83% | 3 cenários | 0 rotas | 4 APIs | 0 caps\n  ✅ food             89% | 4 cenários | 6 rotas | 1 APIs | 0 caps\n  ✅ services        100% | 2 cenários | 1 rotas | 1 APIs | 0 caps\n  ✅ workspace       100% | 1 cenários | 0 rotas | 1 APIs | 0 caps\n  ✅ support         100% | 0 cenários | 0 rotas | 0 APIs | 3 caps\n  ✅ bakery          100% | 7 cenários | 0 rotas | 0 APIs | 0 caps\n  ✅ clinic          100% | 2 cenários | 0 rotas | 0 APIs | 0 caps\n\n═══ Top Issues (1 de 1) ═══\n  🟡 [api-weak-coverage] Módulo API \"domain-flow\" (bpmn) com cobertura fraca: 1 cenário(s) de domínio, 0 diretos\n  ⚠️  services: 100% do INVENTÁRIO LOCAL — NÃO é cobertura de mercado (SAMPLE_NOT_RESEARCHED)\n  ⚠️  workspace: 100% do INVENTÁRIO LOCAL — NÃO é cobertura de mercado (SAMPLE_NOT_RESEARCHED)\n  ⚠️  support: 100% do INVENTÁRIO LOCAL — NÃO é cobertura de mercado (SAMPLE_NOT_RESEARCHED)\n  ⚠️  bakery: 100% do INVENTÁRIO LOCAL — NÃO é cobertura de mercado (SAMPLE_NOT_RESEARCHED)\n  ⚠️  clinic: 100% do INVENTÁRIO LOCAL — NÃO é cobertura de mercado (SAMPLE_NOT_RESEARCHED)\n\n📄 Relatório: /tmp/rap-ci-clean-UodDGf/ria/r-agent2/reports/coverage-completeness-report.json\n"
+    },
+    {
+      "id": "benchmark-sufficiency",
+      "comando": "npm run -s validate:benchmark-sufficiency",
+      "exitCode": 0,
+      "veredito": "PASS",
+      "ok": true,
+      "duracaoMs": 328,
+      "saida": "[benchmark-sufficiency] status=PASS policy=v1.0.0 verticais=7 suficientes=1 violações=0\n[benchmark-sufficiency] saturacao=MEASURED cap(PASS=1/FAIL=5/NM=1) journey(PASS=1/FAIL=5/NM=1) bizRule(PASS=1/FAIL=5/NM=1)\n  - bakery (2026-09-19-r2): SAMPLE_NOT_RESEARCHED\n  - beauty (2026-09-19-r2): SAMPLE_NOT_RESEARCHED\n  - clinic (2026-09-19-r2): SAMPLE_NOT_RESEARCHED\n  - fitness (fitness-sample-v1): SAMPLE_SUFFICIENT\n  - food (2026-09-19-r2): SAMPLE_NOT_RESEARCHED\n  - market (2026-09-19-r2): SAMPLE_NOT_RESEARCHED\n  - services (2026-09-19-r2): SAMPLE_NOT_RESEARCHED\n"
+    },
+    {
+      "id": "evo-contract",
+      "comando": "npm run -s validate:evo-contract",
+      "exitCode": 0,
+      "veredito": "PASS",
+      "ok": true,
+      "duracaoMs": 544,
+      "saida": "[evo-contract] status=PASS certificação=UNVERIFIED recursos=7 violações=0\n"
+    },
+    {
+      "id": "layer-conventions",
+      "comando": "npm run -s validate:layer-conventions",
+      "exitCode": 0,
+      "veredito": "PASS",
+      "ok": true,
+      "duracaoMs": 1097,
+      "saida": "[layer-conventions] Validando convenções de camada...\n\n  Criticals: 0\n  Errors:    0\n  Warnings:  0\n  Infos:     0\n  Total:     0\n\nViolações por camada:\n\n\nReport: /tmp/rap-ci-clean-UodDGf/ria/r-agent2/reports/layer-conventions-report.json\n"
+    },
+    {
+      "id": "journey-projections",
+      "comando": "npm run -s journey:projections",
+      "exitCode": 0,
+      "veredito": "PASS",
+      "ok": true,
+      "duracaoMs": 223,
+      "saida": "✅ 28 projeções operacionais geradas\n   catálogo: 26 jornadas mapeadas\n   descartadas (sem estágio de negócio): 70\n   saída: reports/business-journey-projections.json\n"
+    },
+    {
+      "id": "json-persistence-audit",
+      "comando": "npm run -s audit:json-persistence",
+      "exitCode": 0,
+      "veredito": "PASS",
+      "ok": true,
+      "duracaoMs": 1270,
+      "saida": "{\"totalWriteTargets\":570,\"byCategory\":{\"ARTIFACT_STORAGE\":48,\"STATIC_VERSIONED_CONFIG\":136,\"DB_CANONICAL_JSON_EXPORT\":358,\"TEST_FIXTURE\":20,\"SECRET_STORE\":2,\"TEMPORARY_CACHE\":6},\"unknown\":0,\"deprecated\":0,\"dbCanonicalState\":0,\"status\":\"PASS\"}\n"
+    },
+    {
+      "id": "timeout-architecture",
+      "comando": "npm run -s validate:timeout-architecture",
+      "exitCode": 1,
+      "veredito": "NO_GO",
+      "ok": true,
+      "duracaoMs": 2858,
+      "saida": "[timeout-architecture] inventário:\n  arquivos varridos: 2182\n  timeouts encontrados: 1133\n  LEGACY_UNKNOWN: 0\n    REQUEST_TIMEOUT            45\n    OPERATION_DEADLINE         575\n    COMMAND_DEADLINE           23\n    DATABASE_TIMEOUT           22\n    PROVIDER_TIMEOUT           15\n    LEASE_DURATION             214\n    HEARTBEAT_INTERVAL         31\n    NO_PROGRESS_TIMEOUT        1\n    RETRY_BACKOFF              9\n    POLL_INTERVAL              95\n    TEST_TIMEOUT               3\n    SHUTDOWN_GRACE_PERIOD      5\n    DELAY_SLEEP                81\n    USER_DEFINED_DEADLINE      14\n[timeout-architecture] padrões destrutivos: 5 (críticos: 1)\n  ⓘ PID como corroboração local (arquivo tem lease/fence): 3 — exceções auditáveis\n[timeout-architecture] capacidades:\n  ✓ LEASE                          \n  ✓ FENCING                        \n  ✓ HEARTBEAT                      \n  ✓ NO_PROGRESS_DETECTION          \n  ✓ PROVIDER_TIMEOUT_ISOLATION     \n  ✓ PROVIDER_FALLBACK              \n  ✓ COMMAND_TIMEOUT_ISOLATION      \n  ✓ DATABASE_TIMEOUT_ISOLATION     \n  ✓ CIRCUIT_BREAKER                \n  ✓ CHECKPOINT_RESUME              \n[timeout-architecture] veredictos:\n  NO_GO      TIMEOUT_ARCHITECTURE\n  COMPLETE   TIMEOUT_INVENTORY\n  GREEN      MISSION_TIMEOUT_POLICY\n  GREEN      TASK_DEADLINE_POLICY\n  GREEN      HEARTBEAT\n  GREEN      LEASE\n  GREEN      FENCING\n  GREEN      NO_PROGRESS_DETECTION\n  GREEN      PROVIDER_TIMEOUT_ISOLATION\n  GREEN      PROVIDER_FALLBACK\n  GREEN      COMMAND_TIMEOUT_ISOLATION\n  GREEN      DATABASE_TIMEOUT_ISOLATION\n  GREEN      CIRCUIT_BREAKER\n  GREEN      CHECKPOINT_RESUME\n  PENDING    LONG_RUNNING_TASK\n  PENDING    REAL_DEAD_WORKER_RECOVERY\n  PENDING    NO_PROGRESS_E2E\n  PENDING    PROVIDER_FALLBACK_E2E\n  false      downstreamGatesAssertedHere\n  veredito de gate pai não é afirmado por artefato filho (runtime → gate → selo → readiness → governança final) downstreamGatesNote\n[timeout-architecture] relatório: reports/TIMEOUT_ARCHITECTURE_REPORT.json\n[timeout-architecture] RESULTADO: NO_GO — arquitetura de timeout ainda não é GREEN\n"
+    },
+    {
+      "id": "engineering-router-v2",
+      "comando": "npm run -s validate:engineering-router-v2",
+      "exitCode": 1,
+      "veredito": "NO_GO",
+      "ok": true,
+      "duracaoMs": 662,
+      "saida": "  [PASS] V2_LEASE_POLICY_PURE — invariante verificada em engine/engineeringMission/leasePolicy.js\n  [PASS] V2_PID_NAO_E_AUTORIDADE — invariante verificada em api/services/engineeringMission/missionStoreService.js\n  [PASS] V2_POLICY_RESOLVER_SEM_MERGE_INGENUO — invariante verificada em api/services/engineeringMission/missionCompilerService.js\n  [PASS] V2_ESTADOS_TERMINAIS_CENTRALIZADOS — invariante verificada em engine/engineeringMission/constants.js\n  [PASS] V2_RECOVERY_AUTOMATICO_NO_BOOT — invariante verificada em api/bootstrap/startInitialization.js\n  [PASS] V2_FK_RESTRICT_NA_MIGRATION — invariante verificada em api/db/migrations/20260924160000-engineering-mission-distributed-lease.js\n  [PASS] V2_RBAC_FAIL_CLOSED — invariante verificada em api/modules/engineering-missions/routes.js\n  [PASS] V2_ANTI_GREENWASHING_PORTA_UNICA — invariante verificada em tests/helpers/infraGate.js\n  [FAIL] V2_ANTI_GREENWASHING_VERDE — evidência runtime ausente: reports/anti-greenwashing-report.json\n  [FAIL] V2_CRASH_SIGKILL_VERDE — evidência runtime ausente: reports/mission-crash-recovery-report.json\n  [FAIL] V2_TIMEOUT_ARCHITECTURE_GREEN — TIMEOUT_ARCHITECTURE=NO_GO\n  [FAIL] V2_BUG_AUTONOMOUS_LOOP_GREEN — evidência runtime ausente: reports/bug-autonomous-loop-report.json\n  [PENDING] REAL_TASK_RECOVERY — sem relatório de retomada de task real (rode npm run verify:real-task-recovery)\n  [PENDING] V2_REQUIREMENTS_MATRIX — matriz de requisitos ausente (rode npm run validate:v2-requirements-matrix)\n  [PENDING] V2_REQUIRED_TESTS — medição dos 68 testes obrigatórios ausente (rode npm run validate:required-tests)\n  [PENDING] ENGINEERING_RAG_ENRICHMENT — sem medição do corpus RAG (rode npm run validate:rag-index-health)\n  [PENDING] BUG_AUTONOMOUS_LOOP — sem medição do ciclo de bug (rode npm run validate:bug-autonomous-loop após a execução autoritativa das suítes)\n  [PENDING] ENVELOPE_VERIFICATION — envelope não selado em dist/engineering-router-v2-audit-envelope — gere com engineering-router:v2-envelope:generate e verifique com engineering-router:v2-envelope (a verificação NUNCA gera o envelope)\n[engineering-router-v2] status=NO_GO itens=12 falhas=4 pendencias=5\n"
+    },
+    {
+      "id": "governance-summary",
+      "comando": "npm run -s validate:governance-summary",
+      "exitCode": 1,
+      "veredito": "FAIL",
+      "ok": true,
+      "duracaoMs": 312,
+      "saida": ",\n    \"qaGovernance\": null,\n    \"replayIntegrity\": null,\n    \"releaseHardening\": null,\n    \"agentAdherence\": null,\n    \"selfProving\": null,\n    \"visibilityPolicy\": null,\n    \"coverageGate\": null,\n    \"ragDomainSegregation\": \"PASS\"\n  },\n  \"maxReportAgeMs\": 86400000,\n  \"evaluations\": {\n    \"architectureConsistency\": {\n      \"file\": \"reports/ai-memory-validation-report.json\",\n      \"score\": 0,\n      \"status\": \"MISSING\",\n      \"sourceStatus\": null,\n      \"reason\": \"report_missing\"\n    },\n    \"runtimeValidation\": {\n      \"file\": \"reports/runtime-routes-validation-report.json\",\n      \"score\": 0,\n      \"status\": \"MISSING\",\n      \"sourceStatus\": null,\n      \"reason\": \"report_missing\"\n    },\n    \"qaGovernance\": {\n      \"file\": \"reports/qa-governance-validation-report.json\",\n      \"score\": 0,\n      \"status\": \"MISSING\",\n      \"sourceStatus\": null,\n      \"reason\": \"report_missing\"\n    },\n    \"replayIntegrity\": {\n      \"file\": \"reports/replay-governance-validation-report.json\",\n      \"score\": 0,\n      \"status\": \"MISSING\",\n      \"sourceStatus\": null,\n      \"reason\": \"report_missing\"\n    },\n    \"releaseHardening\": {\n      \"file\": \"reports/release-governance-validation-report.json\",\n      \"score\": 0,\n      \"status\": \"MISSING\",\n      \"sourceStatus\": null,\n      \"reason\": \"report_missing\"\n    },\n    \"agentAdherence\": {\n      \"file\": \"reports/agent-adherence-report.json\",\n      \"score\": 0,\n      \"status\": \"MISSING\",\n      \"sourceStatus\": null,\n      \"reason\": \"report_missing\"\n    },\n    \"selfProving\": {\n      \"file\": \"reports/self-proving-report.json\",\n      \"score\": 0,\n      \"status\": \"MISSING\",\n      \"sourceStatus\": null,\n      \"reason\": \"report_missing\"\n    },\n    \"visibilityPolicy\": {\n      \"file\": \"reports/visibility-policy-report.json\",\n      \"score\": 0,\n      \"status\": \"MISSING\",\n      \"sourceStatus\": null,\n      \"reason\": \"report_missing\"\n    },\n    \"coverageGate\": {\n      \"file\": \"reports/coverage-gate-report.json\",\n      \"score\": 0,\n      \"status\": \"MISSING\",\n      \"sourceStatus\": null,\n      \"reason\": \"report_missing\"\n    },\n    \"ragDomainSegregation\": {\n      \"file\": \"reports/rag-domain-segregation-report.json\",\n      \"score\": 0,\n      \"status\": \"STALE\",\n      \"sourceStatus\": \"PASS\",\n      \"reason\": \"report_stale\",\n      \"ageMs\": 426597167\n    }\n  },\n  \"issues\": [\n    {\n      \"dimension\": \"architectureConsistency\",\n      \"file\": \"reports/ai-memory-validation-report.json\",\n      \"status\": \"MISSING\",\n      \"reason\": \"report_missing\"\n    },\n    {\n      \"dimension\": \"runtimeValidation\",\n      \"file\": \"reports/runtime-routes-validation-report.json\",\n      \"status\": \"MISSING\",\n      \"reason\": \"report_missing\"\n    },\n    {\n      \"dimension\": \"qaGovernance\",\n      \"file\": \"reports/qa-governance-validation-report.json\",\n      \"status\": \"MISSING\",\n      \"reason\": \"report_missing\"\n    },\n    {\n      \"dimension\": \"replayIntegrity\",\n      \"file\": \"reports/replay-governance-validation-report.json\",\n      \"status\": \"MISSING\",\n      \"reason\": \"report_missing\"\n    },\n    {\n      \"dimension\": \"releaseHardening\",\n      \"file\": \"reports/release-governance-validation-report.json\",\n      \"status\": \"MISSING\",\n      \"reason\": \"report_missing\"\n    },\n    {\n      \"dimension\": \"agentAdherence\",\n      \"file\": \"reports/agent-adherence-report.json\",\n      \"status\": \"MISSING\",\n      \"reason\": \"report_missing\"\n    },\n    {\n      \"dimension\": \"selfProving\",\n      \"file\": \"reports/self-proving-report.json\",\n      \"status\": \"MISSING\",\n      \"reason\": \"report_missing\"\n    },\n    {\n      \"dimension\": \"visibilityPolicy\",\n      \"file\": \"reports/visibility-policy-report.json\",\n      \"status\": \"MISSING\",\n      \"reason\": \"report_missing\"\n    },\n    {\n      \"dimension\": \"coverageGate\",\n      \"file\": \"reports/coverage-gate-report.json\",\n      \"status\": \"MISSING\",\n      \"reason\": \"report_missing\"\n    },\n    {\n      \"dimension\": \"ragDomainSegregation\",\n      \"file\": \"reports/rag-domain-segregation-report.json\",\n      \"status\": \"STALE\",\n      \"reason\": \"report_stale\"\n    }\n  ]\n}\n"
+    },
+    {
+      "id": "impact-validation",
+      "comando": "npm run -s impact:validate",
+      "exitCode": 2,
+      "veredito": "ESCALATE",
+      "ok": true,
+      "duracaoMs": 947,
+      "saida": "[L1] alterados=0 testes=0 camadas(t/j/v)=0/0/0 → ESCALATE (NO_CHANGED_FILES)\n[L1] relatório em reports/impact-validation-report.json — nível seguinte (L2) deve cobrir\n"
+    },
+    {
+      "id": "artefatos-obrigatorios",
+      "comando": "(verificação de existência e frescor)",
+      "exitCode": 0,
+      "veredito": "PASS",
+      "ok": true,
+      "duracaoMs": 0,
+      "saida": "",
+      "presentes": [
+        "reports/coverage-completeness-report.json",
+        "reports/benchmark-sufficiency-report.json",
+        "reports/evo-contract-report.json",
+        "reports/layer-conventions-report.json",
+        "reports/business-journey-projections.json",
+        "reports/impact-validation-report.json",
+        "governance/json-persistence-audit.json",
+        "qa-mesh/meshRegistry.json",
+        "reports/TIMEOUT_ARCHITECTURE_REPORT.json",
+        "reports/api-surface-report.json"
+      ],
+      "faltando": [],
+      "naoReescritos": []
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "id": "HARDENING-ENG-GOV-RELEASE-AGREGADO-EXIGE-WORKTREE-CONGELADO",
+  "severity": "P2",
+  "estadoPersistido": "RESOLVED",
+  "titulo": "Gate agregado exige worktree CONGELADO — commitar durante o run quebra a promocao do E2E",
+  "classe": "REQUER_DECISAO_HUMANA",
+  "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+}

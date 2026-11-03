@@ -1,0 +1,30 @@
+MISSÃO C — INVENTÁRIO DE CAMINHOS COM CAPACIDADE DE CERTIFICAR/PUBLICAR/PROMOVER
+data: 2026-10-24T09:38Z
+
+CERTIFICAR / DECIDIR
+  governance/canonical-release-decision.js          autoridade única de decisão
+  scripts/governance/assert-canonical-release-decision.js   CLI: exit 0 só em GO DEFINITIVO
+  tools/system/release-decision.js                  decisão operacional
+  scripts/governance/engineering-router-v2-seal.js  selo V2 (CERTIFIED_GO / SELO_FINAL)
+  scripts/governance/seal-release.sh                orquestra prepare→candidate→final→publish→consolidate
+  scripts/governance/run-governance-enforcement.js  gate agregado
+
+PUBLICAR IMAGEM
+  scripts/docker-push.sh          (npm run deploy:push)      -> AGORA com publication-gate.sh
+  scripts/docker-push-remote.sh   (npm run deploy:remote:save-load) -> AGORA com publication-gate.sh
+  .github/workflows/*             -> nenhum workflow publica (asserção C7 no teste)
+
+TAG / RELEASE
+  scripts/create-release-tag.sh   tag anotada imutável (confere commit, recusa conflito, sem --force)
+  scripts/governance/create-release-publication-receipt.js  recibo de publicação
+
+DEPLOY
+  scripts/deploy-gate.sh (npm run deploy:gate[:official])   gate pré-deploy
+  scripts/deploy-prod.sh, scripts/docker-deploy*.sh         deploy real (exige SYSTEM_DEPLOY_EXECUTE=1)
+  tools/system/deploy*.js
+  docker-compose.prod.yml
+
+ACHADO: os dois caminhos de PUSH DE IMAGEM não consultavam a decisão de release (bloqueio só no
+workflow de CI). Corrigido por `scripts/governance/publication-gate.sh`, que exige
+RAP_PUBLISH_AUTHORIZED=1 E GO definitivo antes de qualquer build — coberto por 4 testes que provam
+que o `docker` falso nunca é invocado.

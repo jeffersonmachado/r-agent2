@@ -1,0 +1,21 @@
+[jest-global-setup] .env carregado (0 chave(s) aplicada(s); ambiente explícito vence)
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/governance/closureRequiresSuite.test.js
+  fechamentos — a fila real não tem item fechado sem suíte
+    ✓ zero violações na fila oficial (110 ms)
+    ✓ a verificação tem alcance real (não passa por fila vazia) (102 ms)
+    ✓ todo item fechado aponta para um arquivo que o repositório tem (122 ms)
+  fechamentos — o predicado DETECTA o defeito (prova de sensibilidade)
+    ✓ sem `regressionTest` ⇒ SEM_SUITE_DECLARADA (102 ms)
+    ✓ campo vazio/em branco ⇒ SEM_SUITE_DECLARADA (não é "declarado") (101 ms)
+    ✓ caminho inexistente ⇒ SUITE_INEXISTENTE (101 ms)
+    ✓ prosa com espaço não é caminho de suíte (100 ms)
+    ✓ item ABERTO não é exigido (a regra é sobre fechamento) (100 ms)
+    ✓ suíte real aceita (contraprova do predicado) (102 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       9 passed, 9 total
+Snapshots:   0 total
+Time:        1.227 s, estimated 2 s
+Ran all test suites matching /tests\/unit\/governance\/closureRequiresSuite.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

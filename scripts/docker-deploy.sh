@@ -5,6 +5,17 @@
 
 set -e
 
+# PUBLICAÇÃO (Fase 3, achado 2 da revisão): este script transporta imagens/artefatos por ssh/rsync
+# para o host de deploy. É publicação — exige autorização explícita e GO definitivo, como os
+# `docker-push*`. (`SYSTEM_DEPLOY_EXECUTE=1` sinaliza intenção explícita do operador.)
+if [[ "${SYSTEM_DEPLOY_EXECUTE:-}" != "1" ]]; then
+    echo "[docker-deploy] BLOQUEADO: defina SYSTEM_DEPLOY_EXECUTE=1 (intenção explícita) para publicar."
+    exit 1
+fi
+# shellcheck source=/dev/null
+. "$(dirname "${BASH_SOURCE[0]}")/governance/publication-gate.sh"
+rap_publication_gate "docker-deploy"
+
 # Cores para output
 RED='\033[0;31m'
 GREEN='\033[0;32m'

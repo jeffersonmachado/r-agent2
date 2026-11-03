@@ -1,0 +1,14 @@
+{
+  "id": "AUDITORIA-ENTRYPOINT-TRAVAS",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Travas do ponto de entrada de auditoria (regressão do agg8 + epoch recalculável)",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+  "teste": "tests/unit/audit/auditEntrypointArtifact.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/AUDITORIA-ENTRYPOINT-TRAVAS.log",
+  "draft": "governance/bug-closure/proofs-drafts/AUDITORIA-ENTRYPOINT-TRAVAS.json",
+  "camposParaAssinar": 18
+}

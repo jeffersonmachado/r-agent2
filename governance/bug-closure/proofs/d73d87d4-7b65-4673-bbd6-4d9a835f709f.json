@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "d73d87d4-7b65-4673-bbd6-4d9a835f709f",
+  "defectId": "DEF-STATESYNC-EXEMPTION-STALE",
+  "severityBefore": "P3",
+  "severityAfter": "P3",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "fc08d682044ddb6be24f28c7ad8cfdca7b03b51e",
+  "codeFingerprint": "3f873a4f5e2d9d5ffa3bf6cc40bd8c9278012309c093787538719b4c7f06ea38",
+  "requiredTests": [
+    "tests/unit/frontend/stateSyncExemptionExactness.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/frontend/stateSyncExemptionExactness.test.js",
+      "command": "npx jest tests/unit/frontend/stateSyncExemptionExactness.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-31T21:47:10.636Z",
+      "finishedAt": "2026-10-31T21:47:13.148Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/DEF-STATESYNC-EXEMPTION-STALE.log",
+      "outputSha256": "ae0b7430038ee3ff6c32cdf698eeed92368a9fa6b0d1cc19b0d785f135098da1"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/frontend/stateSyncExemptionExactness.test.js",
+      "sha256": "9fbf5721b1bc9fd6776b2360a91927e4dc269db01ccfe4873827f6e5f4137bdc"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-10-31T21:47:13.155Z",
+  "proofHash": "8d92a0670e4e60c551e44561776ca566e9c0bec3f9b4855e70230aa74f694fe1",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "OZOfujeEiQP9znMVpLiHAeYOpEsxG2/3UielChB9HFR7qvb0AwfOd+K+e835NzX9hCLVJ8s47zZoC/UTaAwpBA==",
+    "signedAt": "2026-10-31T21:48:57.497Z"
+  }
+}

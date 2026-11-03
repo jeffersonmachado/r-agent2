@@ -281,22 +281,47 @@ function listQueue(queue, options = {}) {
 /**
  * Lista todas as filas disponíveis.
  *
+ * Com `tenantId`, a lista é derivada apenas dos tickets DESTE tenant (o índice
+ * em memória é chaveado por nome de fila, não por tenant). Sem `tenantId`,
+ * preserva o comportamento legado (todos os nomes).
+ *
+ * @param {string} [tenantId]
  * @returns {string[]}
  */
-function listQueues() {
-  return _listQueues({ queues });
+function listQueues(tenantId = null) {
+  if (!tenantId) return _listQueues({ queues });
+  const nomes = new Set();
+  for (const [queueName, ticketIds] of queues.entries()) {
+    for (const ticketId of ticketIds) {
+      const ticket = tickets.get(ticketId);
+      if (ticket && String(ticket.tenantId || '') === String(tenantId)) {
+        nomes.add(queueName);
+        break;
+      }
+    }
+  }
+  return [...nomes].sort();
 }
 
 function createQueue(queueName) {
   return _createQueue(queueName, { queues, ensureQueueIndex, safeTrim, logger });
 }
 
-function deleteQueue(queueName, force = false) {
-  return _deleteQueue(queueName, force, { queues, tickets, getQueueStats, persistTicketBestEffort, safeTrim, logger });
+/**
+ * @param {string} queueName
+ * @param {boolean} force
+ * @param {{tenantId?: string}} [options] escopo da operação (isolamento multi-tenant)
+ */
+function deleteQueue(queueName, force = false, options = {}) {
+  const tenantId = options && options.tenantId != null ? String(options.tenantId) : null;
+  return _deleteQueue(queueName, force, {
+    queues, tickets, getQueueStats, persistTicketBestEffort, safeTrim, logger, tenantId,
+  });
 }
 
-function getQueueInfo(queueName) {
-  return _getQueueInfo(queueName, { queues, tickets, getQueueStats, safeTrim });
+function getQueueInfo(queueName, options = {}) {
+  const tenantId = options && options.tenantId != null ? String(options.tenantId) : null;
+  return _getQueueInfo(queueName, { queues, tickets, getQueueStats, safeTrim, tenantId });
 }
 
 /**

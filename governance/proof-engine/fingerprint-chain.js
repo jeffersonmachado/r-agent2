@@ -141,6 +141,22 @@ const SKIP_REL_FILES = new Set([
   'qa/mesh/intelligence/stabilitySnapshot.json', // snapshot gerado a cada pipeline (ETAPA 4)
 ]);
 
+/**
+ * Padrões de arquivo GERADO dentro de raízes-fonte, por caminho relativo.
+ *
+ * Por que existe: `qa/evidence/` está na superfície provada (os VALIDADORES de evidência
+ * vivem lá), mas o mesmo diretório recebe SAÍDAS de execução (`*-latest.json`, ignoradas pelo
+ * git). Quando uma delas não é excluída, o `sourceFingerprint` deixa de ser função do código
+ * versionado e passa a depender de o workspace ter rodado a jornada: o MESMO commit produz
+ * fingerprints diferentes em checkouts diferentes, e toda prova vira `INVALID_EVIDENCE` ao
+ * trocar de árvore (medido: 118 provas mintadas em worktree limpo, inválidas no workspace
+ * principal, e vice-versa). Artefato gerado nunca é prova — é a mesma regra já aplicada a
+ * `qa-mesh/meshHistory`, `qa/mesh/intelligence/history` e `core/rpa/reports`.
+ */
+const SKIP_REL_FILE_PATTERNS = [
+  /^qa\/evidence\/.+-latest\.(json|txt|log)$/,
+];
+
 /** Políticas e contratos de jornada versionados (policyFingerprint). */
 const POLICY_FILES = [
   'governance/RAP_AGENT_CONSTITUTION.md',
@@ -261,6 +277,7 @@ function walkDir(rootDir, dir, collected, filePattern) {
     }
     if (!filePattern.test(entry.name) || SKIP_FILE_PATTERN.test(entry.name)) continue;
     if (SKIP_REL_FILES.has(relPath)) continue;
+    if (SKIP_REL_FILE_PATTERNS.some((padrao) => padrao.test(relPath))) continue;
     collected.add(relPath);
   }
 }
@@ -386,6 +403,7 @@ module.exports = {
   FILTERED_SOURCE_ROOTS,
   SKIP_REL_DIRS,
   SKIP_REL_FILES,
+  SKIP_REL_FILE_PATTERNS,
   POLICY_FILES,
   POLICY_FILE_PROJECTIONS,
   SCENARIO_REGISTRY_FILES,

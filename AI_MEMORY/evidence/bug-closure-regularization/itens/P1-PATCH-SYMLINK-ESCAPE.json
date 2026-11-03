@@ -1,0 +1,14 @@
+{
+  "id": "P1-PATCH-SYMLINK-ESCAPE",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "validatePatch aceitava symlink (git mode 120000): alvo do link escapa do allowedPaths",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+  "teste": "tests/unit/engineeringRouterPatchSymlinkEscape.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-PATCH-SYMLINK-ESCAPE.log",
+  "draft": "governance/bug-closure/proofs-drafts/P1-PATCH-SYMLINK-ESCAPE.json",
+  "camposParaAssinar": 18
+}

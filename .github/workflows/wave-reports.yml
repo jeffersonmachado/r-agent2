@@ -32,11 +32,24 @@ concurrency:
 env:
   NODE_VERSION_LTS: '20'
 
+# IMAGEM DE RUNNER FIXA (política do repositório desde 2026-10-26): `ubuntu-latest` passou a resolver
+# para ubuntu-26.04 e quebra a validação por AMBIENTE, não por código — `npx playwright install
+# --with-deps chromium` morre com "Playwright does not support chromium on ubuntu26.04-x64" e o systemd
+# do 26.04 mudou a redação de diagnósticos que suítes nossas asseveram. Medido no run 40303567233/40303874392
+# (dev-branch-ci). Imagem fixa até que Playwright e as asserções de mensagem suportem 26.04.
 jobs:
   refresh:
     name: "Refresh dos relatórios de wave (stack viva)"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
+
+    # ERREXIT + PIPEFAIL (mesma classe do D1 da Fase 3): o shell PADRÃO do runner tem `-e` mas NÃO
+    # tem `pipefail` — num pipeline o status é o do último elemento, então um comando que reprova
+    # seguido de `| tail`/`| head`/`>> arquivo` deixa o passo VERDE. Passo que TOLERA falha precisa
+    # dizer `|| true` explicitamente (é o caso dos dumps de log com `if: failure()`).
+    defaults:
+      run:
+        shell: bash --noprofile --norc -eo pipefail {0}
 
     services:
       postgres:
@@ -135,7 +148,7 @@ jobs:
           for i in $(seq 1 60); do
             TOKEN=$(curl -fsS -X POST "http://localhost:3001/auth/login?tenantId=system" \
               -H 'Content-Type: application/json' \
-              -d '{"username":"systemadmin","password":"Admin123!"}' 2>/dev/null | node -e "let d='';process.stdin.on('data',c=>d+=c).on('end',()=>{try{const j=JSON.parse(d);console.log(j.token||'')}catch{}})")
+              -d '{"username":"systemadmin","password":"Admin123!"}' 2>/dev/null | node -e "let d='';process.stdin.on('data',c=>d+=c).on('end',()=>{try{const j=JSON.parse(d);console.log(j.token||'')}catch{}})") || true
             if [ -n "$TOKEN" ]; then
               echo "Login funcional após ${i}s"
               break
@@ -175,6 +188,22 @@ jobs:
           VITE_PROXY_TARGET: http://localhost:3001
           API_PORT: '3001'
 
+      # IDENTIDADE DO RUN — defeito medido 2026-10-25 (run 40158423635): `npm run wave:db-integrity`
+      # morreu com "nenhum run governado encontrado — crie o run antes de produzir evidência" e as duas
+      # waves seguintes nem rodaram. O produtor é fail-closed por projeto (scripts/governance/lib/
+      # report-lineage.js: LINEAGE_RUN_UNDEFINED) porque evidência de runtime sem run é evidência sem
+      # origem. Este job agendado NUNCA abria o run, então o refresh não atualizava nada e as evidências
+      # de wave venciam (o coverage gate degrada VALIDATED -> STALE após 7 dias).
+      #
+      # O run aqui é de MANUTENÇÃO: existe só para dar identidade aos três relatórios e é FECHADO como
+      # SUPERSEDED no fim — ele nunca certifica release, e o fechamento é `if: always()` para não deixar
+      # run órfão quando uma wave falhar (a classe de defeito "run abandonado" do H20).
+      #
+      # `governance/.current-run.json` é gitignored (.gitignore:123) e o passo de commit abaixo adiciona
+      # apenas os três relatórios — o ponteiro do run NUNCA entra no commit.
+      - name: Abrir run governado (identidade dos artefatos de wave)
+        run: node scripts/governance/create-governed-run.js | tee /tmp/wave-run-context.json
+
       - name: Database Integrity Wave (Postgres real)
         run: npm run wave:db-integrity
 
@@ -183,6 +212,22 @@ jobs:
 
       - name: Page Surface Wave (navegação Playwright contra o frontend vivo)
         run: npm run wave:page-surface
+
+      - name: Fechar run governado (manutenção — não certifica release)
+        if: always()
+        run: |
+          # Fechar NÃO esconde divergência: o motivo e a evidência são obrigatórios por projeto
+          # (scripts/governance/close-run-context.js devolve 2 sem --reason/--evidence).
+          # Sem ponteiro (ex.: falha antes de abrir o run) o fechamento é no-op, não erro.
+          if [ ! -f governance/.current-run.json ]; then
+            echo "sem run aberto — nada a fechar"
+            exit 0
+          fi
+          node scripts/governance/close-run-context.js \
+            --status SUPERSEDED \
+            --reason "refresh agendado de evidências de wave; run de manutenção, não certifica release" \
+            --evidence "reports/db-integrity-report.json,reports/api-surface-report.json,reports/page-surface-report.json" \
+            --by "wave-reports-ci"
 
       - name: Commit e push dos relatórios atualizados (se houver mudança)
         run: |

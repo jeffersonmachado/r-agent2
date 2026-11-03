@@ -1,0 +1,25 @@
+L0 — COMPARATIVO FASE 2 (execução SEQUENCIAL, nunca simultânea)
+data: 2026-10-24T09:37:56Z
+node: v22.12.0 | jest: 29.7.0
+
+AMBIENTE A — árvores SEM provisionamento de artefatos (só .env + runner)
+  baseline 484eee478 : 9467 testes | 9442 PASS | 23 FAIL | 2 SKIP | 13 suítes vermelhas
+  branch   541c7d000 : 9600 testes | 9578 PASS | 20 FAIL | 2 SKIP |  9 suítes vermelhas
+  delta por IDENTIDADE de teste: 0 falhas exclusivas da branch; 3 exclusivas da baseline
+    - runIdentityCommit            (worktree da baseline em HEAD DESTACADO: sourceBranch=null)
+    - auditEntrypointArtifact      (governance/json-persistence-audit.json ausente na baseline)
+    - devServicesSupervision       (EADDRINUSE 127.0.0.1:39118 — colisão de porta)
+
+AMBIENTE B — MESMAS árvores após `npm run ci:artifacts` (12 produtores canônicos) + GIT_CONFIG_COUNT=0
+  baseline 484eee478 : 9493 testes | 9489 PASS | 2 FAIL | 2 SKIP
+     runIdentityCommit (HEAD destacado) + modelDrivenE2e (artefato prod-like externo)
+  branch   541c7d000 : 9620 testes | 9617 PASS | 1 FAIL | 2 SKIP
+     modelDrivenE2e (artefato prod-like externo)
+
+AMBIENTE C — CHECKOUT DESCARTÁVEL novo (git worktree) no commit 29a41bcdf, branch anexada,
+              provisionado com `npm run ci:artifacts`:
+  9629 testes | 9626 PASS | 1 FAIL | 2 SKIP | única falha: modelDrivenE2e
+
+CONCLUSÃO: por identidade exata de teste, NENHUMA falha da branch está ausente na baseline.
+As 20 falhas do ambiente A eram ausência de artefato ignorado pelo git + injeção de
+configuração git do processo pai; a única remanescente depende do job `prod-like-smoke` do CI.

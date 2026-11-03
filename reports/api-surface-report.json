@@ -1,16 +1,16 @@
 {
-  "generatedAt": "2026-10-20T15:11:16.723Z",
-  "commit": "16a3aa6720652f32e3de36be96cf32949d42b373",
+  "generatedAt": "2026-11-03T12:53:57.079Z",
+  "commit": "f18a6e24a287cf928f3300748879df876f884820",
   "baseUrl": "http://127.0.0.1:3001",
   "tokens": {
     "development": true,
     "production": true
   },
   "totals": {
-    "items": 918,
+    "items": 924,
     "byState": {
-      "VALIDATED": 888,
-      "VISITED": 9,
+      "VALIDATED": 890,
+      "VISITED": 13,
       "NOT_APPLICABLE": 21
     }
   },
@@ -4014,6 +4014,87 @@
       }
     },
     {
+      "id": "api:GET:/api/lro",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 200,
+          "notFoundFallback": false
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "api:GET:/api/lro/:id",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 500,
+          "notFoundFallback": false
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "api:GET:/api/lro/:id/events",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 500,
+          "notFoundFallback": false
+        },
+        "p3": "skipped"
+      }
+    },
+    {
       "id": "api:GET:/api/market-discovery/runs",
       "state": "VALIDATED",
       "assertions": [
@@ -6274,7 +6355,7 @@
     },
     {
       "id": "api:GET:/api/qa-waves/executions",
-      "state": "VALIDATED",
+      "state": "VISITED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -6294,7 +6375,8 @@
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "super_admin alcançou a rota (200)"
+          "detail": "P3 com erro de rede",
+          "notEvaluated": true
         }
       ],
       "probes": {
@@ -6306,10 +6388,7 @@
           "status": 403,
           "notFoundFallback": false
         },
-        "p3": {
-          "status": 200,
-          "notFoundFallback": false
-        }
+        "p3": "network-error"
       }
     },
     {
@@ -6434,7 +6513,7 @@
     },
     {
       "id": "api:GET:/api/qa-waves/health",
-      "state": "VALIDATED",
+      "state": "VISITED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -6449,13 +6528,15 @@
         {
           "name": "classificationEnforced",
           "passed": true,
-          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT | NOT_APPLICABLE — isenção justificada: Health check público intencional do módulo QA Waves (probe de infraestrutura, payload mínimo sem dados de negócio nem de evidência). Comportamento coberto por api/server.test.js ('GET /api/qa-waves/health deve retornar status ok do modulo'). Demais endpoints do módulo exigem DEVELOPMENT normalmente. (aprovada por jeffersonmachado em 2026-07-28)",
+          "detail": "P2 com erro de rede | NOT_APPLICABLE — isenção justificada: Health check público intencional do módulo QA Waves (probe de infraestrutura, payload mínimo sem dados de negócio nem de evidência). Comportamento coberto por api/server.test.js ('GET /api/qa-waves/health deve retornar status ok do modulo'). Demais endpoints do módulo exigem DEVELOPMENT normalmente. (aprovada por jeffersonmachado em 2026-07-28)",
+          "notEvaluated": true,
           "notApplicable": true
         },
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "super_admin alcançou a rota (200)"
+          "detail": "P3 com erro de rede",
+          "notEvaluated": true
         }
       ],
       "exemption": {
@@ -6470,19 +6551,13 @@
           "status": 401,
           "notFoundFallback": false
         },
-        "p2": {
-          "status": 403,
-          "notFoundFallback": false
-        },
-        "p3": {
-          "status": 200,
-          "notFoundFallback": false
-        }
+        "p2": "network-error",
+        "p3": "network-error"
       }
     },
     {
       "id": "api:GET:/api/qa-waves/intelligence/business-gaps",
-      "state": "VALIDATED",
+      "state": "VISITED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -6492,7 +6567,8 @@
         {
           "name": "authEnforced",
           "passed": true,
-          "detail": "anônimo rejeitado com 401"
+          "detail": "P1 com erro de rede",
+          "notEvaluated": true
         },
         {
           "name": "classificationEnforced",
@@ -6506,10 +6582,7 @@
         }
       ],
       "probes": {
-        "p1": {
-          "status": 401,
-          "notFoundFallback": false
-        },
+        "p1": "network-error",
         "p2": {
           "status": 403,
           "notFoundFallback": false
@@ -6522,7 +6595,7 @@
     },
     {
       "id": "api:GET:/api/qa-waves/intelligence/coverage",
-      "state": "VALIDATED",
+      "state": "VISITED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -6532,7 +6605,8 @@
         {
           "name": "authEnforced",
           "passed": true,
-          "detail": "anônimo rejeitado com 401"
+          "detail": "P1 com erro de rede",
+          "notEvaluated": true
         },
         {
           "name": "classificationEnforced",
@@ -6546,10 +6620,7 @@
         }
       ],
       "probes": {
-        "p1": {
-          "status": 401,
-          "notFoundFallback": false
-        },
+        "p1": "network-error",
         "p2": {
           "status": 403,
           "notFoundFallback": false
@@ -16888,6 +16959,78 @@
       }
     },
     {
+      "id": "api:POST:/api/lro/:id/feedback",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": "skipped",
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "api:POST:/api/lro/:id/transition",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": "skipped",
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "api:POST:/api/lro/feedback/:requestId/respond",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": "skipped",
+        "p3": "skipped"
+      }
+    },
+    {
       "id": "api:POST:/api/market-discovery/runs",
       "state": "VALIDATED",
       "assertions": [
@@ -26009,6 +26152,10 @@
       }
     }
   ],
-  "runId": "rap-governed-20261020150721180-09a2168d",
-  "sourceFingerprint": "1580e16621569210a94d73f6f469d41d0e30776e8b521950083910aaf5a7f423"
+  "runId": "rap-governed-20261103101550258-3dac3e2d",
+  "sourceFingerprint": "330ad47b88702d47d7e21c625a1e77f0b4c8570f55d13be8e8dbc2fc64212ad6",
+  "sourceCommit": "c43614969fa7e5eafcf680b4028097b25143cd94",
+  "sourceTree": "7a1162228d09d3ad30e13c204d919030ff1bbd8e",
+  "artifactType": "api-surface-report",
+  "artifactVersion": "1.0.0"
 }

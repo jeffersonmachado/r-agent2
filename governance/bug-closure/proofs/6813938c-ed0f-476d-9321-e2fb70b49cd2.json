@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "6813938c-ed0f-476d-9321-e2fb70b49cd2",
+  "defectId": "CI-MAIN-MODELDRIVEN-PROD-LIKE",
+  "severityBefore": "P2",
+  "severityAfter": "P2",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "66159b64dcdfd0c7fdabfb70628395370c1f42b8",
+  "codeFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
+  "requiredTests": [
+    "tests/unit/governance/modelDrivenE2e.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/modelDrivenE2e.test.js",
+      "command": "npx jest tests/unit/governance/modelDrivenE2e.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-01T05:32:15.242Z",
+      "finishedAt": "2026-11-01T05:32:18.540Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101051400-b7478e36/logs/CI-MAIN-MODELDRIVEN-PROD-LIKE.log",
+      "outputSha256": "9cd6767561c4f3963135198d0ab43faab283f780dd790971885002fb5c6fae76"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/modelDrivenE2e.test.js",
+      "sha256": "50427d46f759f53ea9811a9d8fb6ed8eb2d859d593fcb7cbdd37d52b468b5b2c"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-01T05:32:18.546Z",
+  "proofHash": "c7ed20b9cd691d8195ad8c0a818425e7c44992f480f2bf0678c5c8eccfe23d69",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "NanXNA6sasqrU3E5aRWdQty13pPp8wLb09+aL9TZaQeh+htzCCjlO611HPy0Ex2ukW/KCJEUIGtJDvyi+IDHDA==",
+    "signedAt": "2026-11-01T05:45:42.472Z"
+  }
+}

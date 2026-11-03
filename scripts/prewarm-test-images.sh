@@ -56,6 +56,13 @@ pull_images() {
 }
 
 push_images() {
+  # PUBLICAÇÃO (Fase 3, achado 2 da revisão): `docker push`/`docker compose push` publicam imagem
+  # para `${TEST_IMAGE_PREFIX}` arbitrário (o próprio uso exemplifica ghcr.io/acme/...) e NÃO
+  # passavam por porteiro nenhum. Autorização explícita + GO definitivo antes de qualquer push.
+  # shellcheck source=/dev/null
+  . "$(dirname "${BASH_SOURCE[0]}")/governance/publication-gate.sh"
+  rap_publication_gate "prewarm-test-images"
+
   echo "[prewarm] push base image: $TEST_API_BASE_IMAGE"
   docker push "$TEST_API_BASE_IMAGE"
 

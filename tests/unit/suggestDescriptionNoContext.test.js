@@ -4,6 +4,9 @@
  */
 
 const http = require('http');
+const { TIMEOUT_BOOT_APP_MS } = require('../helpers/jestTimeouts');
+
+jest.setTimeout(TIMEOUT_BOOT_APP_MS);
 
 jest.mock('../../api/utils/logger', () => ({
   debug: jest.fn(),

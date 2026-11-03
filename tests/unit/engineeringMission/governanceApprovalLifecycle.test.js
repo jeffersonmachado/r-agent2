@@ -38,6 +38,9 @@ jest.mock('../../../api/services/engineeringMission/bugFindingService', () => ({
   releaseFindingLease: jest.fn(async () => ({})),
   heartbeatFindingLease: jest.fn(async () => ({})),
   getFindingMemory: jest.fn(async () => ({ known: false, priorFindings: [], priorRegressionCommands: [] })),
+  // O fix loop adquire a posse do finding (BUG-03d); aqui a posse é apenas repassada. Função PURA de
+  // propósito: `resetMocks` limparia a implementação de um `jest.fn()` e o fix loop devolveria undefined.
+  withFindingLeaseOwned: async (id, opcoes, fn) => fn({ lease: (opcoes && opcoes.lease) || null, owned: false }),
 }));
 
 jest.mock('../../../api/services/engineeringMission/bugTriageService', () => ({

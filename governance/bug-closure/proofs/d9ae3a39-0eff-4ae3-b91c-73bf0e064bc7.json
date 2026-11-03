@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "d9ae3a39-0eff-4ae3-b91c-73bf0e064bc7",
+  "defectId": "H12-RAG-REPARO",
+  "severityBefore": "P2",
+  "severityAfter": "P2",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "68a1da1922d793a5937fcfa9a0c4441a7d734594",
+  "codeFingerprint": "05ceb9b066e95a3c94affb0c3b960c5570ba3c4e4df42f81e4dbf214bc2b4ee2",
+  "requiredTests": [
+    "tests/unit/governance/ragIndexHealthPolicy.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/ragIndexHealthPolicy.test.js",
+      "command": "npx jest tests/unit/governance/ragIndexHealthPolicy.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-01T06:15:23.080Z",
+      "finishedAt": "2026-11-01T06:15:26.277Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101054919-b0aedfae/logs/H12-RAG-REPARO.log",
+      "outputSha256": "0436d89c367a3f26826465cd02f3cc104af94b9a74c205618f3296cc910d75bf"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/ragIndexHealthPolicy.test.js",
+      "sha256": "8874276eee2c5977fa5e990d75fbd44f25362a70265a9e921b8d82e9dbde29a7"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-01T06:15:26.284Z",
+  "proofHash": "36fdaf74ef2894b0fe4ee6a9fa431d79a53853191865d5964ae7952456d99971",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "7it0ol/bDpXW6YvI37uw51GXyRlLfQd7tzNaE3tns9aNU0z7aaS1X2765TcFa15CTnHtd9CddlwKhpgwCd1eBg==",
+    "signedAt": "2026-11-01T06:22:10.875Z"
+  }
+}

@@ -1,0 +1,25 @@
+[jest-global-setup] .env carregado (0 chave(s) aplicada(s); ambiente explícito vence)
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS api/services/lro/__tests__/lroOutboxWorker.test.js
+  worker da outbox de LRO
+    ✓ flag desligada (default) não inicia (106 ms)
+    ✓ flag ligada inicia e agenda com a função INJETADA (109 ms)
+    ✓ tick publica via dispatch e não é reentrante (106 ms)
+    ✓ falha no ciclo NÃO derruba o worker (volta como resumo) (107 ms)
+    ✓ stop é idempotente e limpa o timer (107 ms)
+    ✓ tick também roda a varredura de prazos, sem depender dela (101 ms)
+    ✓ falha PERSISTENTE do dispatch não impede a varredura de rodar a cada ciclo (104 ms)
+    ✓ resultado do ciclo distingue falha de dispatch e desfecho da varredura (102 ms)
+    ✓ flag desligada: worker não agenda ciclo (não há expiração automática sem executor) (104 ms)
+    ✓ falha da varredura NÃO impede a outbox de drenar (103 ms)
+    ✓ publicador WebSocket: publica para o TENANT da operação (107 ms)
+    ✓ publicador WebSocket é FAIL-CLOSED sem tenant (não vaza evento) (103 ms)
+    ✓ stop AGUARDA o tick em andamento concluir (203 ms)
+    ✓ stop com deadline estourado devolve forcado=true (estado recuperável, sem travar) (202 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       14 passed, 14 total
+Snapshots:   0 total
+Time:        2.122 s
+Ran all test suites matching /api\/services\/lro\/__tests__\/lroOutboxWorker.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

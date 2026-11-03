@@ -1,0 +1,27 @@
+[jest-global-setup] .env carregado (0 chave(s) aplicada(s); ambiente explícito vence)
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/governance/closurePointersOrphans.test.js
+  ponteiros de closure — o histórico está MARCADO, não apagado
+    ✓ FINAL_RAP_RELEASE_CLOSURE.json declara SUPERSEDED apontando para arquivo que existe (110 ms)
+    ✓ o conteúdo ORIGINAL foi preservado (marcar não pode destruir a evidência) (105 ms)
+    ✓ o aviso de staleness acompanha o artefato (não só o campo de status) (104 ms)
+  ponteiros de closure — o entrypoint AVISA sobre cada um que existe
+    ✓ existe a seção explícita que proíbe usá-los como estado atual (103 ms)
+    ✓ FINAL_RAP_RELEASE_CLOSURE.json é citado no aviso do entrypoint (103 ms)
+    ✓ FINAL_RELEASE_CLOSURE.md é citado no aviso do entrypoint (102 ms)
+    ✓ ENGINEERING_ROUTER_V1_SEAL_REPORT.json é citado no aviso do entrypoint (102 ms)
+    ✓ ENGINEERING_ROUTER_V1_FINAL_SEAL.md é citado no aviso do entrypoint (103 ms)
+    ✓ o entrypoint aponta para a fonte correta do estado (não para os ponteiros) (104 ms)
+  ponteiros de closure — nenhum gate os consome como autoridade
+    ✓ FINAL_RAP_RELEASE_CLOSURE.json não é lido por nenhum gate executável (197 ms)
+    ✓ FINAL_RELEASE_CLOSURE.md não é lido por nenhum gate executável (191 ms)
+    ✓ ENGINEERING_ROUTER_V1_SEAL_REPORT.json não é lido por nenhum gate executável (154 ms)
+    ✓ ENGINEERING_ROUTER_V1_FINAL_SEAL.md não é lido por nenhum gate executável (141 ms)
+    ✓ a varredura tem alcance real (não passa por diretório vazio) (115 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       14 passed, 14 total
+Snapshots:   0 total
+Time:        1.988 s, estimated 3 s
+Ran all test suites matching /tests\/unit\/governance\/closurePointersOrphans.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

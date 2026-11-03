@@ -264,6 +264,28 @@ function clasificar(input = {}) {
 
   if (!input.selado) return decidir(STATES.PRE_PACKAGE_PASS, 'PACOTE_NAO_SELADO');
   if (!input.certificado) return decidir(STATES.PRE_PACKAGE_PASS, 'NAO_CERTIFICADO');
+
+  // ── IDENTIDADE OBRIGATÓRIA PARA CERTIFICAR (missão 2026-10-25 §4) ──────────
+  // DEFEITO REPRODUZIDO no HEAD anterior desta missão:
+  //   clasificar({ gates: [final_governance, final_readiness, final_proof] todos PASS,
+  //                selado: true, certificado: true })
+  //     -> { state: 'CERTIFIED_GO', reason: 'CERTIFICADO', identity: null }
+  // e também com identidade PARCIAL (`{ runId }` apenas). A checagem de "gate de outro run" só
+  // disparava quando AMBOS os lados tinham `runId` — sem identidade no contrato, ela nunca rodava.
+  // Consequência: qualquer chamada direta (sem passar pelos scripts) certificava com identidade
+  // ausente, e o release ficava sem vínculo com commit/run/fingerprint.
+  // Correção: identidade completa e VÁLIDA é pré-requisito de CERTIFIED_GO e PUBLISHED_VERIFIED.
+  const identidadeParaCertificar = input.identidade || null;
+  const faltandoIdentidade = CAMPOS_IDENTIDADE_OBRIGATORIOS
+    .filter((campo) => !_preenchido(identidadeParaCertificar && identidadeParaCertificar[campo]));
+  if (faltandoIdentidade.length > 0) {
+    return decidir(STATES.NO_GO, `IDENTIDADE_AUSENTE_NO_CONTRATO:${faltandoIdentidade.join(',')}`);
+  }
+  const invalidosIdentidade = CAMPOS_IDENTIDADE_OBRIGATORIOS
+    .filter((campo) => !PADRAO_IDENTIDADE[campo].test(String(identidadeParaCertificar[campo])));
+  if (invalidosIdentidade.length > 0) {
+    return decidir(STATES.NO_GO, `IDENTIDADE_INVALIDA_NO_CONTRATO:${invalidosIdentidade.join(',')}`);
+  }
   if (input.publicado && !input.entregaVerificada) {
     return decidir(STATES.CERTIFIED_GO, 'PUBLICADO_SEM_ENTREGA_VERIFICADA');
   }

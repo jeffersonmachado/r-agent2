@@ -1,0 +1,16 @@
+[jest-global-setup] .env carregado (0 chave(s) aplicada(s); ambiente explícito vence)
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/governance/aiGovernanceRequiredFilesTracked.test.js
+  arquivos exigidos pela governança de IA precisam estar VERSIONADOS
+    ✓ o repositório é um worktree git (sem isso o invariante não pode ser provado) (130 ms)
+    ✓ as listas canônicas continuam completas (nenhum adaptador removido em silêncio) (108 ms)
+    ✓ todo arquivo de REQUIRED_AI_GOVERNANCE_FILES está no índice do git (1049 ms)
+    ✓ todo adaptador de instrução está no índice do git (184 ms)
+    ✓ CONTROLE NEGATIVO: um arquivo não versionado de propósito é detectado como tal (130 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       5 passed, 5 total
+Snapshots:   0 total
+Time:        2.4 s
+Ran all test suites matching /tests\/unit\/governance\/aiGovernanceRequiredFilesTracked.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

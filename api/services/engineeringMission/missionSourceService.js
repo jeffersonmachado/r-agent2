@@ -89,11 +89,31 @@ function models() {
   return require('../../db/models');
 }
 
+/**
+ * Resolve o commit de um ref aceitando também a forma RASTREADA (`origin/<ref>`).
+ *
+ * MEDIDO no CI (run 39585223390, job "Integração real do Engenheiro"): 21 de 40 suítes
+ * reprovaram com `não foi possível resolver o commit de origem "main"` (44 ocorrências).
+ * A causa não é o código da missão: é a suposição de que a linha principal existe como
+ * branch LOCAL. Num checkout de CI (e em qualquer clone raso/worktree destacado) a linha
+ * principal pode existir apenas como `refs/remotes/origin/main` — o repositório tem o
+ * commit, mas `rev-parse main` falha.
+ *
+ * Fail-closed preservado: continua sendo obrigatório que o commit exista em algum lugar.
+ * Só passa a ser aceitável que ele exista como ref rastreado do remoto canônico.
+ */
+async function resolveRefCommit(ref, { cwd } = {}) {
+  const candidatos = [`${ref}^{commit}`, `refs/remotes/origin/${ref}^{commit}`];
+  for (const candidato of candidatos) {
+    const result = await runGit(['rev-parse', '--verify', candidato], { cwd });
+    if (result.ok) return result.stdout;
+  }
+  return null;
+}
+
 /** Commit atual da `main` — a medida que prova que a missão não tocou a linha principal. */
-async function readMainCommit(ref = 'main') {
-  const result = await runGit(['rev-parse', '--verify', `${ref}^{commit}`]);
-  if (!result.ok) return null;
-  return result.stdout;
+async function readMainCommit(ref = 'main', opcoes = {}) {
+  return resolveRefCommit(ref, opcoes);
 }
 
 async function readCommitParent(commit) {
@@ -880,10 +900,29 @@ async function reconcileMissionSourceIntents({ missionId } = {}) {
       continue;
     }
 
-    if (decision.outcome === 'DIVERGENCE' || decision.outcome === 'DB_AHEAD_OF_GIT') {
+    if (decision.outcome === 'DIVERGENCE' || decision.outcome === 'DB_AHEAD_OF_GIT'
+      || decision.outcome === 'BLOCKED_REQUIRES_REPAIR') {
+      // DEFEITO MEDIDO (2026-10-27): `BLOCKED_REQUIRES_REPAIR` NÃO era persistido. O intent voltava
+      // ao scan da reconciliação em TODO boot, sem nunca sair de PREPARED/GIT_APPLIED/DB_APPLIED —
+      // pílula envenenada que consumia o orçamento do lote e deixava de fora o intent recém-crashado
+      // (medido: 138 missões varridas, 0 reconciliadas, backlog de 209 e o intent novo sem vez).
+      // "Requer reparo" É um estado terminal para a reconciliação AUTOMÁTICA — e é o que o próprio
+      // desfecho se chama.
       await transitionIntegrationIntent(intent.id, 'RECOVERY_REQUIRED', {
         extra: { phase: decision.outcome, code: decision.code, reason: decision.reason, reconciledAt: new Date().toISOString() },
       });
+      // NÃO se marca o estado da MISSÃO aqui — decisão revertida por medição (revisão de 2026-10-28).
+      //
+      // A intenção era boa (quem opera lê a missão, não o intent), mas o RAIO DE DANO é grande demais:
+      // a classificação é feita contra o repositório DESTE processo. Num boot cujo repo não enxerga as
+      // refs de missão (clone novo, deploy sem as branches, processo apontando para repo sintético),
+      // TODA missão com intent não-terminal vira `BLOCKED_REQUIRES_REPAIR` — e passar a escrever
+      // `mission_source_state='RECOVERY_REQUIRED'` na missão marcaria como "requer reparo" missões que
+      // estão sadias, sem caminho de volta. Medido: mutação/probe marcaram missão alheia READY→
+      // RECOVERY_REQUIRED numa base compartilhada.
+      //
+      // A dívida continua VISÍVEL e sem esse risco pelo agregado do boot (`needsRepair`, contado de
+      // todas as linhas em RECOVERY_REQUIRED) — sinal global, sem tocar estado de missão individual.
     }
 
     outcomes.push({ intentId: intent.id, candidateCommit: String(intent.candidate_commit).slice(0, 12), ...decision });

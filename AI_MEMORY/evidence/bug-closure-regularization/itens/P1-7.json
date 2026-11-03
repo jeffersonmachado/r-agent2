@@ -1,0 +1,14 @@
+{
+  "id": "P1-7",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Fila de triagem de seguranca mostra o estado da REMEDIACAO submetida",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "CAMPO_DO_ITEM",
+  "teste": "tests/unit/securityIntel/triageRemediation.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-7.log",
+  "draft": "governance/bug-closure/proofs-drafts/P1-7.json",
+  "camposParaAssinar": 18
+}

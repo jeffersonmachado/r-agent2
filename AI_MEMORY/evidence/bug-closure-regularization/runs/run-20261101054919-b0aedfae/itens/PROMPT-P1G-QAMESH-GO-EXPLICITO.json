@@ -1,0 +1,25 @@
+{
+  "id": "PROMPT-P1G-QAMESH-GO-EXPLICITO",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "QA Mesh conclui apenas com GO explicito (SKIPPED/UNKNOWN nao sao sucesso)",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+  "teste": "qa-mesh/__tests__/executionQueueOutcome.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [
+    "ASSINATURA_INVALIDA"
+  ],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101054919-b0aedfae/logs/PROMPT-P1G-QAMESH-GO-EXPLICITO.log",
+  "draft": "governance/bug-closure/proofs-drafts/PROMPT-P1G-QAMESH-GO-EXPLICITO.json",
+  "camposParaAssinar": 18,
+  "runId": "run-20261101054919-b0aedfae",
+  "identidade": {
+    "commit": "68a1da1922d793a5937fcfa9a0c4441a7d734594",
+    "sourceFingerprint": "05ceb9b066e95a3c94affb0c3b960c5570ba3c4e4df42f81e4dbf214bc2b4ee2",
+    "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+    "hardeningQueueFingerprint": "72544e691e26ba4f446ddca340ae714466713386b304fdc4302be1c665f39ca4",
+    "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+  },
+  "artifactSha256": "8197e09ab3f39a2cb84b378f6a556558738bde020834cb41e3ef240ff2196363"
+}

@@ -175,6 +175,26 @@ describe('P0 gate de fases — comprovação de execução, não intenção', ()
     expect(veredito).toBe('BLOQUEADO_POR_TIMEOUT');
   });
 
+  test('8b. passo reprovado no runner REAL (bloqueio PASSO_FALHOU) é FAIL, nunca BLOQUEADO_POR_TIMEOUT', () => {
+    // Regressão do run 39614201981: `L0-suite-oficial` saiu exit=1 por asserção real e o
+    // veredito publicado foi BLOQUEADO_POR_TIMEOUT, sugerindo orçamento de tempo.
+    // `decidirVeredito` RETORNA a string do veredito (não um objeto): destruturar aqui
+    // produziria `undefined` e o teste passaria a medir nada.
+    const veredito = decidirVeredito({
+      entradaInvalida: null,
+      identidade: { ok: true },
+      estados: [
+        { fase: 'A', estado: ESTADOS_DE_FASE.PASS },
+        { fase: 'B', estado: ESTADOS_DE_FASE.NOT_APPLICABLE },
+        { fase: 'C', estado: ESTADOS_DE_FASE.BLOCKED, motivo: 'PASSO_FALHOU' },
+        { fase: 'D', estado: ESTADOS_DE_FASE.NOT_EXECUTED },
+      ],
+      bloqueio: { fase: 'C', code: 'PASSO_FALHOU', detail: 'L0-suite-oficial exit=1' },
+    });
+    expect(veredito).toBe('FAIL');
+    expect(veredito).not.toBe('BLOQUEADO_POR_TIMEOUT');
+  });
+
   test('9. timeout não é confundido com falha de asserção', () => {
     const { veredito } = avaliar({ fases: ['A', 'B'], resultados: [passo('B', { exitCode: null, timeout: true })] });
     expect(veredito).not.toBe('FAIL');

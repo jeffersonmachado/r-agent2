@@ -145,6 +145,15 @@ describe('qa-mesh/meshRunner', () => {
       },
     ];
 
+    // Artefatos CANÔNICOS do mesh (mesmos caminhos que o produto usa). O estado anterior é
+    // capturado para provar que esta execução — não canônica — não os criou nem apagou.
+    const repairPlanPath = path.join(process.cwd(), 'qa-mesh/repairPlan.json');
+    const baselinePath = path.join(process.cwd(), 'qa-mesh/baseline.json');
+    const metricsPath = path.join(process.cwd(), 'qa-mesh/metrics.json');
+    const existiaRepairPlan = fs.existsSync(repairPlanPath);
+    const existiaBaseline = fs.existsSync(baselinePath);
+    const existiaMetrics = fs.existsSync(metricsPath);
+
     const result = await runMesh({
       executionId,
       registry,
@@ -178,14 +187,22 @@ describe('qa-mesh/meshRunner', () => {
 
     const summaryPath = path.join(EVIDENCE_DIR, executionId, 'summary.json');
     const historyPath = path.join(HISTORY_DIR, `${executionId}.json`);
-    const repairPlanPath = path.join(process.cwd(), 'qa-mesh/repairPlan.json');
-    const baselinePath = path.join(process.cwd(), 'qa-mesh/baseline.json');
-    const metricsPath = path.join(process.cwd(), 'qa-mesh/metrics.json');
     expect(fs.existsSync(summaryPath)).toBe(true);
     expect(fs.existsSync(historyPath)).toBe(true);
-    expect(fs.existsSync(repairPlanPath)).toBe(true);
-    expect(fs.existsSync(baselinePath)).toBe(true);
-    expect(fs.existsSync(metricsPath)).toBe(true);
+
+    // CONTRATO CORRIGIDO (medido 2026-10-30): `writeCanonicalOutputs` NÃO vem da opção homônima — é
+    // derivado de `isCanonicalExecution`, que exige `RUNNING_IN_PIPELINE=1` + origem `pipeline` +
+    // registry canônico (meshRunner.js:2373). Os artefatos canônicos (`repairPlan.json`,
+    // `baseline.json`, `metrics.json`, REPORT, GO/NO-GO) NÃO são escritos por execução não canônica —
+    // é a proteção contra uma execução ad-hoc sobrescrever evidência canônica.
+    // O teste antigo exigia esses arquivos aqui, ou seja, exigia o comportamento que o hardening
+    // removeu. As TRÊS asserções continuam existindo, agora no contrato real ("inalterado").
+    // O plano de reparo segue provado acima, em memória (`result.repairPlan`).
+    expect(fs.existsSync(repairPlanPath)).toBe(existiaRepairPlan);
+    expect(fs.existsSync(baselinePath)).toBe(existiaBaseline);
+    expect(fs.existsSync(metricsPath)).toBe(existiaMetrics);
+    expect(result.isCanonicalExecution).toBe(false);
+    expect(result.summary.canonicalPromotion).toBeNull();
 
     const summary = JSON.parse(fs.readFileSync(summaryPath, 'utf8'));
     expect(summary.executionId).toBe(executionId);

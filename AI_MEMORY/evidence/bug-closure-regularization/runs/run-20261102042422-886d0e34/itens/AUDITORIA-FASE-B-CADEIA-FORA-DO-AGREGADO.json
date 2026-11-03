@@ -1,0 +1,25 @@
+{
+  "id": "AUDITORIA-FASE-B-CADEIA-FORA-DO-AGREGADO",
+  "severity": "P3",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Cadeia criptografica: analise corrigida — elos derivados vs imutaveis, e estado exposto na auditoria",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+  "teste": "tests/unit/audit/auditEntrypointArtifact.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [
+    "ASSINATURA_INVALIDA"
+  ],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102042422-886d0e34/logs/AUDITORIA-FASE-B-CADEIA-FORA-DO-AGREGADO.log",
+  "draft": "governance/bug-closure/proofs-drafts/AUDITORIA-FASE-B-CADEIA-FORA-DO-AGREGADO.json",
+  "camposParaAssinar": 18,
+  "runId": "run-20261102042422-886d0e34",
+  "identidade": {
+    "commit": "94dfefe68794277f6af617091983fe6496cc3c16",
+    "sourceFingerprint": "ba0673e3cf2795172599b93da74b6d875c8d0f36c7fa569b0953fd34c7154bed",
+    "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+    "hardeningQueueFingerprint": "fc1d79240124280a7405f76371db4ce58fd2845f8b62596f93ac095cff857401",
+    "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+  },
+  "artifactSha256": "66cc2d9c32fd6c8d8f2867de3859e76e8d39a355b5c0b2eca78bd64bd1b1521f"
+}

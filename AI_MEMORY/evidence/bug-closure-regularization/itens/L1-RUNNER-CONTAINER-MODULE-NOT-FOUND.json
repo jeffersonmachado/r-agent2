@@ -1,0 +1,14 @@
+{
+  "id": "L1-RUNNER-CONTAINER-MODULE-NOT-FOUND",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Container real do Engineering Runner executava sandbox com MODULE_NOT_FOUND (Dockerfile sem fechamento de dependencias)",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+  "teste": "tests/unit/engineeringRunnerDockerfileClosure.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/L1-RUNNER-CONTAINER-MODULE-NOT-FOUND.log",
+  "draft": "governance/bug-closure/proofs-drafts/L1-RUNNER-CONTAINER-MODULE-NOT-FOUND.json",
+  "camposParaAssinar": 18
+}

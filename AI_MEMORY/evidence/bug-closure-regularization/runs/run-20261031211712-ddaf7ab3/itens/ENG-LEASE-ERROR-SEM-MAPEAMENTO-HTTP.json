@@ -1,0 +1,25 @@
+{
+  "id": "ENG-LEASE-ERROR-SEM-MAPEAMENTO-HTTP",
+  "severity": "P2",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "FINDING_LEASE_LOST/MISMATCH e FINDING_STATE_CONFLICT viravam 500 no boundary (concorrencia nomeada tratada como erro de servidor)",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+  "teste": "tests/unit/engineeringMissionRoutes.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [
+    "ASSINATURA_INVALIDA"
+  ],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/ENG-LEASE-ERROR-SEM-MAPEAMENTO-HTTP.log",
+  "draft": "governance/bug-closure/proofs-drafts/ENG-LEASE-ERROR-SEM-MAPEAMENTO-HTTP.json",
+  "camposParaAssinar": 18,
+  "runId": "run-20261031211712-ddaf7ab3",
+  "identidade": {
+    "commit": "fc08d682044ddb6be24f28c7ad8cfdca7b03b51e",
+    "sourceFingerprint": "3f873a4f5e2d9d5ffa3bf6cc40bd8c9278012309c093787538719b4c7f06ea38",
+    "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+    "hardeningQueueFingerprint": "9ef22af5831cff1e8e2a5fe1268c4fbb54dd78d287638a8263bf67d3cf095635",
+    "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+  },
+  "artifactSha256": "a6719c6d3443b1c47c2411666ed1ea671badd9f05dec03f9a54a8d50daabc754"
+}
