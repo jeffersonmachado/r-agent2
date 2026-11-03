@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "7b6dd3ff-528e-4281-a853-cc9e9a88ff61",
+  "transitionId": "6114d16d-f995-45f4-9b69-bc23df5309b2",
   "defectId": "P1-ENTREGA-EXIT-CODE-DESCARTAOO-GREP-COMO-AUTORIDADE",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "a15f550e3522b48a49fb2d7cc6c948fdf2b60f01",
-  "codeFingerprint": "68b2804492d5bf2d9b5e02a86ba0dd1f8846917384d13b61d18ab7fad7dce0c4",
+  "evaluatedCommit": "7f7840aef2b83dedaf64b6aec85e0842dd7e4708",
+  "codeFingerprint": "203f3dc5115a2b7f367695b50541b80d6132aacff3e71d4a90925f6338fa2052",
   "requiredTests": [
     "tests/unit/governance/deliveryVerification.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/deliveryVerification.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-02T15:12:28.137Z",
-      "finishedAt": "2026-11-02T15:12:31.722Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102145001-dd1ae10d/logs/P1-ENTREGA-EXIT-CODE-DESCARTAOO-GREP-COMO-AUTORIDADE.log",
-      "outputSha256": "e68057e81ed88805f5a2f92981dea362c6faee03e1e1019406e67c4487727c16"
+      "startedAt": "2026-11-02T23:47:08.629Z",
+      "finishedAt": "2026-11-02T23:47:15.154Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102233411-b9202e36/logs/P1-ENTREGA-EXIT-CODE-DESCARTAOO-GREP-COMO-AUTORIDADE.log",
+      "outputSha256": "622163cad112459bd3175e28efcebdb2fcfcd01535f9a2839a8c565377463a98"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-02T15:12:31.729Z",
-  "proofHash": "bd48298e5921c18efbd660917857bc73a0ad7f7b8ea44e4932f4f3c4e7586db0"
+  "createdAt": "2026-11-02T23:47:15.161Z",
+  "proofHash": "fa39f817cb1bb9677d7519aeb3d6ea4e94f21821167e8ce06da6419632426991"
 }

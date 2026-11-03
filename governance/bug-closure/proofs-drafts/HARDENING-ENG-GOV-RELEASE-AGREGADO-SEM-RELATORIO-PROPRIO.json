@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "cf96b10c-8599-4108-8b12-ee89042d21ca",
+  "transitionId": "99d0c0bd-ccaa-4f5d-a3c3-b7ef67e26d75",
   "defectId": "HARDENING-ENG-GOV-RELEASE-AGREGADO-SEM-RELATORIO-PROPRIO",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "a15f550e3522b48a49fb2d7cc6c948fdf2b60f01",
-  "codeFingerprint": "68b2804492d5bf2d9b5e02a86ba0dd1f8846917384d13b61d18ab7fad7dce0c4",
+  "evaluatedCommit": "7f7840aef2b83dedaf64b6aec85e0842dd7e4708",
+  "codeFingerprint": "203f3dc5115a2b7f367695b50541b80d6132aacff3e71d4a90925f6338fa2052",
   "requiredTests": [
     "tests/unit/governance/aggregateVerdict.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/aggregateVerdict.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-02T15:08:10.636Z",
-      "finishedAt": "2026-11-02T15:08:19.271Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102145001-dd1ae10d/logs/HARDENING-ENG-GOV-RELEASE-AGREGADO-SEM-RELATORIO-PROPRIO.log",
-      "outputSha256": "c6600d5b40c07bd54e1d5256b9a81e2944dd3bea5d75e5b4abcae64d62d2f331"
+      "startedAt": "2026-11-02T23:43:20.882Z",
+      "finishedAt": "2026-11-02T23:43:28.246Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102233411-b9202e36/logs/HARDENING-ENG-GOV-RELEASE-AGREGADO-SEM-RELATORIO-PROPRIO.log",
+      "outputSha256": "370057f72ee30f2b0b6540675bf15b9d085a3a1be9a515bf5c952b94a0aab98d"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-02T15:08:19.278Z",
-  "proofHash": "7f476c8d82ea899ba043b2d034b7c16d74ca751554d3773efbe4093c5c98801a"
+  "createdAt": "2026-11-02T23:43:28.252Z",
+  "proofHash": "613c5887105b060704321f96de195812a4797e2cd9e32a40d13bdc45555a7cac"
 }

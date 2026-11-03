@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-11-02T19:30:52.850Z",
-  "runId": "rap-governed-20261102162732564-b5cfae28",
+  "generatedAt": "2026-11-03T00:14:02.553Z",
+  "runId": "rap-governed-20261102232414231-478234b9",
   "sourceCommit": "d21a66196f3012440f9c16e402353c94bc44bf53",
-  "sourceFingerprint": "68b2804492d5bf2d9b5e02a86ba0dd1f8846917384d13b61d18ab7fad7dce0c4",
-  "finalDecision": "NO_GO:MANDATORY_GATE_BLOCKED [governance=NO_GO]",
+  "sourceFingerprint": "203f3dc5115a2b7f367695b50541b80d6132aacff3e71d4a90925f6338fa2052",
+  "finalDecision": "NO_GO",
   "candidateMaturityLevel": "AUTONOMOUS_READY_GO",
   "stageReadiness": "AUTONOMOUS_READY_GO",
   "blockingReasons": [
@@ -10853,7 +10853,7 @@
     "Proof artifacts presentes mas semanticamente invalidos (presenca != validade) [gap-proof-invalid-artifact-semantics]"
   ],
   "productionReadiness": {
-    "status": "NO_GO:MANDATORY_GATE_BLOCKED [governance=NO_GO]",
+    "status": "NO_GO",
     "classification": "enterprise-partial",
     "productionLikeFlows": [
       "WhatsApp",

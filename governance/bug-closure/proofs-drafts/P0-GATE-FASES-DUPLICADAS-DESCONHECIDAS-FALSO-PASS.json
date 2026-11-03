@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "90ef25ab-87a2-4230-aa13-2c4253df3d08",
+  "transitionId": "ea146871-129c-4aa3-a62d-7fa206159d73",
   "defectId": "P0-GATE-FASES-DUPLICADAS-DESCONHECIDAS-FALSO-PASS",
   "severityBefore": "P0",
   "severityAfter": "P0",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "a15f550e3522b48a49fb2d7cc6c948fdf2b60f01",
-  "codeFingerprint": "68b2804492d5bf2d9b5e02a86ba0dd1f8846917384d13b61d18ab7fad7dce0c4",
+  "evaluatedCommit": "7f7840aef2b83dedaf64b6aec85e0842dd7e4708",
+  "codeFingerprint": "203f3dc5115a2b7f367695b50541b80d6132aacff3e71d4a90925f6338fa2052",
   "requiredTests": [
     "tests/unit/governance/devBranchGatePhaseContract.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/devBranchGatePhaseContract.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-02T14:52:33.016Z",
-      "finishedAt": "2026-11-02T14:52:39.446Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102145001-dd1ae10d/logs/P0-GATE-FASES-DUPLICADAS-DESCONHECIDAS-FALSO-PASS.log",
-      "outputSha256": "478ac7cf11bbbf946361619352847cb47c62b813de0cf7f3182c6d5ce2f68776"
+      "startedAt": "2026-11-02T23:36:29.822Z",
+      "finishedAt": "2026-11-02T23:36:36.210Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102233411-b9202e36/logs/P0-GATE-FASES-DUPLICADAS-DESCONHECIDAS-FALSO-PASS.log",
+      "outputSha256": "8d94a8eed7b4a516d46ac3d62de08bdcf745e1e43c5351c6a28c5b5611e0e6d6"
     }
   ],
   "negativeEvidence": [
@@ -63,7 +63,7 @@
   "humanAuthorization": {
     "channel": "VSCODE_AGENT",
     "by": "platform-owner:jeffersonmachado",
-    "at": "2026-11-02T16:21:20.308Z",
+    "at": "2026-11-03T00:18:10.301Z",
     "ref": "session:e92510ac-0f54-41c6-bb85-90f42042999c",
     "agentSession": "e92510ac-0f54-41c6-bb85-90f42042999c"
   },
@@ -74,6 +74,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-02T14:52:39.452Z",
-  "proofHash": "83320f9b61faf26097b56699aef5e1e92ed9fd8bcf4e980568a25356b4caa89c"
+  "createdAt": "2026-11-02T23:36:36.216Z",
+  "proofHash": "1caf737ebd9221e2ceca2ac31efa8d478cfdb66a6341d078e9a3581204a12fe6"
 }

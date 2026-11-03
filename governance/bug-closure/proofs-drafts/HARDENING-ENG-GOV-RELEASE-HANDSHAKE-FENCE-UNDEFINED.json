@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "05a5235d-42db-45e4-acc7-3c0a0ad18ed9",
+  "transitionId": "e07e33cf-55b0-48cf-9c37-4a634a5d6064",
   "defectId": "HARDENING-ENG-GOV-RELEASE-HANDSHAKE-FENCE-UNDEFINED",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "RESOLVED",
   "toState": "RESOLVED",
-  "evaluatedCommit": "a15f550e3522b48a49fb2d7cc6c948fdf2b60f01",
-  "codeFingerprint": "68b2804492d5bf2d9b5e02a86ba0dd1f8846917384d13b61d18ab7fad7dce0c4",
+  "evaluatedCommit": "7f7840aef2b83dedaf64b6aec85e0842dd7e4708",
+  "codeFingerprint": "203f3dc5115a2b7f367695b50541b80d6132aacff3e71d4a90925f6338fa2052",
   "requiredTests": [
     "tests/unit/governance/taskLeaseHandshakeParsing.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/taskLeaseHandshakeParsing.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-02T15:08:25.090Z",
-      "finishedAt": "2026-11-02T15:08:31.270Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102145001-dd1ae10d/logs/HARDENING-ENG-GOV-RELEASE-HANDSHAKE-FENCE-UNDEFINED.log",
-      "outputSha256": "11e8417d381b48fa4681012bbb4b28e1f08857659a007f03ae7836b9e2277514"
+      "startedAt": "2026-11-02T23:43:34.144Z",
+      "finishedAt": "2026-11-02T23:43:38.241Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102233411-b9202e36/logs/HARDENING-ENG-GOV-RELEASE-HANDSHAKE-FENCE-UNDEFINED.log",
+      "outputSha256": "f02890069950a5ae080eaf0401fa81a1bf3620b6109fc34b47beb96eddd73df4"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-02T15:08:31.277Z",
-  "proofHash": "f1da0cea3f28608036f35bc6d74f1f870f0bf91f19ce2c42662e76cea3595e0d"
+  "createdAt": "2026-11-02T23:43:38.248Z",
+  "proofHash": "eabda673900cefdccb1b25e30a09d3573fb1ad0e1d64641b50802e4c7cd62235"
 }

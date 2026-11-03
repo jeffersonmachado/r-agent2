@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "71c9552a-aa90-413e-a468-5b479a390575",
+  "transitionId": "f48f715d-e7ac-4e0e-a437-6566acb764dd",
   "defectId": "PROMPT-P1G-QAMESH-GO-EXPLICITO",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "a15f550e3522b48a49fb2d7cc6c948fdf2b60f01",
-  "codeFingerprint": "68b2804492d5bf2d9b5e02a86ba0dd1f8846917384d13b61d18ab7fad7dce0c4",
+  "evaluatedCommit": "7f7840aef2b83dedaf64b6aec85e0842dd7e4708",
+  "codeFingerprint": "203f3dc5115a2b7f367695b50541b80d6132aacff3e71d4a90925f6338fa2052",
   "requiredTests": [
     "qa-mesh/__tests__/executionQueueOutcome.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest qa-mesh/__tests__/executionQueueOutcome.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-02T15:15:00.251Z",
-      "finishedAt": "2026-11-02T15:15:05.981Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102145001-dd1ae10d/logs/PROMPT-P1G-QAMESH-GO-EXPLICITO.log",
-      "outputSha256": "405a152e6a6bec844dc7004413382748162562515de8adcd3dea6ecaf39cf510"
+      "startedAt": "2026-11-02T23:49:26.737Z",
+      "finishedAt": "2026-11-02T23:49:31.364Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102233411-b9202e36/logs/PROMPT-P1G-QAMESH-GO-EXPLICITO.log",
+      "outputSha256": "d97ffc222c22648bf983f1a5f9c5da9b83e7a638c6a8ca59447d591541718808"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-02T15:15:05.989Z",
-  "proofHash": "f036bf4f5449fc3282a84dfc8ebe3a62ed4209bb30344342b035449789c49744"
+  "createdAt": "2026-11-02T23:49:31.374Z",
+  "proofHash": "bcfe24883a2cf754afe198ca74ae196e31aa41fd201264d147632bfbe4c0b60d"
 }

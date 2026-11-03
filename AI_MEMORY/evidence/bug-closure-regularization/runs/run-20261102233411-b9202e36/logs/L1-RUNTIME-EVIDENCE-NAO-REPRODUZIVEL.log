@@ -1,0 +1,31 @@
+[jest-global-setup] .env carregado (0 chave(s) aplicada(s); ambiente explícito vence)
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+[runtime-evidence] ENV_HOST_REPO_ROOT_NOT_A_GIT_REPO — ENGINEERING_ROUTER_HOST_REPO_ROOT=/tmp/runtime-evidence-Fp9gYQ não é um repositório git.
+  O Engineering Router resolve `git rev-parse HEAD` nesse diretório quando a variável está
+  definida; fora de um repo, os itens de runtime reprovam com "saída do Jest não pôde ser
+  parseada como JSON" (falha de AMBIENTE, não de código).
+  Remédio: `unset ENGINEERING_ROUTER_HOST_REPO_ROOT` (o default é este repositório) ou aponte
+  a variável para um clone git válido. Repositório desta aplicação: /opt/results/ria/er-fixci
+PASS tests/unit/governance/runtimeEvidenceReproducibility.test.js
+  L1 — o coletor recusa ambiente que não pode ser reproduzido
+    ✓ diretório que não é repositório git é detectado como tal (153 ms)
+    ✓ ENGINEERING_ROUTER_HOST_REPO_ROOT inválido ⇒ recusa nomeada (nunca relatório) (122 ms)
+    ✓ variável ausente com repositório válido ⇒ aceita e não inventa override (117 ms)
+    ✓ override apontando para repo git VÁLIDO é aceito (117 ms)
+  L1 — identidade por item (evidência não pode ser re-atribuída)
+    ✓ todo item declara id, suíte e caso de teste REAIS (149 ms)
+    ✓ ids de RUNTIME_ITEMS não se repetem (cada item tem uma prova) (102 ms)
+    ✓ o payload do hash carrega a identidade do item e o RESULTADO (102 ms)
+  L1 — determinismo da evidência
+    ✓ mesmo payload produz o MESMO hash (reprodutibilidade) (103 ms)
+    ✓ a ordem das chaves do payload faz parte do contrato (JSON canônico pelo produtor) (102 ms)
+  L1 — extração do JSON do Jest mesmo com log antes
+    ✓ pega o último objeto JSON de uma saída com logs (102 ms)
+    ✓ saída sem JSON devolve null (o coletor reprova, nunca presume sucesso) (102 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       11 passed, 11 total
+Snapshots:   0 total
+Time:        1.889 s, estimated 2 s
+Ran all test suites matching /tests\/unit\/governance\/runtimeEvidenceReproducibility.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "4a65a467-9b5b-4567-8208-bcea914ef438",
+  "transitionId": "25a6bfaa-d55a-4a42-b53c-9f8b6da86c1e",
   "defectId": "HARDENING-ENG-GOV-RELEASE-AUDITORIA-GIT-ENTRYPOINT",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "a15f550e3522b48a49fb2d7cc6c948fdf2b60f01",
-  "codeFingerprint": "68b2804492d5bf2d9b5e02a86ba0dd1f8846917384d13b61d18ab7fad7dce0c4",
+  "evaluatedCommit": "7f7840aef2b83dedaf64b6aec85e0842dd7e4708",
+  "codeFingerprint": "203f3dc5115a2b7f367695b50541b80d6132aacff3e71d4a90925f6338fa2052",
   "requiredTests": [
     "tests/unit/audit/auditEntrypointArtifact.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/audit/auditEntrypointArtifact.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-02T15:29:19.412Z",
-      "finishedAt": "2026-11-02T15:29:25.015Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102145001-dd1ae10d/logs/HARDENING-ENG-GOV-RELEASE-AUDITORIA-GIT-ENTRYPOINT.log",
-      "outputSha256": "61086dc5506e7c14af4e8d4172c500be7a3e53b2fbb9b2c56efaaaaee8a9415a"
+      "startedAt": "2026-11-03T00:03:30.003Z",
+      "finishedAt": "2026-11-03T00:03:32.755Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102233411-b9202e36/logs/HARDENING-ENG-GOV-RELEASE-AUDITORIA-GIT-ENTRYPOINT.log",
+      "outputSha256": "0eea1918bd2e28534f2c032c96f35c92ec6a2d021da9e635c4db1e48938d70b1"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-02T15:29:25.022Z",
-  "proofHash": "695e07c767d64e0c8fd6d6df0a7e8c8442cba5e062802e4ad198336e63a0af82"
+  "createdAt": "2026-11-03T00:03:32.762Z",
+  "proofHash": "a5dbf026b577e69e61a5872b7eb556abf4218067a2b358be0623ac8f7b916484"
 }

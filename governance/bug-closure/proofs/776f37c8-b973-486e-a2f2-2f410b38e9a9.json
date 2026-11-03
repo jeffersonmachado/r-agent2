@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "776f37c8-b973-486e-a2f2-2f410b38e9a9",
+  "defectId": "HARDENING-ENG-GOV-RELEASE-AGREGADO-EXIGE-WORKTREE-CONGELADO",
+  "severityBefore": "P2",
+  "severityAfter": "P2",
+  "fromState": "RESOLVED",
+  "toState": "RESOLVED",
+  "evaluatedCommit": "7f7840aef2b83dedaf64b6aec85e0842dd7e4708",
+  "codeFingerprint": "203f3dc5115a2b7f367695b50541b80d6132aacff3e71d4a90925f6338fa2052",
+  "requiredTests": [
+    "tests/unit/governance/aggregateWorktreeFreeze.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/aggregateWorktreeFreeze.test.js",
+      "command": "npx jest tests/unit/governance/aggregateWorktreeFreeze.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-03T00:03:26.251Z",
+      "finishedAt": "2026-11-03T00:03:29.985Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102233411-b9202e36/logs/HARDENING-ENG-GOV-RELEASE-AGREGADO-EXIGE-WORKTREE-CONGELADO.log",
+      "outputSha256": "bf67066d793ad2491c76e57f731c745e52ce693ec78dc542bb7f61d174aa72fb"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/aggregateWorktreeFreeze.test.js",
+      "sha256": "58691d684c7d9d2699c7e4b53e3d8357121d3d37bc814ab73a1ec2075c98dea3"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-03T00:03:29.993Z",
+  "proofHash": "331d251e5f9f5b24aea63be33a7f4c10d052d4b1820b6041a600d4e795354595",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "aDTBobpcZkB0NHYgxf3XpIhJalnQfEnmCnyKP2lagCOw6s3jQMevsGxV9+JZBzWoK6NnYCoTa5qQE1MtV26oCg==",
+    "signedAt": "2026-11-03T00:18:30.366Z"
+  }
+}

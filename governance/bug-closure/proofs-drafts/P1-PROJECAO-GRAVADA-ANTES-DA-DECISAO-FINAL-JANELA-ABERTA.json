@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "5d37e9f8-7549-4084-8a98-83714ae78f7d",
+  "transitionId": "0789b6c6-d2d5-4d33-a98c-5687720b5e98",
   "defectId": "P1-PROJECAO-GRAVADA-ANTES-DA-DECISAO-FINAL-JANELA-ABERTA",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "a15f550e3522b48a49fb2d7cc6c948fdf2b60f01",
-  "codeFingerprint": "68b2804492d5bf2d9b5e02a86ba0dd1f8846917384d13b61d18ab7fad7dce0c4",
+  "evaluatedCommit": "7f7840aef2b83dedaf64b6aec85e0842dd7e4708",
+  "codeFingerprint": "203f3dc5115a2b7f367695b50541b80d6132aacff3e71d4a90925f6338fa2052",
   "requiredTests": [
     "tests/unit/governance/projectionSyncOnCanonicalWrite.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/projectionSyncOnCanonicalWrite.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-02T15:13:08.075Z",
-      "finishedAt": "2026-11-02T15:13:11.517Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102145001-dd1ae10d/logs/P1-PROJECAO-GRAVADA-ANTES-DA-DECISAO-FINAL-JANELA-ABERTA.log",
-      "outputSha256": "aa5145ab90b2bf11b19354c7608c4ac21b3d88ee05b622853aa432f1eeb4ea9b"
+      "startedAt": "2026-11-02T23:47:42.526Z",
+      "finishedAt": "2026-11-02T23:47:45.003Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102233411-b9202e36/logs/P1-PROJECAO-GRAVADA-ANTES-DA-DECISAO-FINAL-JANELA-ABERTA.log",
+      "outputSha256": "526e3c48d67c3c1b334a53fd279c6e5bce79e9171ec4fd7a4b6a5e9bb8c99e73"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-02T15:13:11.524Z",
-  "proofHash": "83ed590b764d27fab7fa0be8e14899c9c6c9f5f7ec0679b8841fc6cf94be5444"
+  "createdAt": "2026-11-02T23:47:45.012Z",
+  "proofHash": "ec755df0f15e0aa7a2f6eedb3d7ab66ed216d706c01cba86d24d629fffdabe87"
 }

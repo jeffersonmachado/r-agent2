@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "1e36774e-3f5e-4f11-82b5-29badbd25d16",
+  "transitionId": "0b19b1d7-5446-4c5b-850f-701ff2430bf6",
   "defectId": "P1-CDR-HEALTH-SIGPIPE-PIPEFAIL",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "a15f550e3522b48a49fb2d7cc6c948fdf2b60f01",
-  "codeFingerprint": "68b2804492d5bf2d9b5e02a86ba0dd1f8846917384d13b61d18ab7fad7dce0c4",
+  "evaluatedCommit": "7f7840aef2b83dedaf64b6aec85e0842dd7e4708",
+  "codeFingerprint": "203f3dc5115a2b7f367695b50541b80d6132aacff3e71d4a90925f6338fa2052",
   "requiredTests": [
     "tests/unit/pbx/pbxCdrHealthSigpipe.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/pbx/pbxCdrHealthSigpipe.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-02T15:11:51.922Z",
-      "finishedAt": "2026-11-02T15:12:00.551Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102145001-dd1ae10d/logs/P1-CDR-HEALTH-SIGPIPE-PIPEFAIL.log",
-      "outputSha256": "8e39fb2ff87af9c8a8774495d8b9ac79c9a497b51eb6ba5e14a304eef62883f9"
+      "startedAt": "2026-11-02T23:46:39.069Z",
+      "finishedAt": "2026-11-02T23:46:46.372Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102233411-b9202e36/logs/P1-CDR-HEALTH-SIGPIPE-PIPEFAIL.log",
+      "outputSha256": "eb033b241465046ff40a0bf2d07854c67e4f91b97e9bf9523b7154bd7c989680"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-02T15:12:00.557Z",
-  "proofHash": "2e9d2b0d6c1645b89edfe9d45d741569d79b1eea652c67854b58de080be3d426"
+  "createdAt": "2026-11-02T23:46:46.379Z",
+  "proofHash": "a9e1f92ce6de2e831bf300c1af2a63ba1f21e7f444b42e0f6f4a718d488229cc"
 }

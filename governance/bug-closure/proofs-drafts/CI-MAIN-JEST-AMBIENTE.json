@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "41f3a418-2219-49f4-8c8c-9c3ac7d1354f",
+  "transitionId": "c44a75be-f77f-4db9-aa30-608728abcefb",
   "defectId": "CI-MAIN-JEST-AMBIENTE",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "a15f550e3522b48a49fb2d7cc6c948fdf2b60f01",
-  "codeFingerprint": "68b2804492d5bf2d9b5e02a86ba0dd1f8846917384d13b61d18ab7fad7dce0c4",
+  "evaluatedCommit": "7f7840aef2b83dedaf64b6aec85e0842dd7e4708",
+  "codeFingerprint": "203f3dc5115a2b7f367695b50541b80d6132aacff3e71d4a90925f6338fa2052",
   "requiredTests": [
     "tests/unit/governance/ciWorkflowContract.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/ciWorkflowContract.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-02T15:03:18.833Z",
-      "finishedAt": "2026-11-02T15:03:24.798Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102145001-dd1ae10d/logs/CI-MAIN-JEST-AMBIENTE.log",
-      "outputSha256": "aca2413526f2e0b7a42eef91d414223273b23f0f9b7c828dfbcf6a5c158c1303"
+      "startedAt": "2026-11-02T23:38:48.268Z",
+      "finishedAt": "2026-11-02T23:38:51.195Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102233411-b9202e36/logs/CI-MAIN-JEST-AMBIENTE.log",
+      "outputSha256": "8b80d61e2f03309bc20282738106f3079301b500c7d24b51d1a58154f475e980"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-02T15:03:24.805Z",
-  "proofHash": "a318365d9b88deae8d43f8608f578cb828fcd70312455cb8756fd8dad1e64f6b"
+  "createdAt": "2026-11-02T23:38:51.203Z",
+  "proofHash": "4f08a9d613f567357905eeee11498679516b408ef141a7b91a8273b14dcef318"
 }

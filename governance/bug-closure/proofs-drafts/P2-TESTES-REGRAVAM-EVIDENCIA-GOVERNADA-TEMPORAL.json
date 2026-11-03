@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "70015fdb-9eb4-45ef-822b-149842fdf218",
+  "transitionId": "dac517da-3181-440e-9e6e-2cfe61499a14",
   "defectId": "P2-TESTES-REGRAVAM-EVIDENCIA-GOVERNADA-TEMPORAL",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "RESOLVED",
   "toState": "RESOLVED",
-  "evaluatedCommit": "a15f550e3522b48a49fb2d7cc6c948fdf2b60f01",
-  "codeFingerprint": "68b2804492d5bf2d9b5e02a86ba0dd1f8846917384d13b61d18ab7fad7dce0c4",
+  "evaluatedCommit": "7f7840aef2b83dedaf64b6aec85e0842dd7e4708",
+  "codeFingerprint": "203f3dc5115a2b7f367695b50541b80d6132aacff3e71d4a90925f6338fa2052",
   "requiredTests": [
     "tests/unit/governance/governedArtifactPreservation.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/governedArtifactPreservation.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-02T15:32:19.071Z",
-      "finishedAt": "2026-11-02T15:32:21.987Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102145001-dd1ae10d/logs/P2-TESTES-REGRAVAM-EVIDENCIA-GOVERNADA-TEMPORAL.log",
-      "outputSha256": "013602489599e4e6aafb98921c321aa23bb838a1bb68cc1ee4a60cb76b451e6c"
+      "startedAt": "2026-11-03T00:06:00.895Z",
+      "finishedAt": "2026-11-03T00:06:05.927Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102233411-b9202e36/logs/P2-TESTES-REGRAVAM-EVIDENCIA-GOVERNADA-TEMPORAL.log",
+      "outputSha256": "f2bf86ad84585dd5069804fab6c892bf9d50e7ddfcc0ad14154e5926c65c4d47"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-02T15:32:21.995Z",
-  "proofHash": "ae5af916912639b82fa629b3cbc1abd0791b9afd443cb3197ad920bbe8477833"
+  "createdAt": "2026-11-03T00:06:05.934Z",
+  "proofHash": "e8f39f68e7bb73cb5b2fabe2074b89dfda0c8c3eab5fc82d045f604db8e9f4a7"
 }

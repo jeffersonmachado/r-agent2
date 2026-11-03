@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "b9dc1f6e-4592-4dce-a5d1-98decf0f9614",
+  "defectId": "TESTE-DURABLE-RESUME-FLAKE-POR-BANCO-COMPARTILHADO",
+  "severityBefore": "P2",
+  "severityAfter": "P2",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "7f7840aef2b83dedaf64b6aec85e0842dd7e4708",
+  "codeFingerprint": "203f3dc5115a2b7f367695b50541b80d6132aacff3e71d4a90925f6338fa2052",
+  "requiredTests": [
+    "tests/integration/engineeringMissionDurableResume.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/integration/engineeringMissionDurableResume.test.js",
+      "command": "npx jest tests/integration/engineeringMissionDurableResume.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-03T00:07:18.940Z",
+      "finishedAt": "2026-11-03T00:09:05.083Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102233411-b9202e36/logs/TESTE-DURABLE-RESUME-FLAKE-POR-BANCO-COMPARTILHADO.log",
+      "outputSha256": "ef79bc441531a8f3ad897835766f49d5a8c1772d33ae1abd0c0cb432395b8d46"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/integration/engineeringMissionDurableResume.test.js",
+      "sha256": "154bb7b9b8bbedbfcae598d79ad6fa76db7c0ef551a46907959fa80baa465d19"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-03T00:09:05.101Z",
+  "proofHash": "9a2007c9c5e914694481f92710333e3eaeec7c60dbbe551925144e7907ffb2c3",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "ms/J5Ot9QQx7bmKJIrYkRfinSHzEA334O9bQGqd6CNlXyZYO5+sDEWxPKNbEbcR5aZobwY82u1ZB/l17X8LaAg==",
+    "signedAt": "2026-11-03T00:19:12.013Z"
+  }
+}

@@ -1,9 +1,9 @@
 # Enterprise Readiness
 
-- Decision: NO_GO:MANDATORY_GATE_BLOCKED [governance=NO_GO]
+- Decision: NO_GO
 - Canonical mesh execution: mesh-2026-11-02T17-51-03-824Z
 - Enterprise readiness: autonomous-ready
-- Production readiness: NO_GO:MANDATORY_GATE_BLOCKED [governance=NO_GO]
+- Production readiness: NO_GO
 - Blocking gaps: 2
 - Blocking domains: none
 

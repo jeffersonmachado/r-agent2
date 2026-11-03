@@ -1,0 +1,43 @@
+  console.error
+    [2026-11-03T00:02:44.968Z] [ERROR] [CRM] Falha de persistência
+    {
+      "erro": "banco indisponível (teste)"
+    }
+
+    [0m [90m 183 |[39m       
+     [90m 184 |[39m       [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 185 |[39m       console[33m.[39merror(formatMessage([33mLOG_LEVELS[39m[33m.[39m[33mERROR[39m[33m,[39m message[33m,[39m errorData))[33m;[39m
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 186 |[39m     }
+     [90m 187 |[39m   }[33m,[39m
+     [90m 188 |[39m   [0m
+
+      at Object.error (api/utils/logger.js:185:15)
+      at error (api/modules/crm/routes.js:116:12)
+      at api/modules/crm/routes.js:412:5
+
+[jest-global-setup] .env carregado (0 chave(s) aplicada(s); ambiente explícito vence)
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/crmRealtimeEvents.test.js
+  CRM — toda mutação emite crm.metrics.updated
+    ✓ POST /api/crm/accounts emite evento de criação (206 ms)
+    ✓ POST /api/crm/contacts emite evento de criação (114 ms)
+    ✓ POST /api/crm/leads emite evento de criação (110 ms)
+    ✓ POST /api/crm/pipelines emite evento de criação (113 ms)
+    ✓ POST /api/crm/opportunities emite evento de criação (111 ms)
+    ✓ POST /api/crm/activities emite evento de criação (116 ms)
+    ✓ GET não emite evento (leitura não é mutação) (750 ms)
+  CRM — persistência de verdade (mesma fonte para escrita e leitura)
+    ✓ conta criada aparece no GET seguinte e sobrevive à releitura (137 ms)
+    ✓ oportunidade criada é lida de volta com os campos do contrato (121 ms)
+    ✓ lead criado aparece na lista de leads E na de contatos (marketing_leads) (124 ms)
+    ✓ DELETE remove de verdade (GET passa a 404) (115 ms)
+    ✓ mover oportunidade persiste a nova etapa (114 ms)
+    ✓ falha de banco responde 500 persistence_required (sem fallback em memória) (209 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       13 passed, 13 total
+Snapshots:   0 total
+Time:        3.187 s, estimated 4 s
+Ran all test suites matching /tests\/unit\/crmRealtimeEvents.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

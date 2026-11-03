@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "9aed9379-2124-4cbb-9db6-a228c6d9f3f0",
+  "defectId": "H16-MUTACAO-SUPERFICIE-NO-RUN",
+  "severityBefore": "P2",
+  "severityAfter": "P2",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "7f7840aef2b83dedaf64b6aec85e0842dd7e4708",
+  "codeFingerprint": "203f3dc5115a2b7f367695b50541b80d6132aacff3e71d4a90925f6338fa2052",
+  "requiredTests": [
+    "tests/unit/governance/allValidatorsRunner.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/allValidatorsRunner.test.js",
+      "command": "npx jest tests/unit/governance/allValidatorsRunner.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-03T00:02:11.272Z",
+      "finishedAt": "2026-11-03T00:02:27.530Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102233411-b9202e36/logs/H16-MUTACAO-SUPERFICIE-NO-RUN.log",
+      "outputSha256": "f41e9aebac99fa6c5309aee044150249a01085fc500ba39978329d561781698b"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/allValidatorsRunner.test.js",
+      "sha256": "29c83d3c713f5b29a3d9e0cafa917e7123b955703ac4735a7f1cbcba8fcf3026"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-03T00:02:27.537Z",
+  "proofHash": "bd373d7650624d4fdba67691fa15dff534c39a8ffffdd6af452907172be252b7",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "RG7rU5khj0iENlzSHIwD6yA6LCcKjELTWfTAa7BFe2jILspYKhRy1ZUFMcyiofzGCd+76ug5YcHa0DX1IPzwCw==",
+    "signedAt": "2026-11-03T00:18:27.968Z"
+  }
+}

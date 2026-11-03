@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "33bab2f7-4097-4150-8224-55d9d5e9aa9a",
+  "transitionId": "acb41c36-f9ea-42ab-92be-49a374a7d410",
   "defectId": "P1-CONCORRENCIA-EXIGE-POSTGRES",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "a15f550e3522b48a49fb2d7cc6c948fdf2b60f01",
-  "codeFingerprint": "68b2804492d5bf2d9b5e02a86ba0dd1f8846917384d13b61d18ab7fad7dce0c4",
+  "evaluatedCommit": "7f7840aef2b83dedaf64b6aec85e0842dd7e4708",
+  "codeFingerprint": "203f3dc5115a2b7f367695b50541b80d6132aacff3e71d4a90925f6338fa2052",
   "requiredTests": [
     "tests/integration/engineeringRouterConcurrentRunHttp.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/integration/engineeringRouterConcurrentRunHttp.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-02T15:12:06.521Z",
-      "finishedAt": "2026-11-02T15:12:17.212Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102145001-dd1ae10d/logs/P1-CONCORRENCIA-EXIGE-POSTGRES.log",
-      "outputSha256": "99d3a1571015ff48546be30967812172f0a0476e6fe42db3a48dc0c109282c50"
+      "startedAt": "2026-11-02T23:46:50.423Z",
+      "finishedAt": "2026-11-02T23:46:54.515Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102233411-b9202e36/logs/P1-CONCORRENCIA-EXIGE-POSTGRES.log",
+      "outputSha256": "f18fc1022a5262f57d63cc15e1b899c4df375f794eedde714c422511da64c499"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-02T15:12:17.220Z",
-  "proofHash": "1ab6fdc03fb98d7939cd3621de46fd0d310c46b518d02fe95688c04752f8332f"
+  "createdAt": "2026-11-02T23:46:54.523Z",
+  "proofHash": "c15d5888d95e43b7ff6fe6cca7faf0fbd9de12f2f02903cd0a4147f193eefc4f"
 }

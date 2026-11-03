@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "663a4008-00bb-4a0e-89f5-847e48eebaca",
+  "transitionId": "cc58df78-835d-4fc4-9e26-40a0eeb41448",
   "defectId": "MISSAO-B1-CADEIA-CRIPTOGRAFICA",
   "severityBefore": "P0",
   "severityAfter": "P0",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "a15f550e3522b48a49fb2d7cc6c948fdf2b60f01",
-  "codeFingerprint": "68b2804492d5bf2d9b5e02a86ba0dd1f8846917384d13b61d18ab7fad7dce0c4",
+  "evaluatedCommit": "7f7840aef2b83dedaf64b6aec85e0842dd7e4708",
+  "codeFingerprint": "203f3dc5115a2b7f367695b50541b80d6132aacff3e71d4a90925f6338fa2052",
   "requiredTests": [
     "tests/unit/governance/bugClosureHistoricalGuards.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/bugClosureHistoricalGuards.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-02T14:51:09.722Z",
-      "finishedAt": "2026-11-02T14:51:12.891Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102145001-dd1ae10d/logs/MISSAO-B1-CADEIA-CRIPTOGRAFICA.log",
-      "outputSha256": "750b41c05b91a6c4839e8d268bd9a8265a5547b86a0f6ede4b33724e7e1815fb"
+      "startedAt": "2026-11-02T23:35:12.609Z",
+      "finishedAt": "2026-11-02T23:35:15.725Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102233411-b9202e36/logs/MISSAO-B1-CADEIA-CRIPTOGRAFICA.log",
+      "outputSha256": "f4fb19ccc7f0fad998fdeebcf31784ce4604c5c00619c8811c1fc0fe4c89da9f"
     }
   ],
   "negativeEvidence": [
@@ -63,7 +63,7 @@
   "humanAuthorization": {
     "channel": "VSCODE_AGENT",
     "by": "platform-owner:jeffersonmachado",
-    "at": "2026-11-02T16:21:20.308Z",
+    "at": "2026-11-03T00:18:10.301Z",
     "ref": "session:e92510ac-0f54-41c6-bb85-90f42042999c",
     "agentSession": "e92510ac-0f54-41c6-bb85-90f42042999c"
   },
@@ -74,6 +74,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-02T14:51:12.898Z",
-  "proofHash": "4f9d68a9f6323186d2558da758a542034be453ef56644cb70153e642cbcbe39c"
+  "createdAt": "2026-11-02T23:35:15.732Z",
+  "proofHash": "7070a0ac886e2419fd115af00946e965073fc535690096abdc8228625d617c66"
 }

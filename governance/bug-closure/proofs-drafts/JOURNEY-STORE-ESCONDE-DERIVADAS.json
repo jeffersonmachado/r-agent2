@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "c5a83bae-60f7-4556-b443-4f667a7eba8f",
+  "transitionId": "648f77c3-7477-4a99-80f8-01c5bedaccf7",
   "defectId": "JOURNEY-STORE-ESCONDE-DERIVADAS",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "a15f550e3522b48a49fb2d7cc6c948fdf2b60f01",
-  "codeFingerprint": "68b2804492d5bf2d9b5e02a86ba0dd1f8846917384d13b61d18ab7fad7dce0c4",
+  "evaluatedCommit": "7f7840aef2b83dedaf64b6aec85e0842dd7e4708",
+  "codeFingerprint": "203f3dc5115a2b7f367695b50541b80d6132aacff3e71d4a90925f6338fa2052",
   "requiredTests": [
     "api/services/__tests__/qaWavesService.journey.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest api/services/__tests__/qaWavesService.journey.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-02T15:08:45.968Z",
-      "finishedAt": "2026-11-02T15:08:53.249Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102145001-dd1ae10d/logs/JOURNEY-STORE-ESCONDE-DERIVADAS.log",
-      "outputSha256": "b3a22209e37c41fea69f28f9e90cd6ea687436ffbef433e49bdf568a50791826"
+      "startedAt": "2026-11-02T23:43:47.864Z",
+      "finishedAt": "2026-11-02T23:43:52.694Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102233411-b9202e36/logs/JOURNEY-STORE-ESCONDE-DERIVADAS.log",
+      "outputSha256": "6a4dfc7ba68c8a1502c2a42d48de051d255f85282739166b6f699fe7b6830cb5"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-02T15:08:53.257Z",
-  "proofHash": "85dcaf11fa735999518e63013e08d5527e8634d9a0af9c3e86fdc5498a0fdaa2"
+  "createdAt": "2026-11-02T23:43:52.704Z",
+  "proofHash": "cb5e4d090ca973b9dea69300dbe32bc8b523c148b3afdfb5b0eed2982d09dc91"
 }

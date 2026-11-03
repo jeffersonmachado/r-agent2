@@ -1,0 +1,452 @@
+  console.log
+    [qa-mesh/meshScheduler] SKIP: pipeline_active {}
+
+      at log (qa-mesh/meshScheduler.js:116:11)
+
+  console.error
+    [qa-mesh/meshScheduler] estado inválido ou ausente em /opt/results/ria/er-fixci/qa-mesh/scheduler-state.json: "undefined" is not valid JSON
+
+    [0m [90m 125 |[39m   } [36mcatch[39m (error) {
+     [90m 126 |[39m     [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 127 |[39m     console[33m.[39merror([32m`[qa-mesh/meshScheduler] estado inválido ou ausente em ${SCHEDULER_STATE_PATH}: ${error.message || error}`[39m)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 128 |[39m     [36mreturn[39m {
+     [90m 129 |[39m       lastExecutionAt[33m:[39m [36mnull[39m[33m,[39m
+     [90m 130 |[39m       lastExecutionKind[33m:[39m [36mnull[39m[33m,[39m[0m
+
+      at error (qa-mesh/meshScheduler.js:127:13)
+      at safeReadState (qa-mesh/meshScheduler.js:344:19)
+      at Object.setSchedulerEnabled (qa-mesh/__tests__/scheduler.test.js:132:20)
+
+  console.error
+    [qa-mesh/meshScheduler] estado inválido ou ausente em /opt/results/ria/er-fixci/qa-mesh/scheduler-state.json: "undefined" is not valid JSON
+
+    [0m [90m 125 |[39m   } [36mcatch[39m (error) {
+     [90m 126 |[39m     [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 127 |[39m     console[33m.[39merror([32m`[qa-mesh/meshScheduler] estado inválido ou ausente em ${SCHEDULER_STATE_PATH}: ${error.message || error}`[39m)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 128 |[39m     [36mreturn[39m {
+     [90m 129 |[39m       lastExecutionAt[33m:[39m [36mnull[39m[33m,[39m
+     [90m 130 |[39m       lastExecutionKind[33m:[39m [36mnull[39m[33m,[39m[0m
+
+      at error (qa-mesh/meshScheduler.js:127:13)
+      at safeReadState (qa-mesh/meshScheduler.js:226:17)
+      at buildScheduleStatus (qa-mesh/meshScheduler.js:345:10)
+      at Object.setSchedulerEnabled (qa-mesh/__tests__/scheduler.test.js:132:20)
+
+  console.error
+    [qa-mesh/meshScheduler] estado inválido ou ausente em /opt/results/ria/er-fixci/qa-mesh/scheduler-state.json: "undefined" is not valid JSON
+
+    [0m [90m 125 |[39m   } [36mcatch[39m (error) {
+     [90m 126 |[39m     [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 127 |[39m     console[33m.[39merror([32m`[qa-mesh/meshScheduler] estado inválido ou ausente em ${SCHEDULER_STATE_PATH}: ${error.message || error}`[39m)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 128 |[39m     [36mreturn[39m {
+     [90m 129 |[39m       lastExecutionAt[33m:[39m [36mnull[39m[33m,[39m
+     [90m 130 |[39m       lastExecutionKind[33m:[39m [36mnull[39m[33m,[39m[0m
+
+      at error (qa-mesh/meshScheduler.js:127:13)
+      at safeReadState (qa-mesh/meshScheduler.js:226:17)
+      at Object.buildScheduleStatus (qa-mesh/__tests__/scheduler.test.js:134:12)
+
+  console.error
+    [qa-mesh/meshScheduler] estado inválido ou ausente em /opt/results/ria/er-fixci/qa-mesh/scheduler-state.json: "undefined" is not valid JSON
+
+    [0m [90m 125 |[39m   } [36mcatch[39m (error) {
+     [90m 126 |[39m     [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 127 |[39m     console[33m.[39merror([32m`[qa-mesh/meshScheduler] estado inválido ou ausente em ${SCHEDULER_STATE_PATH}: ${error.message || error}`[39m)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 128 |[39m     [36mreturn[39m {
+     [90m 129 |[39m       lastExecutionAt[33m:[39m [36mnull[39m[33m,[39m
+     [90m 130 |[39m       lastExecutionKind[33m:[39m [36mnull[39m[33m,[39m[0m
+
+      at error (qa-mesh/meshScheduler.js:127:13)
+      at safeReadState (qa-mesh/meshScheduler.js:344:19)
+      at Object.setSchedulerEnabled (qa-mesh/__tests__/scheduler.test.js:126:5)
+
+  console.error
+    [qa-mesh/meshScheduler] estado inválido ou ausente em /opt/results/ria/er-fixci/qa-mesh/scheduler-state.json: "undefined" is not valid JSON
+
+    [0m [90m 125 |[39m   } [36mcatch[39m (error) {
+     [90m 126 |[39m     [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 127 |[39m     console[33m.[39merror([32m`[qa-mesh/meshScheduler] estado inválido ou ausente em ${SCHEDULER_STATE_PATH}: ${error.message || error}`[39m)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 128 |[39m     [36mreturn[39m {
+     [90m 129 |[39m       lastExecutionAt[33m:[39m [36mnull[39m[33m,[39m
+     [90m 130 |[39m       lastExecutionKind[33m:[39m [36mnull[39m[33m,[39m[0m
+
+      at error (qa-mesh/meshScheduler.js:127:13)
+      at safeReadState (qa-mesh/meshScheduler.js:226:17)
+      at buildScheduleStatus (qa-mesh/meshScheduler.js:345:10)
+      at Object.setSchedulerEnabled (qa-mesh/__tests__/scheduler.test.js:126:5)
+
+  console.info
+    [2026-11-03T00:06:35.164Z] [INFO] [Sequelize] Conectado ao PostgreSQL com sucesso
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.error
+    [qa-mesh/meshScheduler] estado inválido ou ausente em /opt/results/ria/er-fixci/qa-mesh/scheduler-state.json: "undefined" is not valid JSON
+
+    [0m [90m 125 |[39m   } [36mcatch[39m (error) {
+     [90m 126 |[39m     [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 127 |[39m     console[33m.[39merror([32m`[qa-mesh/meshScheduler] estado inválido ou ausente em ${SCHEDULER_STATE_PATH}: ${error.message || error}`[39m)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 128 |[39m     [36mreturn[39m {
+     [90m 129 |[39m       lastExecutionAt[33m:[39m [36mnull[39m[33m,[39m
+     [90m 130 |[39m       lastExecutionKind[33m:[39m [36mnull[39m[33m,[39m[0m
+
+      at error (qa-mesh/meshScheduler.js:127:13)
+      at safeReadState (qa-mesh/meshScheduler.js:344:19)
+      at Object.setSchedulerEnabled (qa-mesh/__tests__/scheduler.test.js:138:5)
+
+  console.error
+    [qa-mesh/meshScheduler] estado inválido ou ausente em /opt/results/ria/er-fixci/qa-mesh/scheduler-state.json: "undefined" is not valid JSON
+
+    [0m [90m 125 |[39m   } [36mcatch[39m (error) {
+     [90m 126 |[39m     [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 127 |[39m     console[33m.[39merror([32m`[qa-mesh/meshScheduler] estado inválido ou ausente em ${SCHEDULER_STATE_PATH}: ${error.message || error}`[39m)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 128 |[39m     [36mreturn[39m {
+     [90m 129 |[39m       lastExecutionAt[33m:[39m [36mnull[39m[33m,[39m
+     [90m 130 |[39m       lastExecutionKind[33m:[39m [36mnull[39m[33m,[39m[0m
+
+      at error (qa-mesh/meshScheduler.js:127:13)
+      at safeReadState (qa-mesh/meshScheduler.js:226:17)
+      at buildScheduleStatus (qa-mesh/meshScheduler.js:345:10)
+      at Object.setSchedulerEnabled (qa-mesh/__tests__/scheduler.test.js:138:5)
+
+  console.error
+    [qa-mesh/meshScheduler] estado inválido ou ausente em /opt/results/ria/er-fixci/qa-mesh/scheduler-state.json: "undefined" is not valid JSON
+
+    [0m [90m 125 |[39m   } [36mcatch[39m (error) {
+     [90m 126 |[39m     [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 127 |[39m     console[33m.[39merror([32m`[qa-mesh/meshScheduler] estado inválido ou ausente em ${SCHEDULER_STATE_PATH}: ${error.message || error}`[39m)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 128 |[39m     [36mreturn[39m {
+     [90m 129 |[39m       lastExecutionAt[33m:[39m [36mnull[39m[33m,[39m
+     [90m 130 |[39m       lastExecutionKind[33m:[39m [36mnull[39m[33m,[39m[0m
+
+      at error (qa-mesh/meshScheduler.js:127:13)
+      at safeReadState (qa-mesh/meshScheduler.js:344:19)
+      at Object.setSchedulerEnabled (qa-mesh/__tests__/scheduler.test.js:139:20)
+
+  console.error
+    [qa-mesh/meshScheduler] estado inválido ou ausente em /opt/results/ria/er-fixci/qa-mesh/scheduler-state.json: "undefined" is not valid JSON
+
+    [0m [90m 125 |[39m   } [36mcatch[39m (error) {
+     [90m 126 |[39m     [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 127 |[39m     console[33m.[39merror([32m`[qa-mesh/meshScheduler] estado inválido ou ausente em ${SCHEDULER_STATE_PATH}: ${error.message || error}`[39m)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 128 |[39m     [36mreturn[39m {
+     [90m 129 |[39m       lastExecutionAt[33m:[39m [36mnull[39m[33m,[39m
+     [90m 130 |[39m       lastExecutionKind[33m:[39m [36mnull[39m[33m,[39m[0m
+
+      at error (qa-mesh/meshScheduler.js:127:13)
+      at safeReadState (qa-mesh/meshScheduler.js:226:17)
+      at buildScheduleStatus (qa-mesh/meshScheduler.js:345:10)
+      at Object.setSchedulerEnabled (qa-mesh/__tests__/scheduler.test.js:139:20)
+
+  console.error
+    [qa-mesh/meshScheduler] estado inválido ou ausente em /opt/results/ria/er-fixci/qa-mesh/scheduler-state.json: "undefined" is not valid JSON
+
+    [0m [90m 125 |[39m   } [36mcatch[39m (error) {
+     [90m 126 |[39m     [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 127 |[39m     console[33m.[39merror([32m`[qa-mesh/meshScheduler] estado inválido ou ausente em ${SCHEDULER_STATE_PATH}: ${error.message || error}`[39m)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 128 |[39m     [36mreturn[39m {
+     [90m 129 |[39m       lastExecutionAt[33m:[39m [36mnull[39m[33m,[39m
+     [90m 130 |[39m       lastExecutionKind[33m:[39m [36mnull[39m[33m,[39m[0m
+
+      at error (qa-mesh/meshScheduler.js:127:13)
+      at safeReadState (qa-mesh/meshScheduler.js:226:17)
+      at Object.buildScheduleStatus (qa-mesh/__tests__/scheduler.test.js:141:12)
+
+  console.error
+    [qa-mesh/meshScheduler] estado inválido ou ausente em /opt/results/ria/er-fixci/qa-mesh/scheduler-state.json: "undefined" is not valid JSON
+
+    [0m [90m 125 |[39m   } [36mcatch[39m (error) {
+     [90m 126 |[39m     [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 127 |[39m     console[33m.[39merror([32m`[qa-mesh/meshScheduler] estado inválido ou ausente em ${SCHEDULER_STATE_PATH}: ${error.message || error}`[39m)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 128 |[39m     [36mreturn[39m {
+     [90m 129 |[39m       lastExecutionAt[33m:[39m [36mnull[39m[33m,[39m
+     [90m 130 |[39m       lastExecutionKind[33m:[39m [36mnull[39m[33m,[39m[0m
+
+      at error (qa-mesh/meshScheduler.js:127:13)
+      at safeReadState (qa-mesh/meshScheduler.js:344:19)
+      at Object.setSchedulerEnabled (qa-mesh/__tests__/scheduler.test.js:126:5)
+
+  console.error
+    [qa-mesh/meshScheduler] estado inválido ou ausente em /opt/results/ria/er-fixci/qa-mesh/scheduler-state.json: "undefined" is not valid JSON
+
+    [0m [90m 125 |[39m   } [36mcatch[39m (error) {
+     [90m 126 |[39m     [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 127 |[39m     console[33m.[39merror([32m`[qa-mesh/meshScheduler] estado inválido ou ausente em ${SCHEDULER_STATE_PATH}: ${error.message || error}`[39m)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 128 |[39m     [36mreturn[39m {
+     [90m 129 |[39m       lastExecutionAt[33m:[39m [36mnull[39m[33m,[39m
+     [90m 130 |[39m       lastExecutionKind[33m:[39m [36mnull[39m[33m,[39m[0m
+
+      at error (qa-mesh/meshScheduler.js:127:13)
+      at safeReadState (qa-mesh/meshScheduler.js:226:17)
+      at buildScheduleStatus (qa-mesh/meshScheduler.js:345:10)
+      at Object.setSchedulerEnabled (qa-mesh/__tests__/scheduler.test.js:126:5)
+
+  console.error
+    [qa-mesh/meshScheduler] estado inválido ou ausente em /opt/results/ria/er-fixci/qa-mesh/scheduler-state.json: "undefined" is not valid JSON
+
+    [0m [90m 125 |[39m   } [36mcatch[39m (error) {
+     [90m 126 |[39m     [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 127 |[39m     console[33m.[39merror([32m`[qa-mesh/meshScheduler] estado inválido ou ausente em ${SCHEDULER_STATE_PATH}: ${error.message || error}`[39m)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 128 |[39m     [36mreturn[39m {
+     [90m 129 |[39m       lastExecutionAt[33m:[39m [36mnull[39m[33m,[39m
+     [90m 130 |[39m       lastExecutionKind[33m:[39m [36mnull[39m[33m,[39m[0m
+
+      at error (qa-mesh/meshScheduler.js:127:13)
+      at safeReadState (qa-mesh/meshScheduler.js:329:23)
+      at Object.setSchedulerEnabled (qa-mesh/__tests__/scheduler.test.js:146:20)
+
+  console.error
+    [qa-mesh/meshScheduler] estado inválido ou ausente em /opt/results/ria/er-fixci/qa-mesh/scheduler-state.json: "undefined" is not valid JSON
+
+    [0m [90m 125 |[39m   } [36mcatch[39m (error) {
+     [90m 126 |[39m     [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 127 |[39m     console[33m.[39merror([32m`[qa-mesh/meshScheduler] estado inválido ou ausente em ${SCHEDULER_STATE_PATH}: ${error.message || error}`[39m)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 128 |[39m     [36mreturn[39m {
+     [90m 129 |[39m       lastExecutionAt[33m:[39m [36mnull[39m[33m,[39m
+     [90m 130 |[39m       lastExecutionKind[33m:[39m [36mnull[39m[33m,[39m[0m
+
+      at error (qa-mesh/meshScheduler.js:127:13)
+      at safeReadState (qa-mesh/meshScheduler.js:226:17)
+      at buildScheduleStatus (qa-mesh/meshScheduler.js:330:14)
+      at Object.setSchedulerEnabled (qa-mesh/__tests__/scheduler.test.js:146:20)
+
+  console.error
+    [qa-mesh/meshScheduler] estado inválido ou ausente em /opt/results/ria/er-fixci/qa-mesh/scheduler-state.json: "undefined" is not valid JSON
+
+    [0m [90m 125 |[39m   } [36mcatch[39m (error) {
+     [90m 126 |[39m     [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 127 |[39m     console[33m.[39merror([32m`[qa-mesh/meshScheduler] estado inválido ou ausente em ${SCHEDULER_STATE_PATH}: ${error.message || error}`[39m)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 128 |[39m     [36mreturn[39m {
+     [90m 129 |[39m       lastExecutionAt[33m:[39m [36mnull[39m[33m,[39m
+     [90m 130 |[39m       lastExecutionKind[33m:[39m [36mnull[39m[33m,[39m[0m
+
+      at error (qa-mesh/meshScheduler.js:127:13)
+      at safeReadState (qa-mesh/meshScheduler.js:344:19)
+      at Object.setSchedulerEnabled (qa-mesh/__tests__/scheduler.test.js:126:5)
+
+  console.error
+    [qa-mesh/meshScheduler] estado inválido ou ausente em /opt/results/ria/er-fixci/qa-mesh/scheduler-state.json: "undefined" is not valid JSON
+
+    [0m [90m 125 |[39m   } [36mcatch[39m (error) {
+     [90m 126 |[39m     [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 127 |[39m     console[33m.[39merror([32m`[qa-mesh/meshScheduler] estado inválido ou ausente em ${SCHEDULER_STATE_PATH}: ${error.message || error}`[39m)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 128 |[39m     [36mreturn[39m {
+     [90m 129 |[39m       lastExecutionAt[33m:[39m [36mnull[39m[33m,[39m
+     [90m 130 |[39m       lastExecutionKind[33m:[39m [36mnull[39m[33m,[39m[0m
+
+      at error (qa-mesh/meshScheduler.js:127:13)
+      at safeReadState (qa-mesh/meshScheduler.js:226:17)
+      at buildScheduleStatus (qa-mesh/meshScheduler.js:345:10)
+      at Object.setSchedulerEnabled (qa-mesh/__tests__/scheduler.test.js:126:5)
+
+  console.error
+    [qa-mesh/meshScheduler] estado inválido ou ausente em /opt/results/ria/er-fixci/qa-mesh/scheduler-state.json: "undefined" is not valid JSON
+
+    [0m [90m 125 |[39m   } [36mcatch[39m (error) {
+     [90m 126 |[39m     [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 127 |[39m     console[33m.[39merror([32m`[qa-mesh/meshScheduler] estado inválido ou ausente em ${SCHEDULER_STATE_PATH}: ${error.message || error}`[39m)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 128 |[39m     [36mreturn[39m {
+     [90m 129 |[39m       lastExecutionAt[33m:[39m [36mnull[39m[33m,[39m
+     [90m 130 |[39m       lastExecutionKind[33m:[39m [36mnull[39m[33m,[39m[0m
+
+      at error (qa-mesh/meshScheduler.js:127:13)
+      at safeReadState (qa-mesh/meshScheduler.js:344:19)
+      at Object.setSchedulerEnabled (qa-mesh/__tests__/scheduler.test.js:151:20)
+
+  console.error
+    [qa-mesh/meshScheduler] estado inválido ou ausente em /opt/results/ria/er-fixci/qa-mesh/scheduler-state.json: "undefined" is not valid JSON
+
+    [0m [90m 125 |[39m   } [36mcatch[39m (error) {
+     [90m 126 |[39m     [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 127 |[39m     console[33m.[39merror([32m`[qa-mesh/meshScheduler] estado inválido ou ausente em ${SCHEDULER_STATE_PATH}: ${error.message || error}`[39m)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 128 |[39m     [36mreturn[39m {
+     [90m 129 |[39m       lastExecutionAt[33m:[39m [36mnull[39m[33m,[39m
+     [90m 130 |[39m       lastExecutionKind[33m:[39m [36mnull[39m[33m,[39m[0m
+
+      at error (qa-mesh/meshScheduler.js:127:13)
+      at safeReadState (qa-mesh/meshScheduler.js:226:17)
+      at buildScheduleStatus (qa-mesh/meshScheduler.js:345:10)
+      at Object.setSchedulerEnabled (qa-mesh/__tests__/scheduler.test.js:151:20)
+
+  console.error
+    [qa-mesh/meshScheduler] estado inválido ou ausente em /opt/results/ria/er-fixci/qa-mesh/scheduler-state.json: "undefined" is not valid JSON
+
+    [0m [90m 125 |[39m   } [36mcatch[39m (error) {
+     [90m 126 |[39m     [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 127 |[39m     console[33m.[39merror([32m`[qa-mesh/meshScheduler] estado inválido ou ausente em ${SCHEDULER_STATE_PATH}: ${error.message || error}`[39m)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 128 |[39m     [36mreturn[39m {
+     [90m 129 |[39m       lastExecutionAt[33m:[39m [36mnull[39m[33m,[39m
+     [90m 130 |[39m       lastExecutionKind[33m:[39m [36mnull[39m[33m,[39m[0m
+
+      at error (qa-mesh/meshScheduler.js:127:13)
+      at safeReadState (qa-mesh/meshScheduler.js:344:19)
+      at Object.setSchedulerEnabled (qa-mesh/__tests__/scheduler.test.js:126:5)
+
+  console.error
+    [qa-mesh/meshScheduler] estado inválido ou ausente em /opt/results/ria/er-fixci/qa-mesh/scheduler-state.json: "undefined" is not valid JSON
+
+    [0m [90m 125 |[39m   } [36mcatch[39m (error) {
+     [90m 126 |[39m     [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 127 |[39m     console[33m.[39merror([32m`[qa-mesh/meshScheduler] estado inválido ou ausente em ${SCHEDULER_STATE_PATH}: ${error.message || error}`[39m)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 128 |[39m     [36mreturn[39m {
+     [90m 129 |[39m       lastExecutionAt[33m:[39m [36mnull[39m[33m,[39m
+     [90m 130 |[39m       lastExecutionKind[33m:[39m [36mnull[39m[33m,[39m[0m
+
+      at error (qa-mesh/meshScheduler.js:127:13)
+      at safeReadState (qa-mesh/meshScheduler.js:226:17)
+      at buildScheduleStatus (qa-mesh/meshScheduler.js:345:10)
+      at Object.setSchedulerEnabled (qa-mesh/__tests__/scheduler.test.js:126:5)
+
+  console.error
+    [qa-mesh/meshScheduler] estado inválido ou ausente em /opt/results/ria/er-fixci/qa-mesh/scheduler-state.json: "undefined" is not valid JSON
+
+    [0m [90m 125 |[39m   } [36mcatch[39m (error) {
+     [90m 126 |[39m     [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 127 |[39m     console[33m.[39merror([32m`[qa-mesh/meshScheduler] estado inválido ou ausente em ${SCHEDULER_STATE_PATH}: ${error.message || error}`[39m)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 128 |[39m     [36mreturn[39m {
+     [90m 129 |[39m       lastExecutionAt[33m:[39m [36mnull[39m[33m,[39m
+     [90m 130 |[39m       lastExecutionKind[33m:[39m [36mnull[39m[33m,[39m[0m
+
+      at error (qa-mesh/meshScheduler.js:127:13)
+      at safeReadState (qa-mesh/meshScheduler.js:344:19)
+      at Object.setSchedulerEnabled (qa-mesh/__tests__/scheduler.test.js:158:5)
+
+  console.error
+    [qa-mesh/meshScheduler] estado inválido ou ausente em /opt/results/ria/er-fixci/qa-mesh/scheduler-state.json: "undefined" is not valid JSON
+
+    [0m [90m 125 |[39m   } [36mcatch[39m (error) {
+     [90m 126 |[39m     [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 127 |[39m     console[33m.[39merror([32m`[qa-mesh/meshScheduler] estado inválido ou ausente em ${SCHEDULER_STATE_PATH}: ${error.message || error}`[39m)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 128 |[39m     [36mreturn[39m {
+     [90m 129 |[39m       lastExecutionAt[33m:[39m [36mnull[39m[33m,[39m
+     [90m 130 |[39m       lastExecutionKind[33m:[39m [36mnull[39m[33m,[39m[0m
+
+      at error (qa-mesh/meshScheduler.js:127:13)
+      at safeReadState (qa-mesh/meshScheduler.js:226:17)
+      at buildScheduleStatus (qa-mesh/meshScheduler.js:345:10)
+      at Object.setSchedulerEnabled (qa-mesh/__tests__/scheduler.test.js:158:5)
+
+  console.error
+    [qa-mesh/meshScheduler] estado inválido ou ausente em /opt/results/ria/er-fixci/qa-mesh/scheduler-state.json: "undefined" is not valid JSON
+
+    [0m [90m 125 |[39m   } [36mcatch[39m (error) {
+     [90m 126 |[39m     [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 127 |[39m     console[33m.[39merror([32m`[qa-mesh/meshScheduler] estado inválido ou ausente em ${SCHEDULER_STATE_PATH}: ${error.message || error}`[39m)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 128 |[39m     [36mreturn[39m {
+     [90m 129 |[39m       lastExecutionAt[33m:[39m [36mnull[39m[33m,[39m
+     [90m 130 |[39m       lastExecutionKind[33m:[39m [36mnull[39m[33m,[39m[0m
+
+      at error (qa-mesh/meshScheduler.js:127:13)
+      at safeReadState (qa-mesh/meshScheduler.js:344:19)
+      at Object.setSchedulerEnabled (qa-mesh/__tests__/scheduler.test.js:159:20)
+
+  console.error
+    [qa-mesh/meshScheduler] estado inválido ou ausente em /opt/results/ria/er-fixci/qa-mesh/scheduler-state.json: "undefined" is not valid JSON
+
+    [0m [90m 125 |[39m   } [36mcatch[39m (error) {
+     [90m 126 |[39m     [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 127 |[39m     console[33m.[39merror([32m`[qa-mesh/meshScheduler] estado inválido ou ausente em ${SCHEDULER_STATE_PATH}: ${error.message || error}`[39m)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 128 |[39m     [36mreturn[39m {
+     [90m 129 |[39m       lastExecutionAt[33m:[39m [36mnull[39m[33m,[39m
+     [90m 130 |[39m       lastExecutionKind[33m:[39m [36mnull[39m[33m,[39m[0m
+
+      at error (qa-mesh/meshScheduler.js:127:13)
+      at safeReadState (qa-mesh/meshScheduler.js:226:17)
+      at buildScheduleStatus (qa-mesh/meshScheduler.js:345:10)
+      at Object.setSchedulerEnabled (qa-mesh/__tests__/scheduler.test.js:159:20)
+
+  console.error
+    [qa-mesh/meshScheduler] estado inválido ou ausente em /opt/results/ria/er-fixci/qa-mesh/scheduler-state.json: "undefined" is not valid JSON
+
+    [0m [90m 125 |[39m   } [36mcatch[39m (error) {
+     [90m 126 |[39m     [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 127 |[39m     console[33m.[39merror([32m`[qa-mesh/meshScheduler] estado inválido ou ausente em ${SCHEDULER_STATE_PATH}: ${error.message || error}`[39m)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 128 |[39m     [36mreturn[39m {
+     [90m 129 |[39m       lastExecutionAt[33m:[39m [36mnull[39m[33m,[39m
+     [90m 130 |[39m       lastExecutionKind[33m:[39m [36mnull[39m[33m,[39m[0m
+
+      at error (qa-mesh/meshScheduler.js:127:13)
+      at safeReadState (qa-mesh/meshScheduler.js:344:19)
+      at Object.setSchedulerEnabled (qa-mesh/__tests__/scheduler.test.js:126:5)
+
+  console.error
+    [qa-mesh/meshScheduler] estado inválido ou ausente em /opt/results/ria/er-fixci/qa-mesh/scheduler-state.json: "undefined" is not valid JSON
+
+    [0m [90m 125 |[39m   } [36mcatch[39m (error) {
+     [90m 126 |[39m     [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 127 |[39m     console[33m.[39merror([32m`[qa-mesh/meshScheduler] estado inválido ou ausente em ${SCHEDULER_STATE_PATH}: ${error.message || error}`[39m)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 128 |[39m     [36mreturn[39m {
+     [90m 129 |[39m       lastExecutionAt[33m:[39m [36mnull[39m[33m,[39m
+     [90m 130 |[39m       lastExecutionKind[33m:[39m [36mnull[39m[33m,[39m[0m
+
+      at error (qa-mesh/meshScheduler.js:127:13)
+      at safeReadState (qa-mesh/meshScheduler.js:226:17)
+      at buildScheduleStatus (qa-mesh/meshScheduler.js:345:10)
+      at Object.setSchedulerEnabled (qa-mesh/__tests__/scheduler.test.js:126:5)
+
+  console.error
+    [qa-mesh/meshScheduler] estado inválido ou ausente em /opt/results/ria/er-fixci/qa-mesh/scheduler-state.json: "undefined" is not valid JSON
+
+    [0m [90m 125 |[39m   } [36mcatch[39m (error) {
+     [90m 126 |[39m     [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 127 |[39m     console[33m.[39merror([32m`[qa-mesh/meshScheduler] estado inválido ou ausente em ${SCHEDULER_STATE_PATH}: ${error.message || error}`[39m)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 128 |[39m     [36mreturn[39m {
+     [90m 129 |[39m       lastExecutionAt[33m:[39m [36mnull[39m[33m,[39m
+     [90m 130 |[39m       lastExecutionKind[33m:[39m [36mnull[39m[33m,[39m[0m
+
+      at error (qa-mesh/meshScheduler.js:127:13)
+      at safeReadState (qa-mesh/meshScheduler.js:280:21)
+      at Object.startScheduler (qa-mesh/__tests__/scheduler.test.js:183:20)
+
+[jest-global-setup] .env carregado (0 chave(s) aplicada(s); ambiente explícito vence)
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS qa-mesh/__tests__/scheduler.test.js
+  qa-mesh/meshScheduler
+    ✓ seleciona apenas smoke para schedule smoke (111 ms)
+    ✓ seleciona apenas blocking para schedule critical (104 ms)
+    ✓ regression executa toda a malha (103 ms)
+    ✓ não executa scheduler quando pipeline oficial está ativo (225 ms)
+    ✓ execução agendada desabilita escrita canônica (390 ms)
+  qa-mesh/meshScheduler — setSchedulerEnabled
+    ✓ desativa o scheduler e reflete no status (218 ms)
+    ✓ reativa o scheduler e reflete no status (312 ms)
+    ✓ env var QA_MESH_SCHEDULER_DISABLED mantém desligado (fail-closed) (148 ms)
+    ✓ altera a frequência e reflete no status (173 ms)
+    ✓ ignora chave de frequência inválida (199 ms)
+  qa-mesh/meshScheduler — startScheduler (habilitação explícita)
+    ✓ permanece desligado por padrão (sem enabled:true nem env opt-in) (113 ms)
+    ✓ kill-switch QA_MESH_SCHEDULER_DISABLED=true vence qualquer estado (103 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       12 passed, 12 total
+Snapshots:   0 total
+Time:        3.331 s
+Ran all test suites matching /qa-mesh\/__tests__\/scheduler.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

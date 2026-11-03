@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "9cf1703e-4a50-4d20-bb09-c09412cf20ec",
+  "transitionId": "9b5940bb-9414-4759-93c5-ac66fbe942a0",
   "defectId": "QA-MESH-SCHEDULER-REASON-BUG-CLOSURE-ANTES-DE-PIPELINE",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "a15f550e3522b48a49fb2d7cc6c948fdf2b60f01",
-  "codeFingerprint": "68b2804492d5bf2d9b5e02a86ba0dd1f8846917384d13b61d18ab7fad7dce0c4",
+  "evaluatedCommit": "7f7840aef2b83dedaf64b6aec85e0842dd7e4708",
+  "codeFingerprint": "203f3dc5115a2b7f367695b50541b80d6132aacff3e71d4a90925f6338fa2052",
   "requiredTests": [
     "qa-mesh/__tests__/scheduler.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest qa-mesh/__tests__/scheduler.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-02T15:32:50.156Z",
-      "finishedAt": "2026-11-02T15:32:57.762Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102145001-dd1ae10d/logs/QA-MESH-SCHEDULER-REASON-BUG-CLOSURE-ANTES-DE-PIPELINE.log",
-      "outputSha256": "3a72d04f92a972637872c4ac2fad72cf0d1e7a1e52c1cd95ef8bcc8e1a051f9d"
+      "startedAt": "2026-11-03T00:06:29.193Z",
+      "finishedAt": "2026-11-03T00:06:36.434Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102233411-b9202e36/logs/QA-MESH-SCHEDULER-REASON-BUG-CLOSURE-ANTES-DE-PIPELINE.log",
+      "outputSha256": "6cfb92e79c8dec6a134b0dba26390da72b6e6f1ee1132c4fa7ecc04da07db2e9"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-02T15:32:57.769Z",
-  "proofHash": "7d57c0cf766756e048b281de3ba60db87c843b4ebe5f4bfd10e6bf0b88ae490e"
+  "createdAt": "2026-11-03T00:06:36.441Z",
+  "proofHash": "4cad68f3120fc0b90fadc3f77337d193020ab6f1887ae6e72235e86ec423f441"
 }

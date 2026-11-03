@@ -1,0 +1,85 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "5de2ea83-47b1-409f-8f0c-b55254ec3fd2",
+  "defectId": "P0-RISCO-ACEITO-DISPENSA-CONTROLE-CRITICO",
+  "severityBefore": "P0",
+  "severityAfter": "P0",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "7f7840aef2b83dedaf64b6aec85e0842dd7e4708",
+  "codeFingerprint": "203f3dc5115a2b7f367695b50541b80d6132aacff3e71d4a90925f6338fa2052",
+  "requiredTests": [
+    "tests/unit/governance/riskAcceptedCriticalControl.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/riskAcceptedCriticalControl.test.js",
+      "command": "npx jest tests/unit/governance/riskAcceptedCriticalControl.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-02T23:36:43.005Z",
+      "finishedAt": "2026-11-02T23:36:49.678Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102233411-b9202e36/logs/P0-RISCO-ACEITO-DISPENSA-CONTROLE-CRITICO.log",
+      "outputSha256": "9917a5eac752f6e695985517beaf1c482dd6ffadd9e120f8d71a0567bba42014"
+    }
+  ],
+  "negativeEvidence": [
+    {
+      "targetFile": "governance/bug-closure/eligibility.js",
+      "control": "RISK_ACCEPTED válido volta a dispensar defeito P0 (deixa de ser bloqueante)",
+      "mutatedFromSha256": "d95670cc85f1c212293d6d79f8b219932d70350173a46d6fbdd1fa1eb1e022e4",
+      "mutatedToSha256": "703836b9e8c1e25937fd50488d08c5e770e176c8b9bdc4f360b6b4742a4317c5",
+      "testPath": "tests/unit/governance/riskAcceptedCriticalControl.test.js",
+      "command": "npx jest tests/unit/governance/riskAcceptedCriticalControl.test.js --bail=1 --ci",
+      "baseline": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-RISCO-ACEITO-DISPENSA-CONTROLE-CRITICO-baseline-1ba58361.log",
+        "logSha256": "d599711e95f946e5980655401986ae6b7501e182d920a3f0bb0f3b177c386c0f"
+      },
+      "mutated": {
+        "exitCode": 1,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-RISCO-ACEITO-DISPENSA-CONTROLE-CRITICO-mutado-1ba58361.log",
+        "logSha256": "b8136a7e1ab572e22663f543840271f473a9389ec3722576f2899f0a132438fe"
+      },
+      "restored": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-RISCO-ACEITO-DISPENSA-CONTROLE-CRITICO-restaurado-1ba58361.log",
+        "logSha256": "4fa45a5d1dde8aac6ff2c2d7e38e96d4db2bb3567d55ae6da8cc68ca1941e9df"
+      },
+      "capturedAt": "2026-11-02T16:06:10.118Z"
+    }
+  ],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/riskAcceptedCriticalControl.test.js",
+      "sha256": "e2ac8c7cf8f5de8d79fe80c757f6ad6af7b108e1b5187bc61b0df4edc49c7ac9"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": {
+    "channel": "VSCODE_AGENT",
+    "by": "platform-owner:jeffersonmachado",
+    "at": "2026-11-03T00:18:10.301Z",
+    "ref": "session:e92510ac-0f54-41c6-bb85-90f42042999c",
+    "agentSession": "e92510ac-0f54-41c6-bb85-90f42042999c"
+  },
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-02T23:36:49.687Z",
+  "proofHash": "9500692609f2211e5a7342c45e78fa416b544403c59ba4f94ead1e2240ebee87",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "N/iRrTzKwghpeQSAgOckcFnYhTJT0b+09SEJtT9ugydaphZWfG64yfSM4/mNIz+27QDj8hXxcQpjqexUEKifCw==",
+    "signedAt": "2026-11-03T00:18:45.523Z"
+  }
+}

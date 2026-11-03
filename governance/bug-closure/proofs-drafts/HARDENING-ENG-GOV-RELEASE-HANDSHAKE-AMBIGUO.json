@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "5c39a412-c150-4ca2-af4a-423e7a0c78ee",
+  "transitionId": "ca86d197-81d1-4ef7-b645-c5a1c7450830",
   "defectId": "HARDENING-ENG-GOV-RELEASE-HANDSHAKE-AMBIGUO",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "RESOLVED",
   "toState": "RESOLVED",
-  "evaluatedCommit": "a15f550e3522b48a49fb2d7cc6c948fdf2b60f01",
-  "codeFingerprint": "68b2804492d5bf2d9b5e02a86ba0dd1f8846917384d13b61d18ab7fad7dce0c4",
+  "evaluatedCommit": "7f7840aef2b83dedaf64b6aec85e0842dd7e4708",
+  "codeFingerprint": "203f3dc5115a2b7f367695b50541b80d6132aacff3e71d4a90925f6338fa2052",
   "requiredTests": [
     "tests/unit/governance/taskLeaseHandshakeParsing.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/taskLeaseHandshakeParsing.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-02T15:08:19.290Z",
-      "finishedAt": "2026-11-02T15:08:25.068Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102145001-dd1ae10d/logs/HARDENING-ENG-GOV-RELEASE-HANDSHAKE-AMBIGUO.log",
-      "outputSha256": "fd834680ca712170e5e66c2d68f430630c9af36934521f815b8058a53c13166c"
+      "startedAt": "2026-11-02T23:43:28.261Z",
+      "finishedAt": "2026-11-02T23:43:34.125Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102233411-b9202e36/logs/HARDENING-ENG-GOV-RELEASE-HANDSHAKE-AMBIGUO.log",
+      "outputSha256": "755886f5509e309c3072859a265b6cbb51fe69f6f4589a92bc2cf18913fcd159"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-02T15:08:25.078Z",
-  "proofHash": "82bb0d0aa323f908c7e343b5b348ebf31b15fbbb50520a09f78d748c5bb3db8b"
+  "createdAt": "2026-11-02T23:43:34.133Z",
+  "proofHash": "6f75588efcb8f36eb98f694bea8777cf5f5339ffe25812ca2b93fc3bd864bc0e"
 }
