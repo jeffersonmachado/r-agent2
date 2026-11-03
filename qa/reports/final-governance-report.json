@@ -190,7 +190,7 @@
       "id": "package_integrity",
       "pass": true,
       "severity": "OK",
-      "zipName": "r-agent2-20261017-040050.zip",
+      "zipName": "r-agent2-20261103-062854.zip",
       "computed": "56ed79c7e78a5529a8fd6a3b…",
       "recorded": "56ed79c7e78a5529a8fd6a3b…",
       "hashSource": "governance/package-validation-report.json",
@@ -240,5 +240,6 @@
   ],
   "highFailed": [],
   "summary": "4 bloqueio(s) crítico(s). Decisão: NO_GO:GOVERNANCE_BLOCKED [MASTER_SCORECARD_NOT_10_OF_10: RAP-055: score=6 target=10 | RAP-055: mandatory requirement failures=runtime-validated,governed,no-known-gap | RAP-055: open gaps=2 | RAP-056: score=6 target=10 | RAP-056: mandatory requirement failures=runtime-validated,no-known-gap | RAP-056: open gaps=1 | scorecard: open gaps=3 | FINAL_PROOF_NOT_PASS: PASS_WITH_DEFERRED_PACKAGE_GATE | FINAL_READINESS_NOT_PASS: PASS_WITH_DEFERRED_PACKAGE_GATE | FINAL_GOVERNANCE declara GO, mas o filho obrigatório PLATFORM_READINESS está NOT_GO (PASS_WITH_DEFERRED_PACKAGE_GATE)]",
-  "sourceCommit": "90226a6b0ab11f6e178ecc2e66fbdfd4dfe452d0"
+  "sourceCommit": "90226a6b0ab11f6e178ecc2e66fbdfd4dfe452d0",
+  "reboundAt": "2026-11-03T09:44:45.583Z"
 }

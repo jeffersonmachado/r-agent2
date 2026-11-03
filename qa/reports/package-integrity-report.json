@@ -3,7 +3,7 @@
   "engine": "package-integrity-engine/v1",
   "pass": true,
   "decision": "PACKAGE_INTEGRITY_GO",
-  "packageName": "r-agent2-20261017-040050.zip",
+  "packageName": "r-agent2-20261103-062854.zip",
   "packageHash": "56ed79c7e78a5529a8fd6a3bae9ad9afb1e35a89c06467650ee057a835281d42",
   "generatedAt_pkg": "2026-10-17T07:17:59Z",
   "gitCommit": "8bfbb61bd92c1b871a5121f309dda6aad2cb6d9f",
@@ -13,7 +13,7 @@
       "check": "zip_hash",
       "pass": true,
       "severity": "OK",
-      "zipName": "r-agent2-20261017-040050.zip",
+      "zipName": "r-agent2-20261103-062854.zip",
       "computed": "56ed79c7e78a5529a8fd6a3bae9ad9afb1e35a89c06467650ee057a835281d42",
       "recorded": "56ed79c7e78a5529a8fd6a3bae9ad9afb1e35a89c06467650ee057a835281d42",
       "hashSource": "sidecar-manifest",
@@ -25,7 +25,7 @@
       "check": "zip_name_alignment",
       "pass": true,
       "severity": "OK",
-      "zipName": "r-agent2-20261017-040050.zip",
+      "zipName": "r-agent2-20261103-062854.zip",
       "mismatches": [],
       "reason": null
     },
@@ -45,8 +45,8 @@
       "validatorOk": true,
       "selfContained": true,
       "missingEntries": 0,
-      "reportedZip": "r-agent2-20261017-040050.zip",
-      "actualZip": "r-agent2-20261017-040050.zip",
+      "reportedZip": "r-agent2-20261103-062854.zip",
+      "actualZip": "r-agent2-20261103-062854.zip",
       "zipMatch": true,
       "reason": null
     }
@@ -54,7 +54,7 @@
   "failedChecks": 0,
   "criticalChecks": 0,
   "failureReasons": [],
-  "summary": "Pacote r-agent2-20261017-040050.zip íntegro. Todos os hashes correspondem.",
+  "summary": "Pacote r-agent2-20261103-062854.zip íntegro. Todos os hashes correspondem.",
   "artifactType": "package-integrity-report",
   "artifactVersion": "1.0.0",
   "runId": "rap-governed-20261017053314590-3558e6f4",
@@ -70,5 +70,6 @@
   "finishedAt": "2026-10-17T07:18:21.191Z",
   "producer": "governance/rebind-to-current-package.js",
   "gitTree": "c96266b6ffebf8b10f0d54c4c1e1622ee3269c6e",
-  "blockingFindings": []
+  "blockingFindings": [],
+  "reboundAt": "2026-11-03T09:44:45.585Z"
 }

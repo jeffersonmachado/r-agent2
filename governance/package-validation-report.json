@@ -1,9 +1,24 @@
 {
-  "generatedAt": "2026-11-03T03:52:49.092Z",
-  "ok": false,
-  "zipPath": null,
-  "zipName": null,
+  "generatedAt": "2026-11-03T09:45:08.435Z",
+  "zipPath": "/opt/results/ria/er-fixci/dist/r-agent2-20261103-062854.zip",
+  "zipName": "r-agent2-20261103-062854.zip",
+  "zipSha256": "d77ae657b91ecd071b91c62ca766e0b28a33539360ef6e78a952eb03823e9e3f",
+  "payloadCentric": false,
+  "envelopePath": null,
+  "selectionMode": "explicit",
+  "candidateFallbackUsed": false,
+  "manifestPath": "/opt/results/ria/er-fixci/dist/r-agent2-20261103-062854.manifest.json",
+  "manifestAudit": "passed",
+  "auditSatisfied": true,
+  "selfContainmentCheck": {
+    "passed": true,
+    "missing": []
+  },
   "requiredEntries": [
+    "governance/final-proof-report.json",
+    "governance/evidence-manifest.json",
+    "governance/blocker-engine.js",
+    "governance/final-consistency-report.json",
     "qa/smoke-evidence.json",
     "qa/l01-physical-queue-evidence.json",
     "qa/l02-ura-publish-rollback-evidence.json",
@@ -29,11 +44,50 @@
     "governance/outbound-reliability-report.json",
     "governance/source-remote-provenance-report.json"
   ],
-  "missingEntries": [],
-  "error": "artifact_missing:none_found_in_dist",
-  "deferred": true,
-  "phase": "PRE_PACKAGE",
-  "status": "DEFERRED",
+  "entryCount": 12597,
+  "missingEntries": [
+    "qa/smoke-evidence.json",
+    "qa/l01-physical-queue-evidence.json",
+    "qa/l02-ura-publish-rollback-evidence.json",
+    "qa/l03-pbx-voice-tts-asr-evidence.json",
+    "qa/l04-pbx-call-events-runtime-evidence.json",
+    "qa/l05-chatpro-omnichannel-evidence.json"
+  ],
+  "missingEntryCodes": [
+    {
+      "entry": "qa/smoke-evidence.json",
+      "code": "PROOF_ENTRY_MISSING"
+    },
+    {
+      "entry": "qa/l01-physical-queue-evidence.json",
+      "code": "PROOF_ENTRY_MISSING"
+    },
+    {
+      "entry": "qa/l02-ura-publish-rollback-evidence.json",
+      "code": "PROOF_ENTRY_MISSING"
+    },
+    {
+      "entry": "qa/l03-pbx-voice-tts-asr-evidence.json",
+      "code": "PROOF_ENTRY_MISSING"
+    },
+    {
+      "entry": "qa/l04-pbx-call-events-runtime-evidence.json",
+      "code": "PROOF_ENTRY_MISSING"
+    },
+    {
+      "entry": "qa/l05-chatpro-omnichannel-evidence.json",
+      "code": "PROOF_ENTRY_MISSING"
+    }
+  ],
+  "ok": false,
+  "error": null,
+  "packageBinding": {
+    "boundTo": "r-agent2-20261103-062854.zip",
+    "sha256": "d77ae657b91ecd071b91c62ca766e0b28a33539360ef6e78a952eb03823e9e3f",
+    "immutable": true,
+    "selfProving": true,
+    "offlineAuditable": true
+  },
   "artifactType": "package-validation-report",
   "artifactVersion": "1.0.0",
   "runId": "rap-governed-20261102232414231-478234b9",
@@ -46,10 +100,10 @@
   "testPlanHash": null,
   "testResultHash": null,
   "evidenceManifestHash": null,
-  "startedAt": "2026-11-03T03:52:26.177Z",
-  "finishedAt": "2026-11-03T03:52:49.092Z",
-  "producer": "tools/system/platform-readiness.js",
-  "gitCommit": "480d1ba44f1394f1886bb8a0061950fafd1a2822",
-  "gitTree": "3db640b55aa191a4c715dacc25ab205e2c3ae8ae",
+  "startedAt": "2026-11-03T09:45:07.154Z",
+  "finishedAt": "2026-11-03T09:45:08.437Z",
+  "producer": "governance/package-validator.js",
+  "gitCommit": "fffa00997e277257c8d918f1a48a6effe23441b1",
+  "gitTree": "e5d8a9163e3b440547d4eb7011c974860ef08888",
   "blockingFindings": []
 }

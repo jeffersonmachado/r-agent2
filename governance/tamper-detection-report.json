@@ -1,6 +1,6 @@
 {
   "generatedAt": "2026-10-17T07:21:20.289Z",
-  "artifact": "r-agent2-20261017-040050.payload.zip",
+  "artifact": "r-agent2-20261103-062854.payload.zip",
   "pass": true,
   "decision": "GO",
   "totalChecks": 9,
@@ -12,7 +12,7 @@
       "pass": true,
       "severity": "CRITICAL",
       "details": {
-        "zipName": "r-agent2-20261017-040050.payload.zip",
+        "zipName": "r-agent2-20261103-062854.payload.zip",
         "computedHash": "ce28bf88aac70807e304492fa749c90adfa7de7733d2c8a905af914ebd70383f",
         "recordedHash": "ce28bf88aac70807e304492fa749c90adfa7de7733d2c8a905af914ebd70383f",
         "match": true
@@ -25,7 +25,7 @@
       "details": {
         "valid": true,
         "hashMatch": true,
-        "subject": "r-agent2-20261017-040050.payload.manifest.json"
+        "subject": "r-agent2-20261103-062854.payload.manifest.json"
       }
     },
     {
@@ -34,7 +34,7 @@
       "severity": "CRITICAL",
       "details": {
         "valid": true,
-        "subject": "r-agent2-20261017-040050.payload.zip"
+        "subject": "r-agent2-20261103-062854.payload.zip"
       }
     },
     {
@@ -98,5 +98,6 @@
       }
     }
   ],
-  "summary": "Todos os 9 checks de integridade passaram. Nenhuma adulteração detectada."
+  "summary": "Todos os 9 checks de integridade passaram. Nenhuma adulteração detectada.",
+  "reboundAt": "2026-11-03T09:44:45.289Z"
 }
