@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "9e1c6029-291d-4c7b-8ddb-cecb3a222079",
+  "transitionId": "7921bc51-d22f-492c-bea6-2c40e5290e0f",
   "defectId": "CI-RUNNER-COMPARTILHADO-ENTRE-ARVORES",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "c43614969fa7e5eafcf680b4028097b25143cd94",
-  "codeFingerprint": "330ad47b88702d47d7e21c625a1e77f0b4c8570f55d13be8e8dbc2fc64212ad6",
+  "evaluatedCommit": "78418d2761910a724cc57d577a83da102231f1d4",
+  "codeFingerprint": "025726e0cbee6873d83d35f7f4a11270d1f7fd12d68d4ea648f2f85553d29ab8",
   "requiredTests": [
     "tests/unit/governance/officialTestScriptsNoVacuousPass.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/officialTestScriptsNoVacuousPass.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-03T10:21:34.164Z",
-      "finishedAt": "2026-11-03T10:21:37.850Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103101609-e015b999/logs/CI-RUNNER-COMPARTILHADO-ENTRE-ARVORES.log",
-      "outputSha256": "17922cbd294c3ecc8f022b4f6bb6aff5515cdeb36b1fbfa7c2126de649f7cdc8"
+      "startedAt": "2026-11-03T14:33:33.323Z",
+      "finishedAt": "2026-11-03T14:33:39.806Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103142831-15e0ade6/logs/CI-RUNNER-COMPARTILHADO-ENTRE-ARVORES.log",
+      "outputSha256": "5e446a9f8d92c39e3bbf26e0b8887b90484e7a28b1b84d5914a11aef07014a22"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-03T10:21:37.860Z",
-  "proofHash": "cd5a769f1737b2cb829184780446b5124fc29c13ff912bd0fbc449decf40092d"
+  "createdAt": "2026-11-03T14:33:39.814Z",
+  "proofHash": "337292bfe33cb7dbcc8152becec88e58bf9a8eb3239f65085175844391a67e58"
 }

@@ -1,0 +1,18 @@
+[jest-global-setup] .env carregado (0 chave(s) aplicada(s); ambiente explícito vence)
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/governance/smokeEvidenceSummary.test.js
+  montarResumoSmoke
+    ✓ emite sempre as seis chaves, mesmo com entrada parcial (112 ms)
+    ✓ status ausente ou vazio é `unknown`, nunca vazio (102 ms)
+    ✓ evidência não-objeto é descartada (nada de lixo no relatório) (103 ms)
+    ✓ generatedAt é ISO e vem da entrada quando informado (104 ms)
+  todosPassaram
+    ✓ verdadeiro apenas quando os SEIS estão em pass (102 ms)
+    ✓ um único fail/unknown derruba (nunca verde por omissão) (102 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       6 passed, 6 total
+Snapshots:   0 total
+Time:        1.23 s, estimated 2 s
+Ran all test suites matching /tests\/unit\/governance\/smokeEvidenceSummary.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

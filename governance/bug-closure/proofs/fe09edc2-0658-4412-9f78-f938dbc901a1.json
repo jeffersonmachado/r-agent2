@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "fe09edc2-0658-4412-9f78-f938dbc901a1",
+  "defectId": "ENGINEERING-BUGLOOP-DEPENDE-DE-BANCO-LIMPO",
+  "severityBefore": "P2",
+  "severityAfter": "P2",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "78418d2761910a724cc57d577a83da102231f1d4",
+  "codeFingerprint": "025726e0cbee6873d83d35f7f4a11270d1f7fd12d68d4ea648f2f85553d29ab8",
+  "requiredTests": [
+    "tests/integration/engineeringBugLoopNaturalPathE2E.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/integration/engineeringBugLoopNaturalPathE2E.test.js",
+      "command": "npx jest tests/integration/engineeringBugLoopNaturalPathE2E.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-03T15:14:36.593Z",
+      "finishedAt": "2026-11-03T15:16:37.994Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103142831-15e0ade6/logs/ENGINEERING-BUGLOOP-DEPENDE-DE-BANCO-LIMPO.log",
+      "outputSha256": "5cf87c90db3f659240bbf727068f8669d26c3eb8467d65f31819f229206d2205"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/integration/engineeringBugLoopNaturalPathE2E.test.js",
+      "sha256": "2c23e00d78c28e59ee3b345922a5afaa2f9e6ecb1efdc5f4b8cb0cfc498872c1"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-03T15:16:38.006Z",
+  "proofHash": "f3b7dc37c07020b5108f8db948a9179d1a554a6ff2f7185c1ae94b968dcfd7f9",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "Kbl4rgAKLnFQE2Cl7SK17dTpZ07EJJQKWkE1vjfbUQx52hMDDFZArnlEuolvX3GR1SxeJoQcYrQ3r/tQCYCQBw==",
+    "signedAt": "2026-11-03T15:49:42.640Z"
+  }
+}

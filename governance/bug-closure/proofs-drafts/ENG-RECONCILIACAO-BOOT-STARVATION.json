@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "0edcb90c-8cad-45b0-a802-ffb8fbe0f753",
+  "transitionId": "a80dc066-741f-4ad8-b26a-b10e85748dcb",
   "defectId": "ENG-RECONCILIACAO-BOOT-STARVATION",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "c43614969fa7e5eafcf680b4028097b25143cd94",
-  "codeFingerprint": "330ad47b88702d47d7e21c625a1e77f0b4c8570f55d13be8e8dbc2fc64212ad6",
+  "evaluatedCommit": "78418d2761910a724cc57d577a83da102231f1d4",
+  "codeFingerprint": "025726e0cbee6873d83d35f7f4a11270d1f7fd12d68d4ea648f2f85553d29ab8",
   "requiredTests": [
     "tests/integration/engineeringMissionSourceE2E.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/integration/engineeringMissionSourceE2E.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-03T10:33:39.318Z",
-      "finishedAt": "2026-11-03T10:33:52.118Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103101609-e015b999/logs/ENG-RECONCILIACAO-BOOT-STARVATION.log",
-      "outputSha256": "19bcc2f346db89b18f026c6c2dd1ea28b9f8fc84e9587ee28e2f5bc96bfa57b1"
+      "startedAt": "2026-11-03T14:37:01.218Z",
+      "finishedAt": "2026-11-03T14:37:16.927Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103142831-15e0ade6/logs/ENG-RECONCILIACAO-BOOT-STARVATION.log",
+      "outputSha256": "9fb399e93bec42374af244e9e6ca112803cd27ca8b2cb3aa37b0953bfe0863a8"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-03T10:33:52.128Z",
-  "proofHash": "6bd1c1e098479dda59e4eae7840630aa458b434b5cdda845473990c4c53b2f82"
+  "createdAt": "2026-11-03T14:37:16.935Z",
+  "proofHash": "a9819860dd151102422aa07190397bfbe11f81c3d135047258aa4d0b3d09592e"
 }

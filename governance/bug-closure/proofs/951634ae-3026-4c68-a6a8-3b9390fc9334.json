@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "951634ae-3026-4c68-a6a8-3b9390fc9334",
+  "defectId": "ENG-PROVENIENCIA-REPRODUCAO-SOBRESCRITA",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "78418d2761910a724cc57d577a83da102231f1d4",
+  "codeFingerprint": "025726e0cbee6873d83d35f7f4a11270d1f7fd12d68d4ea648f2f85553d29ab8",
+  "requiredTests": [
+    "tests/integration/engineeringBugLoop.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/integration/engineeringBugLoop.test.js",
+      "command": "npx jest tests/integration/engineeringBugLoop.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-03T14:36:30.062Z",
+      "finishedAt": "2026-11-03T14:37:01.185Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103142831-15e0ade6/logs/ENG-PROVENIENCIA-REPRODUCAO-SOBRESCRITA.log",
+      "outputSha256": "689c0708b914bbe6912b92fccb9ca78da05ecabb75b276fccbfb9e5ee9c696f4"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/integration/engineeringBugLoop.test.js",
+      "sha256": "3a1bc90410a2fa92290856e6c2ae73001653068a77a6c9c6668dec041b00932d"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-03T14:37:01.205Z",
+  "proofHash": "4760ec14798c9b1ac4e712b21c6787ba82d9742a70dcfd11c781cbf840b2af85",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "vhTIWW24YlZEnMf6jxyQcM7m5959Hxu/EeMP2SzmuFe6atPTrw8x7MxVfix3W7XlYO0T+WN4dqXVQDp7j+O6Cg==",
+    "signedAt": "2026-11-03T15:49:40.184Z"
+  }
+}

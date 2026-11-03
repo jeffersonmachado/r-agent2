@@ -1,0 +1,175 @@
+{
+  "schemaVersion": 2,
+  "kind": "bug-closure-regularization",
+  "generatedAt": "2026-11-03T15:43:09.635Z",
+  "authoritative": false,
+  "runId": "run-20261103153700-e83d1581",
+  "identidade": {
+    "commit": "78418d2761910a724cc57d577a83da102231f1d4",
+    "sourceFingerprint": "025726e0cbee6873d83d35f7f4a11270d1f7fd12d68d4ea648f2f85553d29ab8",
+    "inventoryFingerprint": "39003d9ea50ba5df64c09cac080101b8cfe1011e0128cbf74c0f5c426d38ce8c",
+    "hardeningQueueFingerprint": "e39d3f6206ceab8060cd1a23e981b705d658950b4d1128a6a6eb277aa4e3a8c3",
+    "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+  },
+  "escopo": {
+    "tipo": "PARCIAL",
+    "filtroSeveridade": "ALL",
+    "limite": 0,
+    "esperadoNoEscopo": 5,
+    "processados": 5,
+    "completoNoEscopo": false,
+    "cobreInventario": false
+  },
+  "resumo": {
+    "commit": "78418d2761910a724cc57d577a83da102231f1d4",
+    "fingerprint": "025726e0cbee6873d83d35f7f4a11270d1f7fd12d68d4ea648f2f85553d29ab8",
+    "runId": "run-20261103153700-e83d1581",
+    "total": 5,
+    "porClasse": {
+      "AGUARDA_ASSINATURA_E_ANCORA": 5
+    },
+    "porSeveridade": {
+      "AGUARDA_ASSINATURA_E_ANCORA:P1": 1,
+      "AGUARDA_ASSINATURA_E_ANCORA:P2": 3,
+      "AGUARDA_ASSINATURA_E_ANCORA:P3": 1
+    },
+    "filaAlterada": false,
+    "assinatura": "PENDENTE — este script não assina e não altera a fila"
+  },
+  "resultados": [
+    {
+      "id": "V2-EVIDENCIA-REAL-NO-HEAD",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Router V2: 3 gates provados no HEAD com produtores canônicos (4 falhas → 1)",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "CAMPO_DO_ITEM",
+      "teste": "tests/integration/governanceApprovalFullWorkerE2E.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103153700-e83d1581/logs/V2-EVIDENCIA-REAL-NO-HEAD.log",
+      "draft": "governance/bug-closure/proofs-drafts/V2-EVIDENCIA-REAL-NO-HEAD.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261103153700-e83d1581",
+      "identidade": {
+        "commit": "78418d2761910a724cc57d577a83da102231f1d4",
+        "sourceFingerprint": "025726e0cbee6873d83d35f7f4a11270d1f7fd12d68d4ea648f2f85553d29ab8",
+        "inventoryFingerprint": "39003d9ea50ba5df64c09cac080101b8cfe1011e0128cbf74c0f5c426d38ce8c",
+        "hardeningQueueFingerprint": "e39d3f6206ceab8060cd1a23e981b705d658950b4d1128a6a6eb277aa4e3a8c3",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "d491d5126edc21a86f93b3257a0a56e548756dbfd54240e0cd281b2f2411a9fb"
+    },
+    {
+      "id": "CI-INTEG-JEST-DUAS-SUITES-BLOCKED",
+      "severity": "P2",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "governanceApprovalFullWorkerE2E: pós-fix não recodifica e não gera recorrência falsa (RESOLVIDO)",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+      "teste": "tests/integration/governanceApprovalFullWorkerE2E.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103153700-e83d1581/logs/CI-INTEG-JEST-DUAS-SUITES-BLOCKED.log",
+      "draft": "governance/bug-closure/proofs-drafts/CI-INTEG-JEST-DUAS-SUITES-BLOCKED.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261103153700-e83d1581",
+      "identidade": {
+        "commit": "78418d2761910a724cc57d577a83da102231f1d4",
+        "sourceFingerprint": "025726e0cbee6873d83d35f7f4a11270d1f7fd12d68d4ea648f2f85553d29ab8",
+        "inventoryFingerprint": "39003d9ea50ba5df64c09cac080101b8cfe1011e0128cbf74c0f5c426d38ce8c",
+        "hardeningQueueFingerprint": "e39d3f6206ceab8060cd1a23e981b705d658950b4d1128a6a6eb277aa4e3a8c3",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "92054bf49f530b90be3c8dc1eb2f96c5258ea7a24aa9c147f09cb8ecc0b85028"
+    },
+    {
+      "id": "ENG-FENCING-OPT-IN-NO-FIX-LOOP",
+      "severity": "P2",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Fencing do lease era opt-in: FIXED/REGRESSION_VALIDATED/CLOSED/BLOCKED/DUPLICATE e a trilha de tentativas escreviam sob posse sem declarar o fence",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+      "teste": "tests/integration/engineeringBugLoop.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103153700-e83d1581/logs/ENG-FENCING-OPT-IN-NO-FIX-LOOP.log",
+      "draft": "governance/bug-closure/proofs-drafts/ENG-FENCING-OPT-IN-NO-FIX-LOOP.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261103153700-e83d1581",
+      "identidade": {
+        "commit": "78418d2761910a724cc57d577a83da102231f1d4",
+        "sourceFingerprint": "025726e0cbee6873d83d35f7f4a11270d1f7fd12d68d4ea648f2f85553d29ab8",
+        "inventoryFingerprint": "39003d9ea50ba5df64c09cac080101b8cfe1011e0128cbf74c0f5c426d38ce8c",
+        "hardeningQueueFingerprint": "e39d3f6206ceab8060cd1a23e981b705d658950b4d1128a6a6eb277aa4e3a8c3",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "f2101b99a91551b1a87560dd0fa996ef6c7af0f64eff413cf066e44d446e2fdb"
+    },
+    {
+      "id": "H20-RUN-ORFAO-PROJECAO-STALE",
+      "severity": "P2",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Ciclo interrompido deixa run governado aberto e projecao de readiness no run anterior",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+      "teste": "tests/unit/governance/convergenceFixpoint.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103153700-e83d1581/logs/H20-RUN-ORFAO-PROJECAO-STALE.log",
+      "draft": "governance/bug-closure/proofs-drafts/H20-RUN-ORFAO-PROJECAO-STALE.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261103153700-e83d1581",
+      "identidade": {
+        "commit": "78418d2761910a724cc57d577a83da102231f1d4",
+        "sourceFingerprint": "025726e0cbee6873d83d35f7f4a11270d1f7fd12d68d4ea648f2f85553d29ab8",
+        "inventoryFingerprint": "39003d9ea50ba5df64c09cac080101b8cfe1011e0128cbf74c0f5c426d38ce8c",
+        "hardeningQueueFingerprint": "e39d3f6206ceab8060cd1a23e981b705d658950b4d1128a6a6eb277aa4e3a8c3",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "8146a1e97c614523decfc3d752cfe5989182ef7fa21f7f14117e5f9352fcea50"
+    },
+    {
+      "id": "MISSAO-A-L2-L3-ORQUESTRADOR",
+      "severity": "P3",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "L2/L3 + EngineeringValidationOrchestrator sobre o L1",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "CAMPO_DO_ITEM",
+      "teste": "tests/unit/coverage/impactRunner.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103153700-e83d1581/logs/MISSAO-A-L2-L3-ORQUESTRADOR.log",
+      "draft": "governance/bug-closure/proofs-drafts/MISSAO-A-L2-L3-ORQUESTRADOR.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261103153700-e83d1581",
+      "identidade": {
+        "commit": "78418d2761910a724cc57d577a83da102231f1d4",
+        "sourceFingerprint": "025726e0cbee6873d83d35f7f4a11270d1f7fd12d68d4ea648f2f85553d29ab8",
+        "inventoryFingerprint": "39003d9ea50ba5df64c09cac080101b8cfe1011e0128cbf74c0f5c426d38ce8c",
+        "hardeningQueueFingerprint": "e39d3f6206ceab8060cd1a23e981b705d658950b4d1128a6a6eb277aa4e3a8c3",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "9fa282fded64837f26d05a8cfe96f74790a32c86211f513758d53c70fa07be72"
+    }
+  ],
+  "coberturaIntegral": {
+    "motivo": "escopo/lista/inventário não conferem",
+    "inventoryDigest": "e39d3f6206ceab8060cd1a23e981b705d658950b4d1128a6a6eb277aa4e3a8c3"
+  },
+  "execucao": {
+    "status": "COMPLETED",
+    "completo": false,
+    "completedAt": "2026-11-03T15:42:56.432Z"
+  }
+}

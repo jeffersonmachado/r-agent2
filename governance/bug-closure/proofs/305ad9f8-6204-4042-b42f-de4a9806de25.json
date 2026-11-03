@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "305ad9f8-6204-4042-b42f-de4a9806de25",
+  "defectId": "P1-5",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "78418d2761910a724cc57d577a83da102231f1d4",
+  "codeFingerprint": "025726e0cbee6873d83d35f7f4a11270d1f7fd12d68d4ea648f2f85553d29ab8",
+  "requiredTests": [
+    "rag-service/tests/test_hybrid_search.py"
+  ],
+  "executions": [
+    {
+      "testPath": "rag-service/tests/test_hybrid_search.py",
+      "command": "/opt/results/ria/r-agent2/rag-service/venv/bin/python -m pytest rag-service/tests/test_hybrid_search.py -q -p no:cacheprovider",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-03T14:41:54.936Z",
+      "finishedAt": "2026-11-03T14:41:58.373Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103142831-15e0ade6/logs/P1-5.log",
+      "outputSha256": "b5abf9780885aaa309bb9c5d8728a71527457377c88c41344ac984f8b274716c"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "rag-service/tests/test_hybrid_search.py",
+      "sha256": "7014c15096d65e060522d28133c583ab923437933293256087c07ce306017461"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-03T14:41:58.379Z",
+  "proofHash": "62f9305f6fc0446831d896ce3756df8cd6cc1f126f297ea176612c813f0020d6",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "h2Pfxikc8nEpBYEvLFax1rPcO/shyXg4ck8uEYvmIPM4niE/GWwSm7QH5Ys4cyuck1KD+rnHsmSDUAtkbOC4Bg==",
+    "signedAt": "2026-11-03T15:50:32.753Z"
+  }
+}

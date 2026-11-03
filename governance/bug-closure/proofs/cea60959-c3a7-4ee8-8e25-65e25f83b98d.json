@@ -1,0 +1,85 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "cea60959-c3a7-4ee8-8e25-65e25f83b98d",
+  "defectId": "P0-GATE-FASES-DUPLICADAS-DESCONHECIDAS-FALSO-PASS",
+  "severityBefore": "P0",
+  "severityAfter": "P0",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "78418d2761910a724cc57d577a83da102231f1d4",
+  "codeFingerprint": "025726e0cbee6873d83d35f7f4a11270d1f7fd12d68d4ea648f2f85553d29ab8",
+  "requiredTests": [
+    "tests/unit/governance/devBranchGatePhaseContract.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/devBranchGatePhaseContract.test.js",
+      "command": "npx jest tests/unit/governance/devBranchGatePhaseContract.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-03T14:30:58.374Z",
+      "finishedAt": "2026-11-03T14:31:09.059Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103142831-15e0ade6/logs/P0-GATE-FASES-DUPLICADAS-DESCONHECIDAS-FALSO-PASS.log",
+      "outputSha256": "0d96069bf4dea5a2f94d0532f2ed604fdf4801ed7317871393db33b4baf8b8f2"
+    }
+  ],
+  "negativeEvidence": [
+    {
+      "targetFile": "scripts/ci/dev-branch-gate.js",
+      "control": "fases duplicadas deixam de invalidar a entrada e o gate pode certificar",
+      "mutatedFromSha256": "f0cc4ed08e703458d91e4020c0836fc5aec65e73060b844c64e7c13f15a809df",
+      "mutatedToSha256": "646f086b1d0fc62d3fa041818023fad7999872c0ef6cbdae38730224f4b8b376",
+      "testPath": "tests/unit/governance/devBranchGatePhaseContract.test.js",
+      "command": "npx jest tests/unit/governance/devBranchGatePhaseContract.test.js --bail=1 --ci",
+      "baseline": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-GATE-FASES-DUPLICADAS-DESCONHECIDAS-FALSO-PASS-baseline-e6c5d5c4.log",
+        "logSha256": "5c2d14131d3f5f6309c013aa341b2f9a04809ea32fe8fd72e0d1f1ebe44d56e6"
+      },
+      "mutated": {
+        "exitCode": 1,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-GATE-FASES-DUPLICADAS-DESCONHECIDAS-FALSO-PASS-mutado-e6c5d5c4.log",
+        "logSha256": "23240561b72a220708bca1bf52aafa5d11dfeaee05b5a93f3cc7bb4c0b8ac4d6"
+      },
+      "restored": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-GATE-FASES-DUPLICADAS-DESCONHECIDAS-FALSO-PASS-restaurado-e6c5d5c4.log",
+        "logSha256": "7ecff0cae4dec710b356e3cdc34ac2ec4aa69d56797851817f2327ab4c27d82d"
+      },
+      "capturedAt": "2026-11-02T16:05:28.237Z"
+    }
+  ],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/devBranchGatePhaseContract.test.js",
+      "sha256": "d2cc92a580730c0283e8b3febab4332ea98078ffade5cfbabfd2c5dffcbfe860"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": {
+    "channel": "VSCODE_AGENT",
+    "by": "platform-owner:jeffersonmachado",
+    "at": "2026-11-03T14:31:20.738Z",
+    "ref": "session:e92510ac-0f54-41c6-bb85-90f42042999c",
+    "agentSession": "session:e92510ac-0f54-41c6-bb85-90f42042999c"
+  },
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-03T14:31:09.066Z",
+  "proofHash": "583c7c04c20962180d73b27f55da25de5740b91e8ab5c05aed2781ba17b2dbb4",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "/JgQGnAL2+OIwAI+eqPE31QjiMIxrNQA7UFGrYv5zFkvqRKyS54tCqKRNDhlth/VZltLIH3Ki0C+cduWMl5oCA==",
+    "signedAt": "2026-11-03T15:50:25.200Z"
+  }
+}

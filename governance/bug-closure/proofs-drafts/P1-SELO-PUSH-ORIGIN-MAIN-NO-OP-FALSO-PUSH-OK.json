@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "baa7b125-bad3-43dc-82e4-284deb6bf685",
+  "transitionId": "866694b9-a21e-4a2f-91c6-edcdd643c89e",
   "defectId": "P1-SELO-PUSH-ORIGIN-MAIN-NO-OP-FALSO-PUSH-OK",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "c43614969fa7e5eafcf680b4028097b25143cd94",
-  "codeFingerprint": "330ad47b88702d47d7e21c625a1e77f0b4c8570f55d13be8e8dbc2fc64212ad6",
+  "evaluatedCommit": "78418d2761910a724cc57d577a83da102231f1d4",
+  "codeFingerprint": "025726e0cbee6873d83d35f7f4a11270d1f7fd12d68d4ea648f2f85553d29ab8",
   "requiredTests": [
     "tests/unit/governance/deliveryVerification.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/deliveryVerification.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-03T10:39:52.566Z",
-      "finishedAt": "2026-11-03T10:39:56.730Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103101609-e015b999/logs/P1-SELO-PUSH-ORIGIN-MAIN-NO-OP-FALSO-PUSH-OK.log",
-      "outputSha256": "1c97c377ebde2d28e19e7d9c3098a8e48905d49d61a98e73777f21c24383ce0d"
+      "startedAt": "2026-11-03T14:43:55.135Z",
+      "finishedAt": "2026-11-03T14:44:02.666Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103142831-15e0ade6/logs/P1-SELO-PUSH-ORIGIN-MAIN-NO-OP-FALSO-PUSH-OK.log",
+      "outputSha256": "c2888bf6709ef372a60fe77d2348bfd1a47e9b122be0b746012a4f483f721ab8"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-03T10:39:56.737Z",
-  "proofHash": "1aab69448e1f3b7a71c69ea0402ae495c675f2ae78b8f5f1a93f9bfd99772893"
+  "createdAt": "2026-11-03T14:44:02.673Z",
+  "proofHash": "a6ad8236a732ad7466dd1ac740cf44601222255a41f3299ac99dd36293782d97"
 }

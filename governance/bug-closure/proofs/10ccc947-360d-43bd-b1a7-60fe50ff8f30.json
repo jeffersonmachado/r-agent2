@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "10ccc947-360d-43bd-b1a7-60fe50ff8f30",
+  "defectId": "ENG-DIVIDA-REPARO-SEM-SINAL",
+  "severityBefore": "P2",
+  "severityAfter": "P2",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "78418d2761910a724cc57d577a83da102231f1d4",
+  "codeFingerprint": "025726e0cbee6873d83d35f7f4a11270d1f7fd12d68d4ea648f2f85553d29ab8",
+  "requiredTests": [
+    "tests/integration/engineeringMissionSourceE2E.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/integration/engineeringMissionSourceE2E.test.js",
+      "command": "npx jest tests/integration/engineeringMissionSourceE2E.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-03T15:08:22.274Z",
+      "finishedAt": "2026-11-03T15:08:37.936Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103142831-15e0ade6/logs/ENG-DIVIDA-REPARO-SEM-SINAL.log",
+      "outputSha256": "c9bf4a3aa8b7a49df6ec801ebc4216f29a0668ea495a58767c3d331b4e08c213"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/integration/engineeringMissionSourceE2E.test.js",
+      "sha256": "e8b417ce6cd96391b8366bb15fd3a992afc34e9c4ecae7072b3df00226768407"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-03T15:08:37.959Z",
+  "proofHash": "b752893d3f59a4271ca21e177b1ae59023bb98b9bf67c1eadc01818a595c86ab",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "O9gPVT8V4BU1PrHJXID5GSWMtMwuXYSEw/j3G7ryS5D8U2fLSFWiupOe88vr7LgHUeqVoVh3qd+fiQSm2t4ZDw==",
+    "signedAt": "2026-11-03T15:49:37.815Z"
+  }
+}

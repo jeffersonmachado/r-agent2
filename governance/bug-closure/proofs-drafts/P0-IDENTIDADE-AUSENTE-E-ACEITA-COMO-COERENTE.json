@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "f240afeb-8e42-4833-bebb-b64e8cc88de7",
+  "transitionId": "6734a7c8-7f80-4f61-92de-bbda4998b14e",
   "defectId": "P0-IDENTIDADE-AUSENTE-E-ACEITA-COMO-COERENTE",
   "severityBefore": "P0",
   "severityAfter": "P0",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "c43614969fa7e5eafcf680b4028097b25143cd94",
-  "codeFingerprint": "330ad47b88702d47d7e21c625a1e77f0b4c8570f55d13be8e8dbc2fc64212ad6",
+  "evaluatedCommit": "78418d2761910a724cc57d577a83da102231f1d4",
+  "codeFingerprint": "025726e0cbee6873d83d35f7f4a11270d1f7fd12d68d4ea648f2f85553d29ab8",
   "requiredTests": [
     "tests/unit/governance/assertCanonicalReleaseDecision.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/assertCanonicalReleaseDecision.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-03T10:18:52.484Z",
-      "finishedAt": "2026-11-03T10:18:57.312Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103101609-e015b999/logs/P0-IDENTIDADE-AUSENTE-E-ACEITA-COMO-COERENTE.log",
-      "outputSha256": "42fc050792f49a34aee16e1307acd04619cbb28addc4f3ea8a802fb623ac16ae"
+      "startedAt": "2026-11-03T14:31:09.073Z",
+      "finishedAt": "2026-11-03T14:31:13.562Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103142831-15e0ade6/logs/P0-IDENTIDADE-AUSENTE-E-ACEITA-COMO-COERENTE.log",
+      "outputSha256": "17c51baf39f77fd377dac38fe02092aff4eddbf80d63e7397e8a58c736a0a5ec"
     }
   ],
   "negativeEvidence": [
@@ -63,9 +63,9 @@
   "humanAuthorization": {
     "channel": "VSCODE_AGENT",
     "by": "platform-owner:jeffersonmachado",
-    "at": "2026-11-03T11:10:47.699Z",
+    "at": "2026-11-03T14:31:20.738Z",
     "ref": "session:e92510ac-0f54-41c6-bb85-90f42042999c",
-    "agentSession": "e92510ac-0f54-41c6-bb85-90f42042999c"
+    "agentSession": "session:e92510ac-0f54-41c6-bb85-90f42042999c"
   },
   "policyDecision": {
     "decision": "REVERIFY_EXISTING_CLOSURE",
@@ -74,6 +74,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-03T10:18:57.318Z",
-  "proofHash": "ce455812c0f434e74f496428a9c03fed957a9d3bb34ec52f175a09496ce22419"
+  "createdAt": "2026-11-03T14:31:13.569Z",
+  "proofHash": "642ffceeabcc8d49850f6aae3efaa39320572dae75fc4cc0d11128d221d76ba0"
 }

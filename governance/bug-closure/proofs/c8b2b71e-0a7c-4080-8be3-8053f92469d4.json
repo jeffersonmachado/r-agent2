@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "c8b2b71e-0a7c-4080-8be3-8053f92469d4",
+  "defectId": "CI-FLOW-GATE-VACUOSO",
+  "severityBefore": "P2",
+  "severityAfter": "P2",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "78418d2761910a724cc57d577a83da102231f1d4",
+  "codeFingerprint": "025726e0cbee6873d83d35f7f4a11270d1f7fd12d68d4ea648f2f85553d29ab8",
+  "requiredTests": [
+    "tests/unit/governance/officialTestScriptsNoVacuousPass.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/officialTestScriptsNoVacuousPass.test.js",
+      "command": "npx jest tests/unit/governance/officialTestScriptsNoVacuousPass.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-03T14:57:32.115Z",
+      "finishedAt": "2026-11-03T14:57:38.241Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103142831-15e0ade6/logs/CI-FLOW-GATE-VACUOSO.log",
+      "outputSha256": "7e9a825c5ce880a1d876e3720090a7c4006436c931f36f7cc725e08282c2e2c6"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/officialTestScriptsNoVacuousPass.test.js",
+      "sha256": "b07db1e051f3d4b8bae1df1c85cf2fa89b3ca233b4c6098be6b43846f21f7021"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-03T14:57:38.250Z",
+  "proofHash": "ec88466d393716976ac6d6ae4fd8ce5f67255c981e762a1d0bb7e85b5f4fb03c",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "EROePcLJfEF5Bnm4CrWVxKQViJvUKkN+J9SiYBLeMWANUO20DV7HWfMhFiq1MQPwJ2/xMSBbc2FKXgeOTlkgCg==",
+    "signedAt": "2026-11-03T15:49:26.007Z"
+  }
+}

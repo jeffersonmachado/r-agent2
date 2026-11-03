@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "c83b2d3e-e121-4c76-9fa9-11e24bc52de0",
+  "transitionId": "763b84f2-3d05-4535-9040-dcfae93c24a5",
   "defectId": "H20-RUN-ORFAO-PROJECAO-STALE",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "c43614969fa7e5eafcf680b4028097b25143cd94",
-  "codeFingerprint": "330ad47b88702d47d7e21c625a1e77f0b4c8570f55d13be8e8dbc2fc64212ad6",
+  "evaluatedCommit": "78418d2761910a724cc57d577a83da102231f1d4",
+  "codeFingerprint": "025726e0cbee6873d83d35f7f4a11270d1f7fd12d68d4ea648f2f85553d29ab8",
   "requiredTests": [
     "tests/unit/governance/convergenceFixpoint.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/convergenceFixpoint.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-03T11:10:14.902Z",
-      "finishedAt": "2026-11-03T11:10:20.086Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103110830-b41f62a0/logs/H20-RUN-ORFAO-PROJECAO-STALE.log",
-      "outputSha256": "16c5506f1ee712e00954be6583f9425511c10e47258233246ab06f71c82295f1"
+      "startedAt": "2026-11-03T15:42:33.541Z",
+      "finishedAt": "2026-11-03T15:42:43.545Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103153700-e83d1581/logs/H20-RUN-ORFAO-PROJECAO-STALE.log",
+      "outputSha256": "1b1aae4f88f82a6325b2b49e0737baf919e9b5f136c87c601063a4b3c753c2d9"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-03T11:10:20.093Z",
-  "proofHash": "02ee97f237604d9f1f026229ede0660432fe9e40073ac0d5ac3c2f0baa04725c"
+  "createdAt": "2026-11-03T15:42:43.557Z",
+  "proofHash": "906699199c3d4d91a284ed67a9826d85d9bffe333c3a34a5f2f5a8d54ddb05d3"
 }

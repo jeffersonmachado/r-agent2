@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "c12652fe-7716-4b3b-8435-e434ce8a5700",
+  "defectId": "ENG-REPARO-NAO-VISIVEL-NA-MISSAO",
+  "severityBefore": "P2",
+  "severityAfter": "P2",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "78418d2761910a724cc57d577a83da102231f1d4",
+  "codeFingerprint": "025726e0cbee6873d83d35f7f4a11270d1f7fd12d68d4ea648f2f85553d29ab8",
+  "requiredTests": [
+    "tests/integration/engineeringMissionSourceE2E.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/integration/engineeringMissionSourceE2E.test.js",
+      "command": "npx jest tests/integration/engineeringMissionSourceE2E.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-03T15:10:33.826Z",
+      "finishedAt": "2026-11-03T15:10:46.980Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103142831-15e0ade6/logs/ENG-REPARO-NAO-VISIVEL-NA-MISSAO.log",
+      "outputSha256": "411fdd96d2347f3694b785a340053d0d111ba2c1e54221c1cb1b34a4d9daafbc"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/integration/engineeringMissionSourceE2E.test.js",
+      "sha256": "e8b417ce6cd96391b8366bb15fd3a992afc34e9c4ecae7072b3df00226768407"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-03T15:10:46.989Z",
+  "proofHash": "a9a35e04967fbd2d971228ca27de6e5d6442a09840e195acf8d332794b05d9b8",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "AfoeZRXsbcf4xW/gVCYaJ3PdbMH5gxN5oveHgAf0zNzfB4vxlRLzMeUDXRAxauFHbFQwUfLyoxdy3cINCX8CDA==",
+    "signedAt": "2026-11-03T15:49:41.381Z"
+  }
+}

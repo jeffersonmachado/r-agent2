@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "607dfb18-f99a-4a42-b15d-5ece8c7a74ef",
+  "transitionId": "51e7e163-2d8b-4ade-826e-bc317fde8342",
   "defectId": "P0-FILAS-ROLLBACK-DESTRUTIVO",
   "severityBefore": "P0",
   "severityAfter": "P0",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "c43614969fa7e5eafcf680b4028097b25143cd94",
-  "codeFingerprint": "330ad47b88702d47d7e21c625a1e77f0b4c8570f55d13be8e8dbc2fc64212ad6",
+  "evaluatedCommit": "78418d2761910a724cc57d577a83da102231f1d4",
+  "codeFingerprint": "025726e0cbee6873d83d35f7f4a11270d1f7fd12d68d4ea648f2f85553d29ab8",
   "requiredTests": [
     "tests/unit/queueCreatePersistBeforeResponse.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/queueCreatePersistBeforeResponse.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-03T10:18:32.361Z",
-      "finishedAt": "2026-11-03T10:18:35.963Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103101609-e015b999/logs/P0-FILAS-ROLLBACK-DESTRUTIVO.log",
-      "outputSha256": "48f9850a8d16f0b6af9844a598108b5f6f5586762044ac5fe62df19fa2606496"
+      "startedAt": "2026-11-03T14:30:44.802Z",
+      "finishedAt": "2026-11-03T14:30:50.098Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103142831-15e0ade6/logs/P0-FILAS-ROLLBACK-DESTRUTIVO.log",
+      "outputSha256": "006288c796e77faf73e8116f096c7d9497843639e34e8180b58bd1f000ca1a3e"
     }
   ],
   "negativeEvidence": [
@@ -63,9 +63,9 @@
   "humanAuthorization": {
     "channel": "VSCODE_AGENT",
     "by": "platform-owner:jeffersonmachado",
-    "at": "2026-11-03T11:10:47.699Z",
+    "at": "2026-11-03T14:31:20.738Z",
     "ref": "session:e92510ac-0f54-41c6-bb85-90f42042999c",
-    "agentSession": "e92510ac-0f54-41c6-bb85-90f42042999c"
+    "agentSession": "session:e92510ac-0f54-41c6-bb85-90f42042999c"
   },
   "policyDecision": {
     "decision": "REVERIFY_EXISTING_CLOSURE",
@@ -74,6 +74,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-03T10:18:35.969Z",
-  "proofHash": "5162d3cc884560f1e5db5cec34cf1dedc8b4db5385c44cf81ce2de5f9a1d40c1"
+  "createdAt": "2026-11-03T14:30:50.105Z",
+  "proofHash": "7b900972c1880d81ce4abfbc2f04c595142b802c7053dc202a045001d32c0095"
 }

@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "473b872b-ffae-41b8-b0ec-9a847721f1a0",
+  "transitionId": "1d7b1d0a-aa41-467f-a006-21ed0fb6511b",
   "defectId": "MISSAO-B1-CADEIA-CRIPTOGRAFICA",
   "severityBefore": "P0",
   "severityAfter": "P0",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "c43614969fa7e5eafcf680b4028097b25143cd94",
-  "codeFingerprint": "330ad47b88702d47d7e21c625a1e77f0b4c8570f55d13be8e8dbc2fc64212ad6",
+  "evaluatedCommit": "78418d2761910a724cc57d577a83da102231f1d4",
+  "codeFingerprint": "025726e0cbee6873d83d35f7f4a11270d1f7fd12d68d4ea648f2f85553d29ab8",
   "requiredTests": [
     "tests/unit/governance/bugClosureHistoricalGuards.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/bugClosureHistoricalGuards.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-03T10:17:23.087Z",
-      "finishedAt": "2026-11-03T10:17:27.098Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103101609-e015b999/logs/MISSAO-B1-CADEIA-CRIPTOGRAFICA.log",
-      "outputSha256": "ace1f386a71d7f782edecfbf5b1568c5e32f5cd589c82f9731cd1174b43b935f"
+      "startedAt": "2026-11-03T14:29:34.703Z",
+      "finishedAt": "2026-11-03T14:29:39.066Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103142831-15e0ade6/logs/MISSAO-B1-CADEIA-CRIPTOGRAFICA.log",
+      "outputSha256": "a858a32da29eb4f222a7f59956b8c961b894f48ddd4632b77b690a1ee8b6835d"
     }
   ],
   "negativeEvidence": [
@@ -63,9 +63,9 @@
   "humanAuthorization": {
     "channel": "VSCODE_AGENT",
     "by": "platform-owner:jeffersonmachado",
-    "at": "2026-11-03T11:10:47.699Z",
+    "at": "2026-11-03T14:31:20.738Z",
     "ref": "session:e92510ac-0f54-41c6-bb85-90f42042999c",
-    "agentSession": "e92510ac-0f54-41c6-bb85-90f42042999c"
+    "agentSession": "session:e92510ac-0f54-41c6-bb85-90f42042999c"
   },
   "policyDecision": {
     "decision": "REVERIFY_EXISTING_CLOSURE",
@@ -74,6 +74,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-03T10:17:27.107Z",
-  "proofHash": "7b55bf10899c9c3436b6515eb5281faf97a95d661eb7194ac77f34fd8ec90729"
+  "createdAt": "2026-11-03T14:29:39.072Z",
+  "proofHash": "36a2f7005633ff3d513f93f99a9a63c4c69ebfe3f884db7b9cbf78254d6bd795"
 }

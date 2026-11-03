@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "0282af5b-dfde-40dd-a8c3-57f2e9e6d884",
+  "defectId": "H18-JORNADA-FUNCIONAL-BROWSER",
+  "severityBefore": "P3",
+  "severityAfter": "P3",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "78418d2761910a724cc57d577a83da102231f1d4",
+  "codeFingerprint": "025726e0cbee6873d83d35f7f4a11270d1f7fd12d68d4ea648f2f85553d29ab8",
+  "requiredTests": [
+    "tests/unit/governance/journeyDetectors.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/journeyDetectors.test.js",
+      "command": "npx jest tests/unit/governance/journeyDetectors.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-03T15:25:50.196Z",
+      "finishedAt": "2026-11-03T15:25:56.482Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103142831-15e0ade6/logs/H18-JORNADA-FUNCIONAL-BROWSER.log",
+      "outputSha256": "3fa1bda8fed7a6ab79350f4780584415e0f81823ba42cbb9e7427364ff48f9b9"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/journeyDetectors.test.js",
+      "sha256": "84c2d6ac301368cf8f9304c9ed9bef1dd794c7aba819a3f2504d005b1fa60e6b"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-03T15:25:56.492Z",
+  "proofHash": "3c1e08008d6a493a1f15cf73b218469136e0605f424d35f9cb383462cdaa2779",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "sqcYoz12yPyqpxVRK4aBZYHbdAuPd+ODT8SR6K4jJOQn7kyQJts7VX9KPqe29aKVUzWiBh3MQRmCnw0Qk4PxCQ==",
+    "signedAt": "2026-11-03T15:49:49.757Z"
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "b19086a0-23de-473e-b378-f7ccbdbd2f75",
+  "defectId": "CI-MAIN-JEST-AMBIENTE",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "78418d2761910a724cc57d577a83da102231f1d4",
+  "codeFingerprint": "025726e0cbee6873d83d35f7f4a11270d1f7fd12d68d4ea648f2f85553d29ab8",
+  "requiredTests": [
+    "tests/unit/governance/ciWorkflowContract.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/ciWorkflowContract.test.js",
+      "command": "npx jest tests/unit/governance/ciWorkflowContract.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-03T14:33:26.495Z",
+      "finishedAt": "2026-11-03T14:33:33.299Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103142831-15e0ade6/logs/CI-MAIN-JEST-AMBIENTE.log",
+      "outputSha256": "5448a688f889fae947364418be5aa1621d004177ca156bb812dc10858810fd8b"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/ciWorkflowContract.test.js",
+      "sha256": "9f8716d05bc3e2364c9137dbf5dc580a44b9fb3d0f4eeb8b94f21735f7bbbc4c"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-03T14:33:33.311Z",
+  "proofHash": "65dbe966a3b9b1b53d017a32bcf99a82e5832f93b446d48c51b5a83c2f1942fb",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "UumMCsBCxdkymdWlMqinMEF6D9m1trcO1o9HA99wsn8wztxFxkC2h5K42s1UW/dcut3fsL0grVEaqooMNfxpBQ==",
+    "signedAt": "2026-11-03T15:49:27.394Z"
+  }
+}

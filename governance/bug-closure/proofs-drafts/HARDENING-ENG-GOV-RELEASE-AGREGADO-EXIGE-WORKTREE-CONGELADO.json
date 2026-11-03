@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "aebd9769-cb9e-48d5-8ec7-0879fc1b1219",
+  "transitionId": "c1592aad-d2aa-4932-9cac-7af6d6b65d16",
   "defectId": "HARDENING-ENG-GOV-RELEASE-AGREGADO-EXIGE-WORKTREE-CONGELADO",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "RESOLVED",
   "toState": "RESOLVED",
-  "evaluatedCommit": "c43614969fa7e5eafcf680b4028097b25143cd94",
-  "codeFingerprint": "330ad47b88702d47d7e21c625a1e77f0b4c8570f55d13be8e8dbc2fc64212ad6",
+  "evaluatedCommit": "78418d2761910a724cc57d577a83da102231f1d4",
+  "codeFingerprint": "025726e0cbee6873d83d35f7f4a11270d1f7fd12d68d4ea648f2f85553d29ab8",
   "requiredTests": [
     "tests/unit/governance/aggregateWorktreeFreeze.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/aggregateWorktreeFreeze.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-03T10:56:10.143Z",
-      "finishedAt": "2026-11-03T10:56:16.117Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103101609-e015b999/logs/HARDENING-ENG-GOV-RELEASE-AGREGADO-EXIGE-WORKTREE-CONGELADO.log",
-      "outputSha256": "ce1b2a53d47b95d1521e31bd0a747a223f3af4847b41d2e81b4e22abb0ec9638"
+      "startedAt": "2026-11-03T15:18:25.363Z",
+      "finishedAt": "2026-11-03T15:18:31.722Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103142831-15e0ade6/logs/HARDENING-ENG-GOV-RELEASE-AGREGADO-EXIGE-WORKTREE-CONGELADO.log",
+      "outputSha256": "8a1465216c313bfba2bdab1cdaa88a38ae13729ecf30cf26813e7d8cfdb711f8"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-03T10:56:16.127Z",
-  "proofHash": "22dcdaf70d47950c1e142edfbf24457a60a0a961e784c66abd9ebe3020632b52"
+  "createdAt": "2026-11-03T15:18:31.735Z",
+  "proofHash": "3f0d6b6a948d0d26b2c799832bec158ff3afc1fc9403410cbf6464a2d9b07b1f"
 }

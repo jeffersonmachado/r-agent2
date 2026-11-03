@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "11ba2098-043f-4849-8738-9670700169f3",
+  "transitionId": "4c65c561-3bdf-4e08-899f-a170a839b47f",
   "defectId": "ENG-RECONCILIACAO-STARVATION-HEAD-ESTACIONARIO",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "c43614969fa7e5eafcf680b4028097b25143cd94",
-  "codeFingerprint": "330ad47b88702d47d7e21c625a1e77f0b4c8570f55d13be8e8dbc2fc64212ad6",
+  "evaluatedCommit": "78418d2761910a724cc57d577a83da102231f1d4",
+  "codeFingerprint": "025726e0cbee6873d83d35f7f4a11270d1f7fd12d68d4ea648f2f85553d29ab8",
   "requiredTests": [
     "tests/integration/engineeringMissionSourceE2E.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/integration/engineeringMissionSourceE2E.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-03T10:33:52.139Z",
-      "finishedAt": "2026-11-03T10:34:02.451Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103101609-e015b999/logs/ENG-RECONCILIACAO-STARVATION-HEAD-ESTACIONARIO.log",
-      "outputSha256": "b63b62c2c5aaef789e36a943f94fd260c2b15f35777cc5b003e5134b91fd0877"
+      "startedAt": "2026-11-03T14:37:16.945Z",
+      "finishedAt": "2026-11-03T14:37:34.529Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103142831-15e0ade6/logs/ENG-RECONCILIACAO-STARVATION-HEAD-ESTACIONARIO.log",
+      "outputSha256": "2439740932ee508042e468fc9eafc5a601fed71580b847247c56331fa6b9b1b7"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-03T10:34:02.463Z",
-  "proofHash": "d9a80c7e6477f74f284967db29457118716ad07b5aee58218129cae69f733384"
+  "createdAt": "2026-11-03T14:37:34.540Z",
+  "proofHash": "a82167b789fd2adeca0b37669a964754bb405ae5b49314758b10b3c58a23b73f"
 }

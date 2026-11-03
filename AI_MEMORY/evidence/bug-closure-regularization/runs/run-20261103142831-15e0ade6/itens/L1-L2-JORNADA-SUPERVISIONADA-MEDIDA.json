@@ -1,0 +1,25 @@
+{
+  "id": "L1-L2-JORNADA-SUPERVISIONADA-MEDIDA",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "L2 (jornada supervisionada 8/8) e L1 (40 suites/221 testes) medidos em isolamento",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+  "teste": "tests/integration/engineeringMissionFullE2E.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [
+    "ASSINATURA_INVALIDA"
+  ],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103142831-15e0ade6/logs/L1-L2-JORNADA-SUPERVISIONADA-MEDIDA.log",
+  "draft": "governance/bug-closure/proofs-drafts/L1-L2-JORNADA-SUPERVISIONADA-MEDIDA.json",
+  "camposParaAssinar": 18,
+  "runId": "run-20261103142831-15e0ade6",
+  "identidade": {
+    "commit": "78418d2761910a724cc57d577a83da102231f1d4",
+    "sourceFingerprint": "025726e0cbee6873d83d35f7f4a11270d1f7fd12d68d4ea648f2f85553d29ab8",
+    "inventoryFingerprint": "39003d9ea50ba5df64c09cac080101b8cfe1011e0128cbf74c0f5c426d38ce8c",
+    "hardeningQueueFingerprint": "e39d3f6206ceab8060cd1a23e981b705d658950b4d1128a6a6eb277aa4e3a8c3",
+    "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+  },
+  "artifactSha256": "5ac7ab3710dca6132e8f2d648a69bf1b8ebf974b8213168749894065396464c7"
+}

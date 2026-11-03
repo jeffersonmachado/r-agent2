@@ -1,7 +1,7 @@
 {
   "artifactType": "enterprise-proof-artifact",
   "artifactVersion": "1.0.0",
-  "generatedAt": "2026-11-03T12:37:20.441Z",
+  "generatedAt": "2026-11-03T17:10:16.185Z",
   "ok": true,
   "apiBaseUrl": "http://localhost:3001",
   "authMode": "rpa",
@@ -11,21 +11,21 @@
       "name": "l03",
       "ok": true,
       "status": 0,
-      "stdout": "[pbx-voice-tts-asr-smoke] OK auth=rpa_scoped flowId=flow-voice-tts-asr-smoke-1793709408259 callId=call-voice-tts-asr-1793709408259 selftest=WARN realCallStatus=originated cdrFound=true evidence=/home/jmachado/.local/share/ragent2-runtime/qa/l03-pbx-voice-tts-asr-evidence.json",
+      "stdout": "[pbx-voice-tts-asr-smoke] OK auth=rpa_scoped flowId=flow-voice-tts-asr-smoke-1793725793791 callId=call-voice-tts-asr-1793725793791 selftest=WARN realCallStatus=originated cdrFound=true evidence=/home/jmachado/.local/share/ragent2-runtime/qa/l03-pbx-voice-tts-asr-evidence.json",
       "stderr": ""
     },
     {
       "name": "l04",
       "ok": true,
       "status": 0,
-      "stdout": "[Config] Configuração carregada de /opt/results/ria/er-fixci/api/data/config.json\n[Config] Configuração do Redis válida: redis://localhost:6379\n[2026-11-03T12:37:07.486Z] [INFO] [Sequelize] Conectado ao PostgreSQL com sucesso\n[2026-11-03T12:37:08.026Z] [INFO] [Sequelize] Conexão fechada\n[2026-11-03T12:37:08.247Z] [INFO] [Sequelize] Conectado ao PostgreSQL com sucesso\n[2026-11-03T12:37:08.293Z] [INFO] [Sequelize] Conexão fechada\n[2026-11-03T12:37:09.374Z] [INFO] [Sequelize] Conectado ao PostgreSQL com sucesso\n[2026-11-03T12:37:09.547Z] [INFO] [PBX CallEvents] scan concluído\n{\n  \"consumer\": \"pbx_cdr_l04_1793709429374\",\n  \"scanned\": 1,\n  \"emitted\": 3,\n  \"cursor\": {\n    \"calldate\": \"2026-11-03T12:38:08.031Z\",\n    \"cdrId\": \"cdr-l04-1793709426501\"\n  }\n}\n[2026-11-03T12:37:09.729Z] [DEBUG] [QueueService] getMetrics: Map tem 0 ticket(s), Array tem 0 ticket(s)\n[2026-11-03T12:37:09.731Z] [DEBUG] [QueueService] Métricas calculadas: 0 ticket(s)\n{\n  \"totalTickets\": 0,\n  \"byStatus\": {\n    \"waiting\": 0,\n    \"in_progress\": 0,\n    \"closed\": 0\n  },\n  \"byQueue\": 0,\n  \"queueDetails\": {}\n}\n[2026-11-03T12:37:09.731Z] [DEBUG] [QueueService] Teste de getMetrics após carregar dados:\n{\n  \"totalTickets\": 0,\n  \"ticketsByStatus\": {\n    \"waiting\": 0,\n    \"in_progress\": 0,\n    \"closed\": 0\n  },\n  \"ticketsByQueue\": {}\n}\n[2026-11-03T12:37:10.204Z] [DEBUG] 🔍 getAiProviderForTenant: Buscando provider\n{\n  \"tenantId\": \"jest-e2e-postfix-recurrence\"\n}\n[2026-11-03T12:37:10.305Z] [INFO] [Sequelize] Conexão fechada\n[2026-11-03T12:37:10.405Z] [INFO] [Sequelize] Conectado ao PostgreSQL com sucesso\n[2026-11-03T12:37:10.428Z] [INFO] [Sequelize] Conexão fechada\n[pbx-call-events-runtime-smoke] OK auth=rpa_scoped flowId=flow-pbx-call-events-runtime-smoke-1793709426501 executionId=fx-1793709430191-6f26801ff88b latencyMs=11 evidence=/home/jmachado/.local/share/ragent2-runtime/qa/l04-pbx-call-events-runtime-evidence.json",
-      "stderr": "[2026-11-03T12:37:10.205Z] [WARN] ⚠️ getAiProviderForTenant: Nenhum provider registrado\n{\n  \"tenantId\": \"jest-e2e-postfix-recurrence\"\n}"
+      "stdout": "[Config] Configuração carregada de /opt/results/ria/er-fixci/api/data/config.json\n[Config] Configuração do Redis válida: redis://localhost:6379\n[2026-11-03T17:10:12.279Z] [INFO] [Sequelize] Conectado ao PostgreSQL com sucesso\n[2026-11-03T17:10:12.543Z] [INFO] [Sequelize] Conexão fechada\n[2026-11-03T17:10:12.594Z] [INFO] [Sequelize] Conectado ao PostgreSQL com sucesso\n[2026-11-03T17:10:12.612Z] [INFO] [Sequelize] Conexão fechada\n[2026-11-03T17:10:13.059Z] [INFO] [Sequelize] Conectado ao PostgreSQL com sucesso\n[2026-11-03T17:10:13.166Z] [INFO] [PBX CallEvents] scan concluído\n{\n  \"consumer\": \"pbx_cdr_l04_1793725813059\",\n  \"scanned\": 1,\n  \"emitted\": 3,\n  \"cursor\": {\n    \"calldate\": \"2026-11-03T17:11:12.544Z\",\n    \"cdrId\": \"cdr-l04-1793725811687\"\n  }\n}\n[2026-11-03T17:10:13.314Z] [DEBUG] [QueueService] getMetrics: Map tem 0 ticket(s), Array tem 0 ticket(s)\n[2026-11-03T17:10:13.319Z] [DEBUG] [QueueService] Métricas calculadas: 0 ticket(s)\n{\n  \"totalTickets\": 0,\n  \"byStatus\": {\n    \"waiting\": 0,\n    \"in_progress\": 0,\n    \"closed\": 0\n  },\n  \"byQueue\": 0,\n  \"queueDetails\": {}\n}\n[2026-11-03T17:10:13.320Z] [DEBUG] [QueueService] Teste de getMetrics após carregar dados:\n{\n  \"totalTickets\": 0,\n  \"ticketsByStatus\": {\n    \"waiting\": 0,\n    \"in_progress\": 0,\n    \"closed\": 0\n  },\n  \"ticketsByQueue\": {}\n}\n[2026-11-03T17:10:13.608Z] [DEBUG] 🔍 getAiProviderForTenant: Buscando provider\n{\n  \"tenantId\": \"jest-e2e-postfix-recurrence\"\n}\n[2026-11-03T17:10:13.667Z] [INFO] [Sequelize] Conexão fechada\n[2026-11-03T17:10:13.726Z] [INFO] [Sequelize] Conectado ao PostgreSQL com sucesso\n[2026-11-03T17:10:13.747Z] [INFO] [Sequelize] Conexão fechada\n[pbx-call-events-runtime-smoke] OK auth=rpa_scoped flowId=flow-pbx-call-events-runtime-smoke-1793725811687 executionId=fx-1793725813602-f820df42cd51 latencyMs=12 evidence=/home/jmachado/.local/share/ragent2-runtime/qa/l04-pbx-call-events-runtime-evidence.json",
+      "stderr": "[2026-11-03T17:10:13.608Z] [WARN] ⚠️ getAiProviderForTenant: Nenhum provider registrado\n{\n  \"tenantId\": \"jest-e2e-postfix-recurrence\"\n}"
     },
     {
       "name": "l05",
       "ok": true,
       "status": 0,
-      "stdout": "[inbox-smoke] OK ticket=default-1793709434920-buvs0gg conversation=conv-1793709435115-7fd29e1b61f5 queue=ux1_smoke_1793709434875 quickReply=qr-1793709436026-tazta8yzf phoneMasking=false->true evidence=/home/jmachado/.local/share/ragent2-runtime/qa/l05-chatpro-omnichannel-evidence.json",
+      "stdout": "[inbox-smoke] OK ticket=default-1793725814006-q1wyq6v conversation=conv-1793725814034-5c336171cf8e queue=ux1_smoke_1793725813994 quickReply=qr-1793725814392-97uovuo4i phoneMasking=false->true evidence=/home/jmachado/.local/share/ragent2-runtime/qa/l05-chatpro-omnichannel-evidence.json",
       "stderr": ""
     }
   ],
@@ -78,8 +78,8 @@
     },
     "warnings": []
   },
-  "runId": "rap-governed-20261103101550258-3dac3e2d",
-  "sourceFingerprint": "330ad47b88702d47d7e21c625a1e77f0b4c8570f55d13be8e8dbc2fc64212ad6",
-  "sourceCommit": "c43614969fa7e5eafcf680b4028097b25143cd94",
-  "sourceTree": "7a1162228d09d3ad30e13c204d919030ff1bbd8e"
+  "runId": "rap-governed-20261103142739249-066256bb",
+  "sourceFingerprint": "025726e0cbee6873d83d35f7f4a11270d1f7fd12d68d4ea648f2f85553d29ab8",
+  "sourceCommit": "78418d2761910a724cc57d577a83da102231f1d4",
+  "sourceTree": "00a0988fbc17046e618fd538b9c9f74d7757bb6e"
 }

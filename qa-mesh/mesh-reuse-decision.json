@@ -1,29 +1,29 @@
 {
   "artifactType": "mesh-reuse-decision",
   "artifactVersion": "1.0.0",
-  "generatedAt": "2026-11-03T12:48:11.808Z",
-  "runId": "rap-governed-20261103101550258-3dac3e2d",
-  "sourceFingerprint": "330ad47b88702d47d7e21c625a1e77f0b4c8570f55d13be8e8dbc2fc64212ad6",
-  "runStartedAt": "2026-11-03T10:15:50.799Z",
-  "decision": "REUSE",
-  "code": "MESH_REUSE_OK",
-  "detail": "execução canônica GO DESTE run cobre o registry corrente: reexecução suprimida",
+  "generatedAt": "2026-11-03T17:21:10.494Z",
+  "runId": "rap-governed-20261103142739249-066256bb",
+  "sourceFingerprint": "025726e0cbee6873d83d35f7f4a11270d1f7fd12d68d4ea648f2f85553d29ab8",
+  "runStartedAt": "2026-11-03T14:27:39.632Z",
+  "decision": "RERUN",
+  "code": "MESH_EVIDENCE_NOT_GO",
+  "detail": "status=NO_GO reasons=[\"CRITICAL_DOMAIN_FAILED:omnichannel\",\"BASELINE_PASS_RATE_REGRESSION\",\"BASELINE_INFRA_REGRESSION\"]",
   "registryScenarios": 143,
   "evidence": {
-    "goNoGoGeneratedAt": "2026-11-03T12:20:25.253Z",
-    "goNoGoStatus": "GO",
-    "historyEntry": "mesh-2026-11-03T11-27-04-915Z.json"
+    "goNoGoGeneratedAt": "2026-11-03T17:04:13.007Z",
+    "goNoGoStatus": "NO_GO",
+    "historyEntry": "mesh-2026-11-03T16-19-40-463Z.json"
   },
   "checks": [
     {
       "code": "SAME_RUN_ID",
       "ok": true,
-      "detail": "runId=rap-governed-20261103101550258-3dac3e2d"
+      "detail": "runId=rap-governed-20261103142739249-066256bb"
     },
     {
       "code": "SAME_SOURCE",
       "ok": true,
-      "detail": "sourceFingerprint=330ad47b8870…"
+      "detail": "sourceFingerprint=025726e0cbee…"
     },
     {
       "code": "RELEASE_GATE_BOUND",
@@ -38,22 +38,7 @@
     {
       "code": "CANONICAL_HISTORY",
       "ok": true,
-      "detail": "qa-mesh/meshHistory/mesh-2026-11-03T11-27-04-915Z.json"
-    },
-    {
-      "code": "DECISION_GO",
-      "ok": true,
-      "detail": "status=GO"
-    },
-    {
-      "code": "SAME_RUN_TIME",
-      "ok": true,
-      "detail": "generatedAt=2026-11-03T12:20:25.253Z"
-    },
-    {
-      "code": "REGISTRY_COVERED",
-      "ok": true,
-      "detail": "143 cenários cobertos pelo run"
+      "detail": "qa-mesh/meshHistory/mesh-2026-11-03T16-19-40-463Z.json"
     }
   ]
 }

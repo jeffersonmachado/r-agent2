@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "9fbbc9f1-3852-4e89-8825-b03c4913e351",
+  "transitionId": "957b0c51-ec90-4641-834a-b2c552549a81",
   "defectId": "HARDENING-ENG-GOV-RELEASE-P0-4",
   "severityBefore": "P0",
   "severityAfter": "P0",
   "fromState": "RESOLVED",
   "toState": "RESOLVED",
-  "evaluatedCommit": "c43614969fa7e5eafcf680b4028097b25143cd94",
-  "codeFingerprint": "330ad47b88702d47d7e21c625a1e77f0b4c8570f55d13be8e8dbc2fc64212ad6",
+  "evaluatedCommit": "78418d2761910a724cc57d577a83da102231f1d4",
+  "codeFingerprint": "025726e0cbee6873d83d35f7f4a11270d1f7fd12d68d4ea648f2f85553d29ab8",
   "requiredTests": [
     "tests/unit/governance/assertCanonicalReleaseDecision.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/assertCanonicalReleaseDecision.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-03T10:16:32.378Z",
-      "finishedAt": "2026-11-03T10:16:37.168Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103101609-e015b999/logs/HARDENING-ENG-GOV-RELEASE-P0-4.log",
-      "outputSha256": "3a847d31a4116936055823dcb348a40dd3a36c700ad54962531edeeff1ac52a6"
+      "startedAt": "2026-11-03T14:28:48.533Z",
+      "finishedAt": "2026-11-03T14:28:52.838Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103142831-15e0ade6/logs/HARDENING-ENG-GOV-RELEASE-P0-4.log",
+      "outputSha256": "1443d701db80d6b45565fadc0859e398ea43510ceeed3496b2f2d0f289928086"
     }
   ],
   "negativeEvidence": [
@@ -63,9 +63,9 @@
   "humanAuthorization": {
     "channel": "VSCODE_AGENT",
     "by": "platform-owner:jeffersonmachado",
-    "at": "2026-11-03T11:10:47.699Z",
+    "at": "2026-11-03T14:31:20.738Z",
     "ref": "session:e92510ac-0f54-41c6-bb85-90f42042999c",
-    "agentSession": "e92510ac-0f54-41c6-bb85-90f42042999c"
+    "agentSession": "session:e92510ac-0f54-41c6-bb85-90f42042999c"
   },
   "policyDecision": {
     "decision": "REVERIFY_EXISTING_CLOSURE",
@@ -74,6 +74,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-03T10:16:37.176Z",
-  "proofHash": "7ef66a8b3f3f04123a61e839cbae2d71fe5138e4bb8e32649730b157660e63aa"
+  "createdAt": "2026-11-03T14:28:52.846Z",
+  "proofHash": "eb7e8f1a7ebaf3dcb8e940677c5d149c67f4d349a51885071e029ef7fce748a5"
 }

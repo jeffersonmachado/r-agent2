@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "ba659e75-dca9-4d8d-b671-7ed31feb87d5",
+  "defectId": "H21-CRM-PERSISTENCIA-X-METRICAS",
+  "severityBefore": "P2",
+  "severityAfter": "P2",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "78418d2761910a724cc57d577a83da102231f1d4",
+  "codeFingerprint": "025726e0cbee6873d83d35f7f4a11270d1f7fd12d68d4ea648f2f85553d29ab8",
+  "requiredTests": [
+    "tests/unit/crmRealtimeEvents.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/crmRealtimeEvents.test.js",
+      "command": "npx jest tests/unit/crmRealtimeEvents.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-03T15:17:30.079Z",
+      "finishedAt": "2026-11-03T15:17:39.734Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103142831-15e0ade6/logs/H21-CRM-PERSISTENCIA-X-METRICAS.log",
+      "outputSha256": "b54123ce5d65f9236a157ea6ff9925856fe0e00e2fb4ac13850f76b978b7f139"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/crmRealtimeEvents.test.js",
+      "sha256": "9614d27624951fefac5e7ef08bec743e140de916175a31b44cb83b0ce5e4854c"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-03T15:17:39.742Z",
+  "proofHash": "fff05f0f73d797d96bac4e26054db5b5775fb0da3bac4f2d1b0f454e63b1e066",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "67TBuduqLNAUowZdkT1lt7d6BJY9fbl8AYutyk18NTQrCictQD6IS0PDNEiDCTVsKPq8RODmFjqp9meCVXDSBA==",
+    "signedAt": "2026-11-03T15:49:51.143Z"
+  }
+}

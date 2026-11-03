@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "92ddcee3-4589-47e9-8277-2ca37959a705",
+  "transitionId": "312726d0-7f6b-49ca-8de1-d3224649e7cf",
   "defectId": "FASE6-NOVO-CANDIDATO-POR-MUDANCA-DE-FINGERPRINT",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "c43614969fa7e5eafcf680b4028097b25143cd94",
-  "codeFingerprint": "330ad47b88702d47d7e21c625a1e77f0b4c8570f55d13be8e8dbc2fc64212ad6",
+  "evaluatedCommit": "78418d2761910a724cc57d577a83da102231f1d4",
+  "codeFingerprint": "025726e0cbee6873d83d35f7f4a11270d1f7fd12d68d4ea648f2f85553d29ab8",
   "requiredTests": [
     "tests/unit/governance/newCandidateOnFingerprintChange.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/newCandidateOnFingerprintChange.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-03T10:34:02.470Z",
-      "finishedAt": "2026-11-03T10:34:05.085Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103101609-e015b999/logs/FASE6-NOVO-CANDIDATO-POR-MUDANCA-DE-FINGERPRINT.log",
-      "outputSha256": "fcf2a5c5f3a773763b20a96faddd87e043c5b1c212ed4235b62bb87bdd2fbd87"
+      "startedAt": "2026-11-03T14:37:34.546Z",
+      "finishedAt": "2026-11-03T14:37:37.826Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103142831-15e0ade6/logs/FASE6-NOVO-CANDIDATO-POR-MUDANCA-DE-FINGERPRINT.log",
+      "outputSha256": "1af98eae82035597b669b110c70b32b0cc63d6ce00f332556fca88eb225ff237"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-03T10:34:05.091Z",
-  "proofHash": "cb016cf0e249e30a4792d667de2fcae1fd31abf549c38f62baf7189801177297"
+  "createdAt": "2026-11-03T14:37:37.836Z",
+  "proofHash": "5558232807990a2a9e28a817de64be2f0ddaa661b2adea72a7d14af36accf90a"
 }

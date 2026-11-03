@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "e0882f79-b2ce-49f4-ada2-372efdbf92ad",
+  "transitionId": "2e6aa1d2-9fe7-4652-b3c5-c129e1fe28d6",
   "defectId": "ENG-TESTE-MEDE-REPO-DIFERENTE-DO-SERVICO",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "c43614969fa7e5eafcf680b4028097b25143cd94",
-  "codeFingerprint": "330ad47b88702d47d7e21c625a1e77f0b4c8570f55d13be8e8dbc2fc64212ad6",
+  "evaluatedCommit": "78418d2761910a724cc57d577a83da102231f1d4",
+  "codeFingerprint": "025726e0cbee6873d83d35f7f4a11270d1f7fd12d68d4ea648f2f85553d29ab8",
   "requiredTests": [
     "tests/integration/engineeringPromotionService.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/integration/engineeringPromotionService.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-03T10:49:25.996Z",
-      "finishedAt": "2026-11-03T10:51:57.140Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103101609-e015b999/logs/ENG-TESTE-MEDE-REPO-DIFERENTE-DO-SERVICO.log",
-      "outputSha256": "453eb0880a8d0c195cf13191af326f13d2be766de86ca7a68e67c3cb4d8d41db"
+      "startedAt": "2026-11-03T15:10:47.001Z",
+      "finishedAt": "2026-11-03T15:13:51.884Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103142831-15e0ade6/logs/ENG-TESTE-MEDE-REPO-DIFERENTE-DO-SERVICO.log",
+      "outputSha256": "aca771d7956822f71bc393b9efdf59b6515d7cf60084f52d7bb84044ffda5593"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-03T10:51:57.152Z",
-  "proofHash": "5a594b8a548449e39a2b6a69c4ab743ad36ab0cc8d2d8a9b2b98a0d7a8aa5ae7"
+  "createdAt": "2026-11-03T15:13:51.896Z",
+  "proofHash": "85ef4c966f25065942d9894d63ce57f62a04f35523fb8cfa1fab248e0cc9806e"
 }

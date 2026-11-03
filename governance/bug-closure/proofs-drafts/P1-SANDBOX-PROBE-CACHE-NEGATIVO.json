@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "962a40f4-b46a-4347-8090-1773946e42db",
+  "transitionId": "229a054a-dbcb-4f6a-af28-c0458c316980",
   "defectId": "P1-SANDBOX-PROBE-CACHE-NEGATIVO",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "c43614969fa7e5eafcf680b4028097b25143cd94",
-  "codeFingerprint": "330ad47b88702d47d7e21c625a1e77f0b4c8570f55d13be8e8dbc2fc64212ad6",
+  "evaluatedCommit": "78418d2761910a724cc57d577a83da102231f1d4",
+  "codeFingerprint": "025726e0cbee6873d83d35f7f4a11270d1f7fd12d68d4ea648f2f85553d29ab8",
   "requiredTests": [
     "tests/unit/engineeringRouterSandboxAvailabilityCache.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/engineeringRouterSandboxAvailabilityCache.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-03T10:39:49.574Z",
-      "finishedAt": "2026-11-03T10:39:52.549Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103101609-e015b999/logs/P1-SANDBOX-PROBE-CACHE-NEGATIVO.log",
-      "outputSha256": "bd300b842236005e4ccaedaaaee29e11855235ddc34ca8e1b9e575f79d28133c"
+      "startedAt": "2026-11-03T14:43:49.291Z",
+      "finishedAt": "2026-11-03T14:43:55.115Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103142831-15e0ade6/logs/P1-SANDBOX-PROBE-CACHE-NEGATIVO.log",
+      "outputSha256": "3dabe749bc8f13c3245b71440e304ba4db71f6b1f07d4414a7aba9de138a3d97"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-03T10:39:52.557Z",
-  "proofHash": "e54c308c87c884122d665cba6ed2e892e5afa510bb87b64c19892179a623492e"
+  "createdAt": "2026-11-03T14:43:55.124Z",
+  "proofHash": "39452c1683f52a0aa5341dffb78d6422870b3fab5eb4ef86637ecacebbb65379"
 }

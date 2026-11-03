@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "f59670c7-bced-43b4-ab9c-d777b6299778",
+  "transitionId": "fe09edc2-0658-4412-9f78-f938dbc901a1",
   "defectId": "ENGINEERING-BUGLOOP-DEPENDE-DE-BANCO-LIMPO",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "c43614969fa7e5eafcf680b4028097b25143cd94",
-  "codeFingerprint": "330ad47b88702d47d7e21c625a1e77f0b4c8570f55d13be8e8dbc2fc64212ad6",
+  "evaluatedCommit": "78418d2761910a724cc57d577a83da102231f1d4",
+  "codeFingerprint": "025726e0cbee6873d83d35f7f4a11270d1f7fd12d68d4ea648f2f85553d29ab8",
   "requiredTests": [
     "tests/integration/engineeringBugLoopNaturalPathE2E.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/integration/engineeringBugLoopNaturalPathE2E.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-03T10:52:49.060Z",
-      "finishedAt": "2026-11-03T10:54:32.256Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103101609-e015b999/logs/ENGINEERING-BUGLOOP-DEPENDE-DE-BANCO-LIMPO.log",
-      "outputSha256": "42cc21459558363340b438164f3957754aee8336dcc83fe688ff9c8d70add4fa"
+      "startedAt": "2026-11-03T15:14:36.593Z",
+      "finishedAt": "2026-11-03T15:16:37.994Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103142831-15e0ade6/logs/ENGINEERING-BUGLOOP-DEPENDE-DE-BANCO-LIMPO.log",
+      "outputSha256": "5cf87c90db3f659240bbf727068f8669d26c3eb8467d65f31819f229206d2205"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-03T10:54:32.268Z",
-  "proofHash": "14f3ec06280b86ea54311976e1f68c726782cc003a7e754c837ea5a0f64d03bf"
+  "createdAt": "2026-11-03T15:16:38.006Z",
+  "proofHash": "1c96487fd6f1f074c23fb01692dcbb928c69e143a3a891f3e478afa1a8c7cfaa"
 }
