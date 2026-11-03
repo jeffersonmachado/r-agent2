@@ -82,7 +82,18 @@ beforeAll(async () => {
   } catch (error) {
     dbAvailable = false;
     dbReason = error.message;
+    return;
   }
+
+  // Resíduo de execução interrompida: o sweep é GLOBAL por natureza — findings de teste deixados
+  // por execuções anteriores (ex.: [ADVERSARIAL] ADV-* do review adversarial, com plano COMMAND que
+  // roda `npx jest` em sandbox Docker) competem com o finding desta suíte. Cada reprodução COMMAND
+  // custa ~20-30s, então poucos resíduos bastam para o ciclo não drenar no orçamento de 120s do
+  // `stopWorkerAndDrain` — medido no selo V2 (lote 1), onde esta suíte reprovava com "worker nao
+  // drenou em 120000ms" e passava isolada em ~2s. O purge não afrouxa asserção: o cenário continua
+  // exigindo que o BOOT encontre e processe o finding REAL que a própria suíte planta.
+  const { purgeTestFindings } = require('../helpers/purgeTestFindings');
+  await purgeTestFindings();
 }, 60000);
 
 afterAll(async () => {
