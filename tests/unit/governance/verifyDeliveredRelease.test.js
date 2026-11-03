@@ -355,6 +355,61 @@ describe('verify-delivered-release — fail-closed behavior', () => {
     expect(gates.governance_mandatory_gates).toBe('DEFERRED');
   });
 
+  test('DEFERRED (not FAIL) when the only missing scorecard evidence is the DELIVERED self-output report', () => {
+    const dir = makeTempDir();
+    buildMinimalValidRoot(dir, provenance);
+    // Scorecard com RAP-055/056 abaixo de 10 (fase DELIVERED pendente).
+    writeJson(dir, 'governance/rap-master-scorecard.json', {
+      runId: 'rap-release-20260820-000000-testtest',
+      generatedAt: '2026-08-20T00:01:00.000Z',
+      artifactType: 'rap-master-scorecard', artifactVersion: '1.0.0',
+      runStatus: 'PACKAGED',
+      dimensions: [
+        { id: 'RAP-055', name: 'Delivered', score: 6, target: 10 },
+        { id: 'RAP-056', name: 'Source/Proof', score: 6, target: 10 },
+      ],
+    });
+    writeJson(dir, 'governance/final-governance-report.json', {
+      runId: 'rap-release-20260820-000000-testtest',
+      generatedAt: '2026-08-20T00:01:00.000Z',
+      finalDecision: 'PASS_WITH_DEFERRED_PACKAGE_GATE',
+    });
+    // Ciclo DELIVERED real: o proof set materializado em PRE_PACKAGE marca o
+    // delivered-release-verification-report.json como ausente (é produzido por
+    // este próprio verifier). Só isso pode faltar — o ramo DEFERRED resolve.
+    updateJson(dir, 'governance/evidence-manifest.json', (manifest) => {
+      manifest.scorecardEvidence.records.push(
+        { dimensionId: 'RAP-055', requirementId: 'runtime-validated', path: 'governance/delivered-release-verification-report.json', exists: false },
+        { dimensionId: 'RAP-055', requirementId: 'governed', path: 'governance/delivered-release-verification-report.json', exists: false },
+        { dimensionId: 'RAP-056', requirementId: 'runtime-validated', path: 'governance/delivered-release-verification-report.json', exists: false },
+      );
+    });
+
+    const result = runVerifier(dir);
+    expect(result.exitCode).toBe(0);
+    expect(result.output).toContain('DELIVERED_RELEASE_VERIFIED');
+    const gates = parseGateStatuses(result.output);
+    expect(gates.master_scorecard).toBe('DEFERRED');
+    expect(gates.governance_mandatory_gates).toBe('DEFERRED');
+  });
+
+  test('FAIL when a non-DELIVERED scorecard evidence record is missing', () => {
+    const dir = makeTempDir();
+    buildMinimalValidRoot(dir, provenance);
+    // Ausência de prova para QUALQUER artefato que não seja o self-output do
+    // verifier continua fail-closed — não pode ser absorvida pela tolerância.
+    updateJson(dir, 'governance/evidence-manifest.json', (manifest) => {
+      manifest.scorecardEvidence.records.push(
+        { dimensionId: 'RAP-078', requirementId: 'governed', path: 'governance/final-proof-report.json', exists: false },
+      );
+    });
+
+    const result = runVerifier(dir);
+    expect(result.exitCode).toBe(1);
+    const gates = parseGateStatuses(result.output);
+    expect(gates.master_scorecard).toBe('FAIL');
+  });
+
   test('FAIL when package manifest is absent (no synthetic fallback allowed)', () => {
     const dir = makeTempDir();
     buildMinimalValidRoot(dir, provenance);

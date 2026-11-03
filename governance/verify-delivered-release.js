@@ -571,8 +571,20 @@ function checkMasterScorecard() {
   const { assessScorecardEvidenceProof } = require('../scripts/governance/lib/scorecard-evidence-proof');
   const proofVerdict = assessScorecardEvidenceProof(manifest && manifest.scorecardEvidence);
   if (!proofVerdict.ok) {
-    const codes = [...new Set(proofVerdict.violations.map((violation) => String(violation.code)))];
-    return fail(gate, `SCORECARD_EVIDENCE_PROOF_INVALID - ${codes.join(', ')} (${proofVerdict.violations.length} violação(ões) em ${proofVerdict.checked} prova(s))`);
+    // Tolerância DELIVERED (quebra de ciclo): a evidência de RAP-055/056 é
+    // `governance/delivered-release-verification-report.json`, produzida por ESTE
+    // verifier ao final da execução. No proof set materializado em PRE_PACKAGE ela
+    // ainda não existe (`SCORECARD_EVIDENCE_MISSING` legítimo); o ramo DEFERRED
+    // abaixo (abaixo de 10 SÓ em RAP-055/056) é quem resolve esse ciclo. Ausência
+    // de prova para QUALQUER outro artefato continua sendo FAIL-closed.
+    const hardViolations = proofVerdict.violations.filter((violation) => !(
+      violation.code === 'SCORECARD_EVIDENCE_MISSING'
+      && violation.path === 'governance/delivered-release-verification-report.json'
+    ));
+    if (hardViolations.length > 0) {
+      const codes = [...new Set(hardViolations.map((violation) => String(violation.code)))];
+      return fail(gate, `SCORECARD_EVIDENCE_PROOF_INVALID - ${codes.join(', ')} (${hardViolations.length} violação(ões) em ${proofVerdict.checked} prova(s))`);
+    }
   }
 
   const dimensions = Array.isArray(scorecard.dimensions) ? scorecard.dimensions : [];
