@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-11-04T03:22:03.317Z",
-  "artifact": "r-agent2-20261104-000924.zip",
+  "generatedAt": "2026-11-04T16:50:52.896Z",
+  "artifact": "r-agent2-20261104-133409.zip",
   "pass": true,
   "decision": "GO",
   "totalChecks": 9,
@@ -12,9 +12,9 @@
       "pass": true,
       "severity": "CRITICAL",
       "details": {
-        "zipName": "r-agent2-20261104-000924.zip",
-        "computedHash": "bce738f5798e6df768e8d0678df075bffee8637db28622ce8448af6d114556be",
-        "recordedHash": "bce738f5798e6df768e8d0678df075bffee8637db28622ce8448af6d114556be",
+        "zipName": "r-agent2-20261104-133409.zip",
+        "computedHash": "08bf3981227ad22e37a750d66ae0c60465f66e6577b1c1604f4327c6bcf2975e",
+        "recordedHash": "08bf3981227ad22e37a750d66ae0c60465f66e6577b1c1604f4327c6bcf2975e",
         "match": true
       }
     },
@@ -25,7 +25,7 @@
       "details": {
         "valid": true,
         "hashMatch": true,
-        "subject": "r-agent2-20261104-000924.manifest.json"
+        "subject": "r-agent2-20261104-133409.manifest.json"
       }
     },
     {
@@ -34,7 +34,7 @@
       "severity": "CRITICAL",
       "details": {
         "valid": true,
-        "subject": "r-agent2-20261104-000924.zip"
+        "subject": "r-agent2-20261104-133409.zip"
       }
     },
     {
@@ -55,7 +55,7 @@
         "chainRootValid": true,
         "tampered": false,
         "failures": [],
-        "storedChainRoot": "0fd450f1a93f3c1bf2cd11c3…"
+        "storedChainRoot": "b5d11b48999a8c8af24846cb…"
       }
     },
     {
@@ -99,10 +99,10 @@
     }
   ],
   "summary": "Todos os 9 checks de integridade passaram. Nenhuma adulteração detectada.",
-  "runId": "rap-governed-20261103211809917-039cadf5",
-  "sourceFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
-  "sourceCommit": "39b224fb7312e099180cf2c681d003fadda85a41",
+  "runId": "rap-governed-20261104102654604-d5d764ea",
+  "sourceFingerprint": "6d91637f14c652d9dc1029b58f57c0300fb5b62e443f6192a0db95fc0769fa0c",
+  "sourceCommit": "16b651d77569b9a225b26c4f086530784f729e17",
   "artifactType": "tamper-detection-report",
   "artifactVersion": "1.0.0",
-  "reboundAt": "2026-11-04T03:24:13.347Z"
+  "reboundAt": "2026-11-04T16:53:31.274Z"
 }
