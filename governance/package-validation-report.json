@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-04T01:02:50.246Z",
+  "generatedAt": "2026-11-04T01:58:23.027Z",
   "ok": false,
   "zipPath": null,
   "zipName": null,
@@ -46,10 +46,10 @@
   "testPlanHash": null,
   "testResultHash": null,
   "evidenceManifestHash": null,
-  "startedAt": "2026-11-04T01:01:59.480Z",
-  "finishedAt": "2026-11-04T01:02:50.247Z",
+  "startedAt": "2026-11-04T01:57:39.086Z",
+  "finishedAt": "2026-11-04T01:58:23.028Z",
   "producer": "tools/system/platform-readiness.js",
-  "gitCommit": "4aeea47d956e49d78815a05379397afebd31fbff",
-  "gitTree": "1283cee03afc762f324c18b8558a9e9191e3d6b2",
+  "gitCommit": "a641a9a876d424de7d2dff835afc1ecd282e1a8e",
+  "gitTree": "71dd21172b8bc4dab7ccd64b45275a1003fc91fd",
   "blockingFindings": []
 }
