@@ -1,106 +1,98 @@
 {
-  "generatedAt": "2026-11-04T06:19:03.656Z",
+  "generatedAt": "2026-11-04T17:21:50.004Z",
   "engine": "final-governance-engine/v1",
   "artifactType": "final-governance-report",
   "artifactVersion": "2.0.0",
-  "runId": "rap-governed-20261103211809917-039cadf5",
-  "sourceFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
-  "sourceCommit": "39b224fb7312e099180cf2c681d003fadda85a41",
+  "runId": "rap-governed-20261104102654604-d5d764ea",
+  "sourceFingerprint": "6d91637f14c652d9dc1029b58f57c0300fb5b62e443f6192a0db95fc0769fa0c",
+  "sourceCommit": "16b651d77569b9a225b26c4f086530784f729e17",
   "policyId": "RAP-AGENT-CONSTITUTION",
   "policyVersion": "1.0.4",
   "policyFingerprint": "4105767b265223362456fabfab89eef312e12d777e55af409f5eb9b1bb8548fb",
   "strictMode": true,
-  "finalDecision": "NO_GO:GOVERNANCE_BLOCKED [RUN_INVALIDATED: RUN_INVALIDATED: rap-governed-20261103211809917-039cadf5 is invalidated | INVALID_ARTIFACT: missing lineage fields: runId, sourceFingerprint, artifactType, artifactVersion | Governance signature inválida — governança adulterada ou chave diverge]",
-  "autonomousReady": false,
-  "allChecksPass": false,
-  "criticalBlocked": true,
+  "finalDecision": "AUTONOMOUS_READY_GO",
+  "autonomousReady": true,
+  "allChecksPass": true,
+  "criticalBlocked": false,
   "checks": [
     {
       "id": "run_context",
       "gateId": "run_context",
       "mandatory": true,
-      "status": "FAIL",
-      "pass": false,
-      "severity": "CRITICAL",
-      "runId": "rap-governed-20261103211809917-039cadf5",
-      "sourceFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
-      "reason": "RUN_INVALIDATED: RUN_INVALIDATED: rap-governed-20261103211809917-039cadf5 is invalidated",
+      "status": "PASS",
+      "pass": true,
+      "severity": "OK",
+      "runId": "rap-governed-20261104102654604-d5d764ea",
+      "sourceFingerprint": "6d91637f14c652d9dc1029b58f57c0300fb5b62e443f6192a0db95fc0769fa0c",
+      "reason": null,
       "runContext": {
-        "runId": "rap-governed-20261103211809917-039cadf5",
-        "sourceFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
-        "sourceCommit": "39b224fb7312e099180cf2c681d003fadda85a41",
-        "sourceTree": "5bbbccb009dce7cefc50269ff5f18e56068d6a24",
-        "startedAt": "2026-11-03T21:18:10.125Z",
-        "generatedAt": "2026-11-04T06:07:24.337Z",
-        "status": "INVALIDATED",
+        "runId": "rap-governed-20261104102654604-d5d764ea",
+        "sourceFingerprint": "6d91637f14c652d9dc1029b58f57c0300fb5b62e443f6192a0db95fc0769fa0c",
+        "sourceCommit": "16b651d77569b9a225b26c4f086530784f729e17",
+        "sourceTree": "007dc96211354252640440d77926d9a27803e7c7",
+        "startedAt": "2026-11-04T10:26:55.248Z",
+        "generatedAt": "2026-11-04T17:21:38.265Z",
+        "status": "COMPLETED",
         "artifactType": "run-context",
         "artifactVersion": "1.0.0",
         "policyId": "RAP-AGENT-CONSTITUTION",
         "policyVersion": "1.0.4",
         "policyFingerprint": "4105767b265223362456fabfab89eef312e12d777e55af409f5eb9b1bb8548fb",
         "lastGovernedStage": "final-governance",
-        "lastSourceVerificationAt": "2026-11-04T03:26:22.641Z",
+        "lastSourceVerificationAt": "2026-11-04T17:21:38.265Z",
         "stageHistory": [
           {
             "stage": "final-governance",
-            "sourceFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
-            "verifiedAt": "2026-11-04T03:02:41.307Z"
+            "sourceFingerprint": "6d91637f14c652d9dc1029b58f57c0300fb5b62e443f6192a0db95fc0769fa0c",
+            "verifiedAt": "2026-11-04T16:50:29.209Z"
           },
           {
             "stage": "final-consistency",
-            "sourceFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
-            "verifiedAt": "2026-11-04T03:03:38.229Z"
+            "sourceFingerprint": "6d91637f14c652d9dc1029b58f57c0300fb5b62e443f6192a0db95fc0769fa0c",
+            "verifiedAt": "2026-11-04T16:51:40.339Z"
           },
           {
             "stage": "final-governance",
-            "sourceFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
-            "verifiedAt": "2026-11-04T03:03:38.796Z"
+            "sourceFingerprint": "6d91637f14c652d9dc1029b58f57c0300fb5b62e443f6192a0db95fc0769fa0c",
+            "verifiedAt": "2026-11-04T16:51:40.995Z"
           },
           {
             "stage": "final-governance",
-            "sourceFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
-            "verifiedAt": "2026-11-04T03:05:08.040Z"
+            "sourceFingerprint": "6d91637f14c652d9dc1029b58f57c0300fb5b62e443f6192a0db95fc0769fa0c",
+            "verifiedAt": "2026-11-04T16:53:31.761Z"
           },
           {
             "stage": "final-governance",
-            "sourceFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
-            "verifiedAt": "2026-11-04T03:21:53.008Z"
+            "sourceFingerprint": "6d91637f14c652d9dc1029b58f57c0300fb5b62e443f6192a0db95fc0769fa0c",
+            "verifiedAt": "2026-11-04T17:15:19.968Z"
           },
           {
             "stage": "final-consistency",
-            "sourceFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
-            "verifiedAt": "2026-11-04T03:22:45.492Z"
+            "sourceFingerprint": "6d91637f14c652d9dc1029b58f57c0300fb5b62e443f6192a0db95fc0769fa0c",
+            "verifiedAt": "2026-11-04T17:16:30.417Z"
           },
           {
             "stage": "final-governance",
-            "sourceFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
-            "verifiedAt": "2026-11-04T03:22:46.099Z"
+            "sourceFingerprint": "6d91637f14c652d9dc1029b58f57c0300fb5b62e443f6192a0db95fc0769fa0c",
+            "verifiedAt": "2026-11-04T17:16:31.971Z"
           },
           {
             "stage": "final-governance",
-            "sourceFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
-            "verifiedAt": "2026-11-04T03:24:14.227Z"
+            "sourceFingerprint": "6d91637f14c652d9dc1029b58f57c0300fb5b62e443f6192a0db95fc0769fa0c",
+            "verifiedAt": "2026-11-04T17:18:44.402Z"
           },
           {
             "stage": "final-consistency",
-            "sourceFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
-            "verifiedAt": "2026-11-04T03:26:22.049Z"
+            "sourceFingerprint": "6d91637f14c652d9dc1029b58f57c0300fb5b62e443f6192a0db95fc0769fa0c",
+            "verifiedAt": "2026-11-04T17:21:36.786Z"
           },
           {
             "stage": "final-governance",
-            "sourceFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
-            "verifiedAt": "2026-11-04T03:26:22.641Z"
+            "sourceFingerprint": "6d91637f14c652d9dc1029b58f57c0300fb5b62e443f6192a0db95fc0769fa0c",
+            "verifiedAt": "2026-11-04T17:21:38.265Z"
           }
         ],
-        "completedAt": "2026-11-04T03:08:44.046Z",
-        "invalidatedAt": "2026-11-04T06:07:24.337Z",
-        "invalidation": {
-          "reason": "RUN_SOURCE_DRIFT",
-          "stage": "final-governance",
-          "expectedSourceFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
-          "actualSourceFingerprint": "d13bbbb5e5f6bd6b4fa70a89e1c0f8756af6cb75d2bd4aab77331a14ed514c63",
-          "detectedAt": "2026-11-04T06:07:24.337Z"
-        }
+        "completedAt": "2026-11-04T16:57:23.487Z"
       }
     },
     {
@@ -110,8 +102,8 @@
       "status": "PASS",
       "pass": true,
       "severity": "OK",
-      "runId": "rap-governed-20261103211809917-039cadf5",
-      "sourceFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
+      "runId": "rap-governed-20261104102654604-d5d764ea",
+      "sourceFingerprint": "6d91637f14c652d9dc1029b58f57c0300fb5b62e443f6192a0db95fc0769fa0c",
       "reason": null,
       "dimensions": 78,
       "dimensionsAt10": 78,
@@ -125,8 +117,8 @@
       "status": "PASS",
       "pass": true,
       "severity": "OK",
-      "runId": "rap-governed-20261103211809917-039cadf5",
-      "sourceFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
+      "runId": "rap-governed-20261104102654604-d5d764ea",
+      "sourceFingerprint": "6d91637f14c652d9dc1029b58f57c0300fb5b62e443f6192a0db95fc0769fa0c",
       "reason": null,
       "selfProofStatus": "PASS",
       "verifierPassed": true,
@@ -138,23 +130,14 @@
       "id": "tamper_detection",
       "gateId": "tamper_detection",
       "mandatory": true,
-      "status": "FAIL",
-      "pass": false,
-      "severity": "CRITICAL",
-      "runId": "rap-governed-20261103211809917-039cadf5",
-      "sourceFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
-      "reason": "INVALID_ARTIFACT: missing lineage fields: runId, sourceFingerprint, artifactType, artifactVersion",
-      "lineage": {
-        "valid": false,
-        "code": "INVALID_ARTIFACT",
-        "reason": "missing lineage fields: runId, sourceFingerprint, artifactType, artifactVersion",
-        "missing": [
-          "runId",
-          "sourceFingerprint",
-          "artifactType",
-          "artifactVersion"
-        ]
-      }
+      "status": "PASS",
+      "pass": true,
+      "severity": "OK",
+      "runId": "rap-governed-20261104102654604-d5d764ea",
+      "sourceFingerprint": "6d91637f14c652d9dc1029b58f57c0300fb5b62e443f6192a0db95fc0769fa0c",
+      "reason": null,
+      "decision": "GO",
+      "failedChecks": 0
     },
     {
       "id": "final_proof",
@@ -163,8 +146,8 @@
       "status": "PASS",
       "pass": true,
       "severity": "OK",
-      "runId": "rap-governed-20261103211809917-039cadf5",
-      "sourceFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
+      "runId": "rap-governed-20261104102654604-d5d764ea",
+      "sourceFingerprint": "6d91637f14c652d9dc1029b58f57c0300fb5b62e443f6192a0db95fc0769fa0c",
       "reason": null,
       "decision": "AUTONOMOUS_READY_GO",
       "fingerprintStatus": "FRESH",
@@ -177,8 +160,8 @@
       "status": "PASS",
       "pass": true,
       "severity": "OK",
-      "runId": "rap-governed-20261103211809917-039cadf5",
-      "sourceFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
+      "runId": "rap-governed-20261104102654604-d5d764ea",
+      "sourceFingerprint": "6d91637f14c652d9dc1029b58f57c0300fb5b62e443f6192a0db95fc0769fa0c",
       "reason": null,
       "decision": "AUTONOMOUS_READY_GO",
       "blockerCount": 0
@@ -196,7 +179,7 @@
       "severity": "OK",
       "status": "GO",
       "reasons": [],
-      "executionId": "mesh-2026-11-03T23-51-59-600Z",
+      "executionId": "mesh-2026-11-04T10-38-00-135Z",
       "passRate": "143/143",
       "reason": null
     },
@@ -226,9 +209,9 @@
       "id": "package_integrity",
       "pass": true,
       "severity": "OK",
-      "zipName": "r-agent2-20261104-000924.payload.zip",
-      "computed": "9e60ff6799d519f29166280d…",
-      "recorded": "9e60ff6799d519f29166280d…",
+      "zipName": "r-agent2-20261104-135808.payload.zip",
+      "computed": "9cccc17c899112f68e1f9719…",
+      "recorded": "9cccc17c899112f68e1f9719…",
       "hashSource": "governance/package-validation-report.json",
       "reason": null
     },
@@ -251,25 +234,12 @@
     },
     {
       "id": "governance_signature",
-      "pass": false,
-      "severity": "CRITICAL",
-      "reason": "Governance signature inválida — governança adulterada ou chave diverge"
+      "pass": true,
+      "severity": "OK",
+      "reason": null
     }
   ],
-  "criticalFailed": [
-    {
-      "id": "run_context",
-      "reason": "RUN_INVALIDATED: RUN_INVALIDATED: rap-governed-20261103211809917-039cadf5 is invalidated"
-    },
-    {
-      "id": "tamper_detection",
-      "reason": "INVALID_ARTIFACT: missing lineage fields: runId, sourceFingerprint, artifactType, artifactVersion"
-    },
-    {
-      "id": "governance_signature",
-      "reason": "Governance signature inválida — governança adulterada ou chave diverge"
-    }
-  ],
+  "criticalFailed": [],
   "highFailed": [],
-  "summary": "3 bloqueio(s) crítico(s). Decisão: NO_GO:GOVERNANCE_BLOCKED [RUN_INVALIDATED: RUN_INVALIDATED: rap-governed-20261103211809917-039cadf5 is invalidated | INVALID_ARTIFACT: missing lineage fields: runId, sourceFingerprint, artifactType, artifactVersion | Governance signature inválida — governança adulterada ou chave diverge]"
+  "summary": "Governança limpa. Decisão: AUTONOMOUS_READY_GO"
 }
