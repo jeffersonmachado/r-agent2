@@ -95,8 +95,19 @@ const DEFAULT_MAX_POLLS = Number(process.env.QA_WAVES_MONITOR_MAX_POLLS) || 720;
 // Cache do índice de replays com validação por mtime
 let replayArtifactsIndexCache = null;
 let replayArtifactsIndexCacheMtime = null;
+let replayArtifactsIndexCacheTenant = null;
 const REPLAY_ARTIFACT_PREFIX_BYTES = 16 * 1024;
+// Janela máxima de varredura para localizar `executionId` em arquivos maiores que o prefixo.
+// Sem esse limite, todo arquivo sem `executionId` (gravações RPA, que são a maioria e somam
+// gigabytes) era integralmente parseado a CADA requisição.
+const REPLAY_ARTIFACT_SCAN_WINDOW_BYTES = Number(process.env.QA_WAVES_REPLAY_SCAN_WINDOW_BYTES) || 512 * 1024;
+const REPLAY_ARTIFACT_META_CACHE_MAX = Number(process.env.QA_WAVES_REPLAY_META_CACHE_MAX) || 4096;
+// Cache (inclusive de resultados negativos) por `arquivo:mtime:size`. Bounded LRU: sem isso o
+// custo da varredura se repetia a cada requisição.
 const replayArtifactMetaCache = new Map();
+// Avisos de arquivo truncado sem `executionId` são emitidos uma vez por arquivo, para que um
+// produtor futuro que grave o campo no fim seja DETECTADO em vez de ignorado silenciosamente.
+const replayArtifactScanWarnings = new Set();
 
 function nowIso() {
   return new Date().toISOString();
@@ -138,6 +149,80 @@ function readFilePrefix(filePath, maxBytes = REPLAY_ARTIFACT_PREFIX_BYTES) {
         // noop
       }
     }
+  }
+}
+
+function readFileRange(filePath, start, length) {
+  let fd;
+  try {
+    const stats = fs.statSync(filePath);
+    const from = Math.max(0, Math.min(Number(stats.size) || 0, start));
+    const bytesToRead = Math.max(0, Math.min((Number(stats.size) || 0) - from, length));
+    if (bytesToRead === 0) return '';
+    const buffer = Buffer.alloc(bytesToRead);
+    fd = fs.openSync(filePath, 'r');
+    fs.readSync(fd, buffer, 0, bytesToRead, from);
+    return buffer.toString('utf8');
+  } catch (_) {
+    return '';
+  } finally {
+    if (fd !== undefined) {
+      try {
+        fs.closeSync(fd);
+      } catch (_) {
+        // noop
+      }
+    }
+  }
+}
+
+/**
+ * Procura `"executionId"` em todo o arquivo, em blocos, sem parsear o JSON.
+ *
+ * Retorna o offset da chave, `-1` quando o arquivo termina sem ela, ou `-2` quando a janela
+ * (`maxBytes`) se esgotou antes do fim do arquivo — nesse caso o caller sabe que a varredura
+ * foi truncada e não pode concluir ausência.
+ */
+function findExecutionIdOffset(filePath, maxBytes = REPLAY_ARTIFACT_SCAN_WINDOW_BYTES) {
+  let fd;
+  const CHUNK = 64 * 1024;
+  const OVERLAP = 32;
+  try {
+    fd = fs.openSync(filePath, 'r');
+    const buffer = Buffer.alloc(CHUNK);
+    let position = 0;
+    let carry = '';
+    for (;;) {
+      const remaining = maxBytes - position;
+      if (remaining <= 0) return -2;
+      const bytesRead = fs.readSync(fd, buffer, 0, Math.min(CHUNK, remaining), position);
+      if (!bytesRead) return -1;
+      const chunk = carry + buffer.toString('utf8', 0, bytesRead);
+      const index = chunk.indexOf('"executionId"');
+      if (index >= 0) return position - carry.length + index;
+      carry = chunk.slice(-OVERLAP);
+      position += bytesRead;
+    }
+  } catch (_) {
+    return -1;
+  } finally {
+    if (fd !== undefined) {
+      try {
+        fs.closeSync(fd);
+      } catch (_) {
+        // noop
+      }
+    }
+  }
+}
+
+function setReplayArtifactMetaCache(cacheKey, meta) {
+  replayArtifactMetaCache.delete(cacheKey);
+  replayArtifactMetaCache.set(cacheKey, meta);
+  while (replayArtifactMetaCache.size > REPLAY_ARTIFACT_META_CACHE_MAX) {
+    const oldest = replayArtifactMetaCache.keys().next();
+    if (oldest.done) break;
+    replayArtifactMetaCache.delete(oldest.value);
   }
 }
 
@@ -184,28 +269,44 @@ function extractReplayArtifactMeta(filePath) {
   if (cached !== undefined) return cached;
 
   const prefix = readFilePrefix(filePath);
-  const fastMeta = buildReplayArtifactMeta({
-    executionId: extractJsonStringField(prefix, 'executionId'),
-    tenantId: extractJsonStringField(prefix, 'tenantId')
-      || extractJsonStringField(prefix, 'tenantKey')
-      || extractJsonStringField(prefix, 'tenant_id')
-      || extractJsonStringField(prefix, 'tenant_key')
+  const buildFromPrefix = (source) => buildReplayArtifactMeta({
+    executionId: extractJsonStringField(source, 'executionId'),
+    tenantId: extractJsonStringField(source, 'tenantId')
+      || extractJsonStringField(source, 'tenantKey')
+      || extractJsonStringField(source, 'tenant_id')
+      || extractJsonStringField(source, 'tenant_key')
       || 'system',
-    replayId: extractJsonStringField(prefix, 'replayId') || extractJsonStringField(prefix, 'id'),
-    waveId: extractJsonStringField(prefix, 'waveId'),
-    journeyId: extractJsonStringField(prefix, 'journeyId'),
-    journeyStep: extractJsonStringField(prefix, 'journeyStep'),
-    scenarioId: extractJsonStringField(prefix, 'scenarioId'),
-    seedId: extractJsonStringField(prefix, 'seedId'),
-    status: extractJsonStringField(prefix, 'status'),
-    finishedAt: extractJsonStringField(prefix, 'finishedAt'),
-    platformAdapter: extractJsonStringField(prefix, 'platformAdapter'),
+    replayId: extractJsonStringField(source, 'replayId') || extractJsonStringField(source, 'id'),
+    waveId: extractJsonStringField(source, 'waveId'),
+    journeyId: extractJsonStringField(source, 'journeyId'),
+    journeyStep: extractJsonStringField(source, 'journeyStep'),
+    scenarioId: extractJsonStringField(source, 'scenarioId'),
+    seedId: extractJsonStringField(source, 'seedId'),
+    status: extractJsonStringField(source, 'status'),
+    finishedAt: extractJsonStringField(source, 'finishedAt'),
+    platformAdapter: extractJsonStringField(source, 'platformAdapter'),
   });
 
-  const meta = fastMeta || buildReplayArtifactMeta(safeReadJson(filePath, null));
-  replayArtifactMetaCache.clear();
-  replayArtifactMetaCache.set(cacheKey, meta);
-  return meta;
+  let meta = buildFromPrefix(prefix);
+  if (!meta) {
+    // `executionId` fora dos primeiros 16 KB. Varre o arquivo em blocos (sem parsear JSON) até a
+    // janela máxima: gravações RPA não têm o campo e NÃO podem custar o parse integral.
+    const offset = findExecutionIdOffset(filePath);
+    if (offset >= 0) {
+      const windowStart = Math.max(0, offset - REPLAY_ARTIFACT_PREFIX_BYTES);
+      meta = buildFromPrefix(readFileRange(filePath, windowStart, REPLAY_ARTIFACT_PREFIX_BYTES * 2));
+    } else if (offset === -2 && !replayArtifactScanWarnings.has(cacheKey)) {
+      replayArtifactScanWarnings.add(cacheKey);
+      logger.warn('[QaWavesExecutionService] replay sem executionId na janela de varredura', {
+        file: path.basename(filePath),
+        size: stats.size,
+        windowBytes: REPLAY_ARTIFACT_SCAN_WINDOW_BYTES,
+      });
+    }
+  }
+
+  setReplayArtifactMetaCache(cacheKey, meta || null);
+  return meta || null;
 }
 
 function safeWriteJson(filePath, payload) {
@@ -1727,6 +1828,15 @@ async function executePreparedWaveScenarios({ expanded, platformScenarioIds, gov
   };
 }
 
+function selectExecutionIds(byExecutionId, targetExecutionIds) {
+  if (!targetExecutionIds) return byExecutionId;
+  const selected = new Map();
+  for (const executionId of targetExecutionIds) {
+    if (byExecutionId.has(executionId)) selected.set(executionId, byExecutionId.get(executionId));
+  }
+  return selected;
+}
+
 function buildReplayArtifactsIndex(executionIds = null, tenantId = 'system') {
   const scopedTenantId = normalizeTenantKey(tenantId);
   const replayDirs = getRpaReplayReadDirs(scopedTenantId).filter((dirPath) => fs.existsSync(dirPath));
@@ -1736,21 +1846,25 @@ function buildReplayArtifactsIndex(executionIds = null, tenantId = 'system') {
     return { byExecutionId, scannedFiles: 0, indexedFiles: 0 };
   }
 
+  const targetExecutionIds = executionIds instanceof Set ? executionIds : null;
+  if (targetExecutionIds && targetExecutionIds.size === 0) {
+    return { byExecutionId, scannedFiles: 0, indexedFiles: 0 };
+  }
+
   const dirCacheKey = replayDirs.map((dirPath) => {
     try { return `${dirPath}:${fs.statSync(dirPath).mtimeMs}`; } catch (_) { return `${dirPath}:missing`; }
   }).join('|');
   if (
     replayArtifactsIndexCache &&
     replayArtifactsIndexCacheMtime === dirCacheKey &&
-    (!executionIds || executionIds.size === 0)
+    replayArtifactsIndexCacheTenant === scopedTenantId
   ) {
-    // Cache válido: retornar sem rescanear
-    return replayArtifactsIndexCache;
-  }
-
-  const targetExecutionIds = executionIds instanceof Set ? executionIds : null;
-  if (targetExecutionIds && targetExecutionIds.size === 0) {
-    return { byExecutionId, scannedFiles: 0, indexedFiles: 0 };
+    // Cache válido para ESTE tenant: derivar o subconjunto sem varrer o diretório novamente.
+    return {
+      byExecutionId: selectExecutionIds(replayArtifactsIndexCache.byExecutionId, targetExecutionIds),
+      scannedFiles: 0,
+      indexedFiles: 0,
+    };
   }
 
   let scannedFiles = 0;
@@ -1784,15 +1898,12 @@ function buildReplayArtifactsIndex(executionIds = null, tenantId = 'system') {
     });
   }
 
-  const result = { byExecutionId, scannedFiles, indexedFiles };
-  
-  // Armazenar em cache apenas se não há filtro de executionIds (full index)
-  if (!targetExecutionIds) {
-    replayArtifactsIndexCache = result;
-    replayArtifactsIndexCacheMtime = dirCacheKey;
-  }
+  // O índice guardado é sempre o completo DESTE tenant: consultas filtradas usam o mesmo cache.
+  replayArtifactsIndexCache = { byExecutionId, scannedFiles, indexedFiles };
+  replayArtifactsIndexCacheMtime = dirCacheKey;
+  replayArtifactsIndexCacheTenant = scopedTenantId;
 
-  return result;
+  return { byExecutionId: selectExecutionIds(byExecutionId, targetExecutionIds), scannedFiles, indexedFiles };
 }
 
 function listWaveExecutions(limit = 20, tenantId = 'system') {

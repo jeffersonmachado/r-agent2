@@ -62,7 +62,11 @@ beforeAll(async () => {
     // é o código de produção.
     app.use((req, _res, next) => {
       const role = String(req.headers['x-test-role'] || 'engineer');
-      const tenantId = String(req.headers['x-test-tenant'] || 'system');
+      // `__sem_tenant__` simula ator autenticado SEM tenant (o header HTTP normal não aceita
+      // valor "vazio", o parser descarta o espaço em branco e o default entraria em vigor).
+      const tenantId = req.headers['x-test-tenant'] === '__sem_tenant__'
+        ? undefined
+        : String(req.headers['x-test-tenant'] || 'system');
       Object.assign(req, ator(role, tenantId));
       next();
     });
@@ -260,5 +264,18 @@ describe('LRO rotas — entrega e segurança', () => {
       headers: { Authorization: 'Bearer token-errado' },
     });
     expect(resposta.status).toBe(401);
+  }, 60000);
+  /**
+   * Regressão: `tenantFromRequest` LANÇA `tenant_id_required` quando o ator não tem tenant.
+   * A lista não tratava essa exceção, então a ausência de tenant virava 500 (erro não tratado na
+   * pipeline Express) — o guard `if (!tenantId)` era inalcançável.
+   */
+  test('ator sem tenant na lista recebe 400 tenant_required, nunca 500', async () => {
+    if (skipIfUnavailable()) return;
+    const resposta = await fetch(`${base}/api/lro?limit=20`, {
+      headers: { Authorization: `Bearer ${TOKEN}`, 'X-Test-Role': 'engineer', 'X-Test-Tenant': '__sem_tenant__' },
+    });
+    expect(resposta.status).toBe(400);
+    expect((await resposta.json()).error).toBe('tenant_required');
   }, 60000);
 });

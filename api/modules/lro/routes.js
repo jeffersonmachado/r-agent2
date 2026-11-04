@@ -25,6 +25,19 @@ const TERMINAIS = ['COMPLETED', 'FAILED', 'CANCELLED', 'TIMED_OUT'];
 function criarRouterLro() {
   const router = express.Router();
 
+  /**
+   * Resolve o tenant do ator. `tenantFromRequest` LANÇA quando não há tenant — sem este
+   * tratamento a ausência de tenant virava 500 (erro não tratado), não 400.
+   */
+  function resolverTenant(req, auth) {
+    const { tenantFromRequest } = require('../../../lib/rpaSecurity');
+    try {
+      return tenantFromRequest(req, auth);
+    } catch (_) {
+      return null;
+    }
+  }
+
   /** Autentica, resolve tenant e autoriza contra a classe de visibilidade da operação. */
   async function autorizar(req, res) {
     const auth = requireAuth(req);
@@ -35,13 +48,7 @@ function criarRouterLro() {
     req.agent = req.agent || auth.agent;
     req.session = req.session || auth.session;
 
-    const { tenantFromRequest } = require('../../../lib/rpaSecurity');
-    let tenantId;
-    try {
-      tenantId = tenantFromRequest(req, auth);
-    } catch (_) {
-      tenantId = null;
-    }
+    const tenantId = resolverTenant(req, auth);
     if (!tenantId) {
       res.status(400).json({ error: 'tenant_required' });
       return null;
@@ -82,8 +89,7 @@ function criarRouterLro() {
       if (!auth || auth.valid === false) return res.status(401).json({ error: 'unauthorized' });
       req.agent = req.agent || auth.agent;
 
-      const { tenantFromRequest } = require('../../../lib/rpaSecurity');
-      const tenantId = tenantFromRequest(req, auth);
+      const tenantId = resolverTenant(req, auth);
       if (!tenantId) return res.status(400).json({ error: 'tenant_required' });
 
       const { getClassificationForAgent } = require('../agent-os/experience-segregation');
@@ -242,8 +248,7 @@ function criarRouterLro() {
       const auth = requireAuth(req);
       if (!auth || auth.valid === false) return res.status(401).json({ error: 'unauthorized' });
       req.agent = req.agent || auth.agent;
-      const { tenantFromRequest } = require('../../../lib/rpaSecurity');
-      const tenantId = tenantFromRequest(req, auth);
+      const tenantId = resolverTenant(req, auth);
       if (!tenantId) return res.status(400).json({ error: 'tenant_required' });
 
       const { decision, optionId, payload, idempotencyKey } = req.body || {};
