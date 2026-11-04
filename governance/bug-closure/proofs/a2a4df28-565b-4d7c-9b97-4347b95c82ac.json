@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "a2a4df28-565b-4d7c-9b97-4347b95c82ac",
+  "defectId": "MISSAO-B5-VINCULO-DEFEITO-PREVENCAO",
+  "severityBefore": "P2",
+  "severityAfter": "P2",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "2a29f745c82f725beb1b8d6c02ea61693b82fa00",
+  "codeFingerprint": "bbf603fffb2db94f3ea9ff76e7781d2197244d508a61f4d0fda39419112ed704",
+  "requiredTests": [
+    "tests/integration/evoSyncIntegration.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/integration/evoSyncIntegration.test.js",
+      "command": "npx jest tests/integration/evoSyncIntegration.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-04T06:57:51.415Z",
+      "finishedAt": "2026-11-04T06:58:01.730Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104062209-a46a2b5a/logs/MISSAO-B5-VINCULO-DEFEITO-PREVENCAO.log",
+      "outputSha256": "bb523f74e3537ac346d0b8c3ebabce5ce12fb6158348b4225cf7f14e8f404fe0"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/integration/evoSyncIntegration.test.js",
+      "sha256": "9fb6d413ab86e96f07a296e543f0e4f868e60b15b4120968f63e4da4958e78b6"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-04T06:58:01.738Z",
+  "proofHash": "de20c8df7ac203d635dc92ccc095b34b565f516c66f45ab6829576b588a81bc2",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "pIN9nBcLX9jwjilbyQamodAHy+oPAD1dDHaDQ7Zrc0rmrlymMSzE5DmT02CM6mtg5KEQAiXkO8JRp6/M6wmCBQ==",
+    "signedAt": "2026-11-04T07:21:08.364Z"
+  }
+}

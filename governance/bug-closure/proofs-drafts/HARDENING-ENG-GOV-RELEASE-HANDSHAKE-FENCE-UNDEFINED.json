@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "9808b66b-635b-434c-8a79-6e9969b32ac4",
+  "transitionId": "95effaa6-377d-4a75-85eb-4b5398f48be9",
   "defectId": "HARDENING-ENG-GOV-RELEASE-HANDSHAKE-FENCE-UNDEFINED",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "RESOLVED",
   "toState": "RESOLVED",
-  "evaluatedCommit": "39b224fb7312e099180cf2c681d003fadda85a41",
-  "codeFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
+  "evaluatedCommit": "2a29f745c82f725beb1b8d6c02ea61693b82fa00",
+  "codeFingerprint": "bbf603fffb2db94f3ea9ff76e7781d2197244d508a61f4d0fda39419112ed704",
   "requiredTests": [
     "tests/unit/governance/taskLeaseHandshakeParsing.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/taskLeaseHandshakeParsing.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-03T22:37:35.801Z",
-      "finishedAt": "2026-11-03T22:37:41.338Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103222617-06d7bb21/logs/HARDENING-ENG-GOV-RELEASE-HANDSHAKE-FENCE-UNDEFINED.log",
-      "outputSha256": "d3abee6e81baec2d36654091c28298866c54d1aef31bb785b7d65ed333f077f9"
+      "startedAt": "2026-11-04T06:34:35.982Z",
+      "finishedAt": "2026-11-04T06:34:41.156Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104062209-a46a2b5a/logs/HARDENING-ENG-GOV-RELEASE-HANDSHAKE-FENCE-UNDEFINED.log",
+      "outputSha256": "70563aeed5b6407c3dde4c0a0587958756b249a8b1c5f52f4c592c02a1ce3759"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-03T22:37:41.345Z",
-  "proofHash": "19c23763a8bb1762e6471074e4cf445d6b73d9e989d19737ac358eb1ee10cf99"
+  "createdAt": "2026-11-04T06:34:41.162Z",
+  "proofHash": "7cdc8b66dfef6c8bf6061ce4f9ffd4b420794520d69e2b77285283184f889bc8"
 }

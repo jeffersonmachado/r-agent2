@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "48b8c687-0547-4b85-a75e-d4cf265d5e57",
+  "defectId": "P1-10",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "2a29f745c82f725beb1b8d6c02ea61693b82fa00",
+  "codeFingerprint": "bbf603fffb2db94f3ea9ff76e7781d2197244d508a61f4d0fda39419112ed704",
+  "requiredTests": [
+    "tests/unit/engineeringRouterProviderChainPolicy.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/engineeringRouterProviderChainPolicy.test.js",
+      "command": "npx jest tests/unit/engineeringRouterProviderChainPolicy.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-04T06:36:59.088Z",
+      "finishedAt": "2026-11-04T06:37:03.865Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104062209-a46a2b5a/logs/P1-10.log",
+      "outputSha256": "dfaed9551742c1bf623be203604a9f32a1b6aedbc5219b8fd01ea1956d06b33d"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/engineeringRouterProviderChainPolicy.test.js",
+      "sha256": "738b99a486db5a42e87c35b306c06aa616af4abee032b628467f61a695d12959"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-04T06:37:03.873Z",
+  "proofHash": "b9249b3a9bd9a32b699185215723c68db98ac18ad83d61b8dcaffec276087ad3",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "N5/dzHW0ajh9BfvohRbbPA+Lz9PcQE8AW1HLGhMOfe6n2nfHcbNni5MWQOakuG21A4cC2u54/dhlTH0HYeerDQ==",
+    "signedAt": "2026-11-04T07:21:27.106Z"
+  }
+}

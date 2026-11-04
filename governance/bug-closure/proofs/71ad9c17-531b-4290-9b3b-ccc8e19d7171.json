@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "71ad9c17-531b-4290-9b3b-ccc8e19d7171",
+  "defectId": "P1-ENTREGA-EXIT-CODE-DESCARTAOO-GREP-COMO-AUTORIDADE",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "2a29f745c82f725beb1b8d6c02ea61693b82fa00",
+  "codeFingerprint": "bbf603fffb2db94f3ea9ff76e7781d2197244d508a61f4d0fda39419112ed704",
+  "requiredTests": [
+    "tests/unit/governance/deliveryVerification.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/deliveryVerification.test.js",
+      "command": "npx jest tests/unit/governance/deliveryVerification.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-04T06:38:55.704Z",
+      "finishedAt": "2026-11-04T06:39:01.956Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104062209-a46a2b5a/logs/P1-ENTREGA-EXIT-CODE-DESCARTAOO-GREP-COMO-AUTORIDADE.log",
+      "outputSha256": "2c72dba51d24710b0b36ace8ae370b63537d4dbd5cdd010dd12c721881e575c2"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/deliveryVerification.test.js",
+      "sha256": "e8e23ac0fccb5f1d0bcb78f3c56a496ef3c5a8015f541e265e99a1980da48a78"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-04T06:39:01.963Z",
+  "proofHash": "6360742e1d8b2bb77d88c5e4336ec2ff392139f7714229334fdc1ec4f9479755",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "ult9l9lUFce42et7CLsifwc8flE3Fyemkxb3LBPhjb/VPpTMXovp/Dr6rKfNCGNu0U7A8F0gzRNxQXcGKK63Bg==",
+    "signedAt": "2026-11-04T07:21:43.800Z"
+  }
+}

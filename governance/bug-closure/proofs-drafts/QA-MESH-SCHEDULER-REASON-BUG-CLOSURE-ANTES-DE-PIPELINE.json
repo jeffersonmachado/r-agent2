@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "bb17820d-734a-4e75-897f-477c7eb6dfff",
+  "transitionId": "f792ebfc-715d-4009-9e21-c7c6058ccfde",
   "defectId": "QA-MESH-SCHEDULER-REASON-BUG-CLOSURE-ANTES-DE-PIPELINE",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "39b224fb7312e099180cf2c681d003fadda85a41",
-  "codeFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
+  "evaluatedCommit": "2a29f745c82f725beb1b8d6c02ea61693b82fa00",
+  "codeFingerprint": "bbf603fffb2db94f3ea9ff76e7781d2197244d508a61f4d0fda39419112ed704",
   "requiredTests": [
     "qa-mesh/__tests__/scheduler.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest qa-mesh/__tests__/scheduler.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-03T23:13:09.239Z",
-      "finishedAt": "2026-11-03T23:13:13.777Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103222617-06d7bb21/logs/QA-MESH-SCHEDULER-REASON-BUG-CLOSURE-ANTES-DE-PIPELINE.log",
-      "outputSha256": "0ad658490647b78f75a5845e12e416249d02eb623284cdfd57bf00731f219916"
+      "startedAt": "2026-11-04T07:00:31.397Z",
+      "finishedAt": "2026-11-04T07:00:42.045Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104062209-a46a2b5a/logs/QA-MESH-SCHEDULER-REASON-BUG-CLOSURE-ANTES-DE-PIPELINE.log",
+      "outputSha256": "9e6759da0bf5f257c115f73e6d823d33b2bcce34c89bce093b5442a128d1b1c8"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-03T23:13:13.785Z",
-  "proofHash": "e61a23ddab3b2aec51fbd0b2ac6291ee401ed267d0da064f262512b8f6f8ba1f"
+  "createdAt": "2026-11-04T07:00:42.055Z",
+  "proofHash": "344d4aace2bccc7b079d68bd1a4efdbd6e3d4c8ec010024ce276a163eb1c702f"
 }

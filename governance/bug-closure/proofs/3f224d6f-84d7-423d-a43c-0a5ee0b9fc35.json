@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "3f224d6f-84d7-423d-a43c-0a5ee0b9fc35",
+  "defectId": "CI-CHECKOUT-LIMPO-HARNESS",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "2a29f745c82f725beb1b8d6c02ea61693b82fa00",
+  "codeFingerprint": "bbf603fffb2db94f3ea9ff76e7781d2197244d508a61f4d0fda39419112ed704",
+  "requiredTests": [
+    "tests/unit/governance/bugClosureHistoricalGuards.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/bugClosureHistoricalGuards.test.js",
+      "command": "npx jest tests/unit/governance/bugClosureHistoricalGuards.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-04T06:26:11.476Z",
+      "finishedAt": "2026-11-04T06:26:18.720Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104062209-a46a2b5a/logs/CI-CHECKOUT-LIMPO-HARNESS.log",
+      "outputSha256": "4ea961498b05cd582e385bd5b9dffedb783629385d9827198d468921e68a2ca2"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/bugClosureHistoricalGuards.test.js",
+      "sha256": "19927a7226a1134557e9baa954d3fc7bd71b09f2ab9f26e32ee27e571ce446d1"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-04T06:26:18.727Z",
+  "proofHash": "e80cc3e367eeb2b682b983c1b6372d70f5f81f246c0f7fc781166ae3d17a6fde",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "Tv1L1Be7cxsEAL4QUWFEhwjtdjMfj8y6HXsIvzJ1zWFqW4QqaTfSDFTQp+rUrZwLGLlbLOvBAMHuPSsjVZ6KAQ==",
+    "signedAt": "2026-11-04T07:20:21.641Z"
+  }
+}

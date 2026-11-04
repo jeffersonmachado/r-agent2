@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "00a85139-2239-40a7-9fc0-3f60556a1761",
+  "transitionId": "ab688021-b123-48ef-b48d-a9362d481af2",
   "defectId": "MISSAO-B4-REVISAO-INDEPENDENTE",
   "severityBefore": "P3",
   "severityAfter": "P3",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "39b224fb7312e099180cf2c681d003fadda85a41",
-  "codeFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
+  "evaluatedCommit": "2a29f745c82f725beb1b8d6c02ea61693b82fa00",
+  "codeFingerprint": "bbf603fffb2db94f3ea9ff76e7781d2197244d508a61f4d0fda39419112ed704",
   "requiredTests": [
     "tests/unit/engineeringMission/reviewIndependenceProof.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/engineeringMission/reviewIndependenceProof.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-03T23:16:46.934Z",
-      "finishedAt": "2026-11-03T23:16:53.474Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103222617-06d7bb21/logs/MISSAO-B4-REVISAO-INDEPENDENTE.log",
-      "outputSha256": "133158c4aff0aec7419e49ad464b9149b7cd77b3aa6d83bb7de1b84402d5f610"
+      "startedAt": "2026-11-04T07:04:27.738Z",
+      "finishedAt": "2026-11-04T07:04:33.222Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104062209-a46a2b5a/logs/MISSAO-B4-REVISAO-INDEPENDENTE.log",
+      "outputSha256": "8eb013f92aa2d7a6c288a8d8003c1ef6781ec31d736d9d9196b255d8b34d8a5d"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-03T23:16:53.481Z",
-  "proofHash": "662deb9033cbe15bb9c72445993c198b48f09719f5ac25b9ad3fa6c6b4aaa930"
+  "createdAt": "2026-11-04T07:04:33.235Z",
+  "proofHash": "acf9eb91d2cf59cc840d36e9c217afa5be4dca8a78d7305fa6c4af634d194860"
 }

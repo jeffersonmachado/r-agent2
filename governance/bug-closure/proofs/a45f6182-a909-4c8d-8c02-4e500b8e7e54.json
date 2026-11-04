@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "a45f6182-a909-4c8d-8c02-4e500b8e7e54",
+  "defectId": "H13-RUNNER-COMPLETO",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "2a29f745c82f725beb1b8d6c02ea61693b82fa00",
+  "codeFingerprint": "bbf603fffb2db94f3ea9ff76e7781d2197244d508a61f4d0fda39419112ed704",
+  "requiredTests": [
+    "tests/unit/governance/allValidatorsRunner.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/allValidatorsRunner.test.js",
+      "command": "npx jest tests/unit/governance/allValidatorsRunner.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-04T06:33:43.658Z",
+      "finishedAt": "2026-11-04T06:33:55.492Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104062209-a46a2b5a/logs/H13-RUNNER-COMPLETO.log",
+      "outputSha256": "eac030cf41db06832c7db14bd62ba7cff3819f3db838b2ab78ac0c9c613ff6c8"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/allValidatorsRunner.test.js",
+      "sha256": "29c83d3c713f5b29a3d9e0cafa917e7123b955703ac4735a7f1cbcba8fcf3026"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-04T06:33:55.499Z",
+  "proofHash": "b2c7287b8c95b8434044e0abf670c878e5fb35d3a1d6f9a7879b1c76a37ee7ed",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "tucXGPJchm1c4Ee1tlUApDiY3PaDGvCod+tc5m+SBmOimCBvi/LrpoApyaiOYuhBFBUuzaKteau4wBuDSAckDw==",
+    "signedAt": "2026-11-04T07:20:37.079Z"
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "346737b7-6ea4-4961-acf5-b771abbe7b89",
+  "defectId": "PROMPT-P1H-RUN-CLOSURE-CONDICIONAL",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "2a29f745c82f725beb1b8d6c02ea61693b82fa00",
+  "codeFingerprint": "bbf603fffb2db94f3ea9ff76e7781d2197244d508a61f4d0fda39419112ed704",
+  "requiredTests": [
+    "tests/unit/governance/runClosureTransition.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/runClosureTransition.test.js",
+      "command": "npx jest tests/unit/governance/runClosureTransition.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-04T06:41:54.639Z",
+      "finishedAt": "2026-11-04T06:41:57.987Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104062209-a46a2b5a/logs/PROMPT-P1H-RUN-CLOSURE-CONDICIONAL.log",
+      "outputSha256": "09a925dd7c6ff6962c8dd0f6fabd56512cc745af672351cb9faa699909c5cc6d"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/runClosureTransition.test.js",
+      "sha256": "142ec4436bbd880d05d528c872f29ebd3f570404fa1d0e53fdba4d011a85d9f7"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-04T06:41:57.994Z",
+  "proofHash": "83cd64b991c771095c3dc09789f0980b37b1d755a67851eb6717a7b7e4b2a82e",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "qTPoXblovYSQUxkKKkHlKBZM4v/pwVQR1dXSowPywcehXdXQt71aV24UUBAUtd5/8bjH+Hthx5iHNAUfk627CA==",
+    "signedAt": "2026-11-04T07:21:56.393Z"
+  }
+}

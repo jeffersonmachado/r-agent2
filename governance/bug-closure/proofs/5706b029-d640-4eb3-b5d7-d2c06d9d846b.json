@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "5706b029-d640-4eb3-b5d7-d2c06d9d846b",
+  "defectId": "HARDENING-ENG-GOV-RELEASE-AUDITORIA-GIT-ENTRYPOINT",
+  "severityBefore": "P2",
+  "severityAfter": "P2",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "2a29f745c82f725beb1b8d6c02ea61693b82fa00",
+  "codeFingerprint": "bbf603fffb2db94f3ea9ff76e7781d2197244d508a61f4d0fda39419112ed704",
+  "requiredTests": [
+    "tests/unit/audit/auditEntrypointArtifact.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/audit/auditEntrypointArtifact.test.js",
+      "command": "npx jest tests/unit/audit/auditEntrypointArtifact.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-04T06:57:08.600Z",
+      "finishedAt": "2026-11-04T06:57:11.978Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104062209-a46a2b5a/logs/HARDENING-ENG-GOV-RELEASE-AUDITORIA-GIT-ENTRYPOINT.log",
+      "outputSha256": "c46de5ef5180deecfefb2360f860bf8b2ca424244a923beb54792b2b0e7d6ed6"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/audit/auditEntrypointArtifact.test.js",
+      "sha256": "2a104e9cba8d86d88de32e8f5e8e55e06ddd29e3f8fdd02d231cede8a6f9d65f"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-04T06:57:11.985Z",
+  "proofHash": "7454d6d858b0e58b10efd4118c6507aa5cb76a28858c95a08d9223b568599132",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "4MaU7Q8e1hAZa3TNLr9U1mgQRuW9c4XGubA+GS4QNU8GLkzgYYF3nM2Vm5I6Fas5uMn7Fzvu/uvFJ3z5YisOAw==",
+    "signedAt": "2026-11-04T07:20:46.117Z"
+  }
+}

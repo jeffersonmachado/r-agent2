@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "5bb6f1de-faf0-4b34-9891-b53f8d656e30",
+  "defectId": "HARDENING-ENG-GOV-RELEASE-P1-11",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "RESOLVED",
+  "toState": "RESOLVED",
+  "evaluatedCommit": "2a29f745c82f725beb1b8d6c02ea61693b82fa00",
+  "codeFingerprint": "bbf603fffb2db94f3ea9ff76e7781d2197244d508a61f4d0fda39419112ed704",
+  "requiredTests": [
+    "tests/unit/governance/evidenceTtl.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/evidenceTtl.test.js",
+      "command": "npx jest tests/unit/governance/evidenceTtl.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-04T06:34:50.009Z",
+      "finishedAt": "2026-11-04T06:34:59.866Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104062209-a46a2b5a/logs/HARDENING-ENG-GOV-RELEASE-P1-11.log",
+      "outputSha256": "3d758d50f2637824a0a15078fa0ff9f31714cc015ce3a563d9a6e10fea5cfe76"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/evidenceTtl.test.js",
+      "sha256": "25e4a2a26b32c1f86031961fe283a7f8a6e2a7d1d1fc19eaeed600d30aad17c6"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-04T06:34:59.875Z",
+  "proofHash": "82a782f9048471be240911d4864e2abf216b2da4e32450cd7d721bd74f6ff0aa",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "mSC4VjoK/UwZ29sMW7vNAgcP1BeOjua0Cq7SM5+ouGr+mjWK3yTD7AuUNKxDfaf2oZ+/19DQxMwybwtgCMMaAQ==",
+    "signedAt": "2026-11-04T07:20:56.351Z"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "id": "H20-RUN-ORFAO-PROJECAO-STALE",
+  "severity": "P2",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Ciclo interrompido deixa run governado aberto e projecao de readiness no run anterior",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+  "teste": "tests/unit/governance/convergenceFixpoint.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [
+    "ASSINATURA_INVALIDA"
+  ],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104070831-50d7e7c0/logs/H20-RUN-ORFAO-PROJECAO-STALE.log",
+  "draft": "governance/bug-closure/proofs-drafts/H20-RUN-ORFAO-PROJECAO-STALE.json",
+  "camposParaAssinar": 18,
+  "runId": "run-20261104070831-50d7e7c0",
+  "identidade": {
+    "commit": "2a29f745c82f725beb1b8d6c02ea61693b82fa00",
+    "sourceFingerprint": "bbf603fffb2db94f3ea9ff76e7781d2197244d508a61f4d0fda39419112ed704",
+    "inventoryFingerprint": "39003d9ea50ba5df64c09cac080101b8cfe1011e0128cbf74c0f5c426d38ce8c",
+    "hardeningQueueFingerprint": "41a2ed2eb744a1e0a5aaf3245bc92fb2426fa54c721fcc14387d94092f502580",
+    "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+  },
+  "artifactSha256": "9fd1d4913ed7d2b9f65ba16bd1ddb47c7a0daf1a4a59d62f0631f98d756fca0a"
+}

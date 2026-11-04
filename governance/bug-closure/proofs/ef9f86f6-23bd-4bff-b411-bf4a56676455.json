@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "ef9f86f6-23bd-4bff-b411-bf4a56676455",
+  "defectId": "PROMPT-P1F-STREAM-ISOLAMENTO",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "2a29f745c82f725beb1b8d6c02ea61693b82fa00",
+  "codeFingerprint": "bbf603fffb2db94f3ea9ff76e7781d2197244d508a61f4d0fda39419112ed704",
+  "requiredTests": [
+    "frontend/src/shared/useLroStream.test.jsx"
+  ],
+  "executions": [
+    {
+      "testPath": "frontend/src/shared/useLroStream.test.jsx",
+      "command": "npm --prefix frontend run test -- src/shared/useLroStream.test.jsx",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-04T06:41:41.276Z",
+      "finishedAt": "2026-11-04T06:41:50.404Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104062209-a46a2b5a/logs/PROMPT-P1F-STREAM-ISOLAMENTO.log",
+      "outputSha256": "000d6a27779f0f569104a2a5a9d927307afcb0ca5d954458bdef8e4549f3f427"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "frontend/src/shared/useLroStream.test.jsx",
+      "sha256": "b083c622b7423b46106d9bf412e12a54d5794c1e8199fee512d40915d10ceb36"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-04T06:41:50.411Z",
+  "proofHash": "7d3419456a0909c3d17e8a19cce4382de57ff8d260761600e9665102dcdf5dbd",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "zCYEduKUipMqiystdGiADbHC/oqlPVeZWAJmmcS6t5Ebkq6XutScyGbsEnpzZDwAAMVs2mVX6k0BOmcPcKyrAg==",
+    "signedAt": "2026-11-04T07:21:55.332Z"
+  }
+}

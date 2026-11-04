@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "f278e8c4-f716-4527-bd94-9c8038fa1e2e",
+  "defectId": "AUDITORIA-ENTRYPOINT-TRAVAS",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "2a29f745c82f725beb1b8d6c02ea61693b82fa00",
+  "codeFingerprint": "bbf603fffb2db94f3ea9ff76e7781d2197244d508a61f4d0fda39419112ed704",
+  "requiredTests": [
+    "tests/unit/audit/auditEntrypointArtifact.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/audit/auditEntrypointArtifact.test.js",
+      "command": "npx jest tests/unit/audit/auditEntrypointArtifact.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-04T06:25:56.257Z",
+      "finishedAt": "2026-11-04T06:25:59.519Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104062209-a46a2b5a/logs/AUDITORIA-ENTRYPOINT-TRAVAS.log",
+      "outputSha256": "177a37ac2e44c1dbd717562a0695a079bb9de01a0541f157ca73e2abb82f9c51"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/audit/auditEntrypointArtifact.test.js",
+      "sha256": "2a104e9cba8d86d88de32e8f5e8e55e06ddd29e3f8fdd02d231cede8a6f9d65f"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-04T06:25:59.525Z",
+  "proofHash": "3b76b87a67ad5f5ebf06fa6898d671df35bdf87a164a8b0b0754887420a36c0a",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "rGBRV5bj05Ijo8eZp7On7ZWA7ksbDUgx5JJmvKtxm6qEqVfug06QtIW0VvSv8EkIJI4YNg6aNCUHfFqYnvnxCA==",
+    "signedAt": "2026-11-04T07:20:20.350Z"
+  }
+}

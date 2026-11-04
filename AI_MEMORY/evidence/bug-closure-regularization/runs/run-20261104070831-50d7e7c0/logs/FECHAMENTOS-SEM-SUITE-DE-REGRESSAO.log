@@ -1,0 +1,60 @@
+[jest-global-setup] .env carregado (0 chave(s) aplicada(s); ambiente explícito vence)
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+FAIL tests/unit/governance/closureRequiresSuite.test.js
+  fechamentos — a fila real não tem item fechado sem suíte
+    ✕ zero violações na fila oficial (154 ms)
+    ✓ a verificação tem alcance real (não passa por fila vazia) (108 ms)
+    ✕ todo item fechado aponta para um arquivo que o repositório tem (180 ms)
+  fechamentos — o predicado DETECTA o defeito (prova de sensibilidade)
+    ✓ sem `regressionTest` ⇒ SEM_SUITE_DECLARADA (103 ms)
+    ✓ campo vazio/em branco ⇒ SEM_SUITE_DECLARADA (não é "declarado") (108 ms)
+    ✓ caminho inexistente ⇒ SUITE_INEXISTENTE (108 ms)
+    ✓ prosa com espaço não é caminho de suíte (107 ms)
+    ✓ item ABERTO não é exigido (a regra é sobre fechamento) (104 ms)
+    ✓ suíte real aceita (contraprova do predicado) (108 ms)
+
+  ● fechamentos — a fila real não tem item fechado sem suíte › zero violações na fila oficial
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 6
+
+    - Array []
+    + Array [
+    +   Object {
+    +     "id": "REQUIRED-TESTS-ANCORA-EXTERNA",
+    +     "motivo": "SEM_SUITE_DECLARADA",
+    +   },
+    + ]
+
+    [0m [90m 50 |[39m describe([32m'fechamentos — a fila real não tem item fechado sem suíte'[39m[33m,[39m () [33m=>[39m {
+     [90m 51 |[39m   test([32m'zero violações na fila oficial'[39m[33m,[39m () [33m=>[39m {
+    [31m[1m>[22m[39m[90m 52 |[39m     expect(violacoesDeSuite([33mFILA[39m[33m.[39mitems))[33m.[39mtoEqual([])[33m;[39m
+     [90m    |[39m                                          [31m[1m^[22m[39m
+     [90m 53 |[39m   })[33m;[39m
+     [90m 54 |[39m
+     [90m 55 |[39m   test([32m'a verificação tem alcance real (não passa por fila vazia)'[39m[33m,[39m () [33m=>[39m {[0m
+
+      at Object.toEqual (tests/unit/governance/closureRequiresSuite.test.js:52:42)
+
+  ● fechamentos — a fila real não tem item fechado sem suíte › todo item fechado aponta para um arquivo que o repositório tem
+
+    TypeError: The "path" argument must be of type string. Received undefined
+
+    [0m [90m 64 |[39m     [36mconst[39m fechados [33m=[39m [33mFILA[39m[33m.[39mitems[33m.[39mfilter((i) [33m=>[39m [33mFECHADOS[39m[33m.[39mhas([33mString[39m(i[33m.[39mstatus [33m||[39m [32m''[39m)[33m.[39mtoLowerCase()))[33m;[39m
+     [90m 65 |[39m     [36mfor[39m ([36mconst[39m item [36mof[39m fechados) {
+    [31m[1m>[22m[39m[90m 66 |[39m       [36mconst[39m abs [33m=[39m path[33m.[39mjoin([33mRAIZ[39m[33m,[39m item[33m.[39mregressionTest)[33m;[39m
+     [90m    |[39m                        [31m[1m^[22m[39m
+     [90m 67 |[39m       expect(fs[33m.[39mexistsSync(abs))[33m.[39mtoBe([36mtrue[39m)[33m;[39m
+     [90m 68 |[39m     }
+     [90m 69 |[39m   })[33m;[39m[0m
+
+      at Object.join (tests/unit/governance/closureRequiresSuite.test.js:66:24)
+
+Test Suites: 1 failed, 1 total
+Tests:       2 failed, 7 passed, 9 total
+Snapshots:   0 total
+Time:        2.455 s
+Ran all test suites matching /tests\/unit\/governance\/closureRequiresSuite.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

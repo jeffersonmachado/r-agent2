@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "92107bac-1a25-4019-bc60-f276d1cd0bcc",
+  "defectId": "JOURNEY-STORE-ESCONDE-DERIVADAS",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "2a29f745c82f725beb1b8d6c02ea61693b82fa00",
+  "codeFingerprint": "bbf603fffb2db94f3ea9ff76e7781d2197244d508a61f4d0fda39419112ed704",
+  "requiredTests": [
+    "api/services/__tests__/qaWavesService.journey.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "api/services/__tests__/qaWavesService.journey.test.js",
+      "command": "npx jest api/services/__tests__/qaWavesService.journey.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-04T06:34:59.891Z",
+      "finishedAt": "2026-11-04T06:35:11.191Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104062209-a46a2b5a/logs/JOURNEY-STORE-ESCONDE-DERIVADAS.log",
+      "outputSha256": "eb5900a3a62e88421db038c7d0f4c989616ccf1cb6b6f58ee5c944adb3e89040"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "api/services/__tests__/qaWavesService.journey.test.js",
+      "sha256": "d9ea1c23a3ed67189bce98b27ee7ad5b27185cd35b3906239b99ea4c849ddb10"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-04T06:35:11.198Z",
+  "proofHash": "f3ac6491821889263b661c2c17785126ba1010e9d84704eb85aa560852500cb7",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "QBoYrFpzFJryDjV+otf3gKm6AVSsNVr5e+E9jKbRYVE+qRHnqyjlUcpd6+UxTrkt9C+O6pI2yZrp2/ZdM3KzCg==",
+    "signedAt": "2026-11-04T07:21:01.176Z"
+  }
+}

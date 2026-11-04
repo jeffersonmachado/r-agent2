@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "kind": "bug-closure-regularization-run",
+  "authoritative": false,
+  "runId": "run-20261104071941-e89ee16a",
+  "versaoRegularizador": "2.0.0",
+  "identidade": {
+    "commit": "2a29f745c82f725beb1b8d6c02ea61693b82fa00",
+    "sourceFingerprint": "bbf603fffb2db94f3ea9ff76e7781d2197244d508a61f4d0fda39419112ed704",
+    "inventoryFingerprint": "39003d9ea50ba5df64c09cac080101b8cfe1011e0128cbf74c0f5c426d38ce8c",
+    "hardeningQueueFingerprint": "df70bf83ddd522034b4004ccb95225ad77a1f3ab6698bba747683b2d56f751b6",
+    "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+  },
+  "ambiente": {
+    "node": "v22.12.0",
+    "plataforma": "linux-x64",
+    "host": "jmachado-Precision-5530",
+    "runnerDeTeste": "jest",
+    "bancoDeTeste": "CRM_PG_TEST_URL",
+    "runnerEngenharia": "ENGINEERING_RUNNER_URL"
+  },
+  "escopo": {
+    "tipo": "PARCIAL",
+    "filtroSeveridade": "ALL",
+    "idsSelecionados": [
+      "FECHAMENTOS-SEM-SUITE-DE-REGRESSAO"
+    ],
+    "limite": 0,
+    "esperadoNoEscopo": 1,
+    "idsEsperados": [
+      "FECHAMENTOS-SEM-SUITE-DE-REGRESSAO"
+    ],
+    "completo": false
+  },
+  "status": "COMPLETED",
+  "startedAt": "2026-11-04T07:19:41.749Z",
+  "completedAt": "2026-11-04T07:19:46.028Z",
+  "resultados": 1,
+  "observacoes": []
+}

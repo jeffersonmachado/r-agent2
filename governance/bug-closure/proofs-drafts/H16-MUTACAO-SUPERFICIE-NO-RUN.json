@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "3d7a5c15-724e-4152-9583-56e03a3b621a",
+  "transitionId": "f260951f-234d-43e2-89df-d560e92a1fa6",
   "defectId": "H16-MUTACAO-SUPERFICIE-NO-RUN",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "39b224fb7312e099180cf2c681d003fadda85a41",
-  "codeFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
+  "evaluatedCommit": "2a29f745c82f725beb1b8d6c02ea61693b82fa00",
+  "codeFingerprint": "bbf603fffb2db94f3ea9ff76e7781d2197244d508a61f4d0fda39419112ed704",
   "requiredTests": [
     "tests/unit/governance/allValidatorsRunner.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/allValidatorsRunner.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-03T23:07:08.794Z",
-      "finishedAt": "2026-11-03T23:07:28.056Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103222617-06d7bb21/logs/H16-MUTACAO-SUPERFICIE-NO-RUN.log",
-      "outputSha256": "408564468f68ca6dc87e8e64f55259449989e36eb8cc992c047c0561923328bb"
+      "startedAt": "2026-11-04T06:55:59.404Z",
+      "finishedAt": "2026-11-04T06:56:13.024Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104062209-a46a2b5a/logs/H16-MUTACAO-SUPERFICIE-NO-RUN.log",
+      "outputSha256": "5e01d7899c4f1958cf248216b4d7ab9d181180bae02301097fb9de77849d1cda"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-03T23:07:28.066Z",
-  "proofHash": "9b0e5f82845cb0dc3bf4f840c99560325ef7b56fe57c94b6680032fc913d94fb"
+  "createdAt": "2026-11-04T06:56:13.031Z",
+  "proofHash": "733f4da06dbb253becca390054e8cb2b25ae49cee45fb7fe40aff1b84e070750"
 }

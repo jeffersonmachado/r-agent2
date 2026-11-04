@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "432ec7b3-963b-444b-b031-851601128a5c",
+  "transitionId": "1afe5049-f593-4ed8-8483-5272c71315b4",
   "defectId": "AUDITORIA-BRANCH-INVENTORY",
   "severityBefore": "P3",
   "severityAfter": "P3",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "39b224fb7312e099180cf2c681d003fadda85a41",
-  "codeFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
+  "evaluatedCommit": "2a29f745c82f725beb1b8d6c02ea61693b82fa00",
+  "codeFingerprint": "bbf603fffb2db94f3ea9ff76e7781d2197244d508a61f4d0fda39419112ed704",
   "requiredTests": [
     "tests/unit/audit/branchInventory.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/audit/branchInventory.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-03T23:16:00.842Z",
-      "finishedAt": "2026-11-03T23:16:03.713Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103222617-06d7bb21/logs/AUDITORIA-BRANCH-INVENTORY.log",
-      "outputSha256": "f5bd34aa128c49680ad787fa94c83e600bbacbceae2835d154df2e6c969e9c47"
+      "startedAt": "2026-11-04T07:03:33.894Z",
+      "finishedAt": "2026-11-04T07:03:36.477Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104062209-a46a2b5a/logs/AUDITORIA-BRANCH-INVENTORY.log",
+      "outputSha256": "c797b76d8e4895578fc05f4d96a4158f874152aedbd9a732cbda429b6665614c"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-03T23:16:03.721Z",
-  "proofHash": "f101bf09e824711df868acfcb90162746859b9d803dc70fd3dbe1b1e1256dd13"
+  "createdAt": "2026-11-04T07:03:36.484Z",
+  "proofHash": "8cfff64fda4c0278049a83696ee306f7148df78973d9c6bb381959b3e6df5aa2"
 }

@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "20ff0d08-fbb3-4830-955d-0bac46747c88",
+  "transitionId": "cf02f4a6-3437-440c-a682-224dd9b6b1ab",
   "defectId": "HARDENING-ENG-GOV-RELEASE-PONTEIROS-CLOSURE-ORFAOS",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "RESOLVED",
   "toState": "RESOLVED",
-  "evaluatedCommit": "39b224fb7312e099180cf2c681d003fadda85a41",
-  "codeFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
+  "evaluatedCommit": "2a29f745c82f725beb1b8d6c02ea61693b82fa00",
+  "codeFingerprint": "bbf603fffb2db94f3ea9ff76e7781d2197244d508a61f4d0fda39419112ed704",
   "requiredTests": [
     "tests/unit/governance/closurePointersOrphans.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/closurePointersOrphans.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-03T23:09:05.998Z",
-      "finishedAt": "2026-11-03T23:09:13.833Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103222617-06d7bb21/logs/HARDENING-ENG-GOV-RELEASE-PONTEIROS-CLOSURE-ORFAOS.log",
-      "outputSha256": "dc3b6898b7d05bcc6f22b419b5ed6b7c6d608e6e0f9c62a44bb1efd3d388c985"
+      "startedAt": "2026-11-04T06:57:11.993Z",
+      "finishedAt": "2026-11-04T06:57:17.267Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104062209-a46a2b5a/logs/HARDENING-ENG-GOV-RELEASE-PONTEIROS-CLOSURE-ORFAOS.log",
+      "outputSha256": "03218ad6d940c463d42ec586d674c42e315b0917d5cebc5035057764c5de6f23"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-03T23:09:13.841Z",
-  "proofHash": "1130ae053461dc76f6fc55d290f203a376aba6fb5b42c15134bc76e2328b9c72"
+  "createdAt": "2026-11-04T06:57:17.273Z",
+  "proofHash": "3f64bbfa6a0da630a0e20af7e2b2f2cd2263580992aa7d15436d25270944ce98"
 }

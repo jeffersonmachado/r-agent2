@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "a9e75347-0898-4779-a286-31a78d2e7507",
+  "transitionId": "ef820e10-e3c7-40fd-a34f-f3dfec363ad4",
   "defectId": "P1-SELO-PUSH-ORIGIN-MAIN-NO-OP-FALSO-PUSH-OK",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "39b224fb7312e099180cf2c681d003fadda85a41",
-  "codeFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
+  "evaluatedCommit": "2a29f745c82f725beb1b8d6c02ea61693b82fa00",
+  "codeFingerprint": "bbf603fffb2db94f3ea9ff76e7781d2197244d508a61f4d0fda39419112ed704",
   "requiredTests": [
     "tests/unit/governance/deliveryVerification.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/deliveryVerification.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-03T22:46:10.284Z",
-      "finishedAt": "2026-11-03T22:46:15.720Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103222617-06d7bb21/logs/P1-SELO-PUSH-ORIGIN-MAIN-NO-OP-FALSO-PUSH-OK.log",
-      "outputSha256": "bc3521252e0fe26b41009692833ce203500b1ff550fdb4cecf0025ecf1701bd6"
+      "startedAt": "2026-11-04T06:40:01.212Z",
+      "finishedAt": "2026-11-04T06:40:05.286Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104062209-a46a2b5a/logs/P1-SELO-PUSH-ORIGIN-MAIN-NO-OP-FALSO-PUSH-OK.log",
+      "outputSha256": "a74d9c8cd007a9289841c1597fc7fa79f279808a78bb6476c70274a61efe8c42"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-03T22:46:19.491Z",
-  "proofHash": "0997c838eb1001110fc7311ba88e7c0ae08a25762bb40873ca75dce0b1edcbee"
+  "createdAt": "2026-11-04T06:40:05.302Z",
+  "proofHash": "93347083dea306ecf4372755850b3373fb1f105fcf7d8fa10c6541215c2f5a09"
 }

@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "9288db44-7e61-4193-a959-25210e9e1f0b",
+  "defectId": "P1-6",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "2a29f745c82f725beb1b8d6c02ea61693b82fa00",
+  "codeFingerprint": "bbf603fffb2db94f3ea9ff76e7781d2197244d508a61f4d0fda39419112ed704",
+  "requiredTests": [
+    "rag-service/tests/test_hybrid_isolation_real_db.py"
+  ],
+  "executions": [
+    {
+      "testPath": "rag-service/tests/test_hybrid_isolation_real_db.py",
+      "command": "/opt/results/ria/r-agent2/rag-service/venv/bin/python -m pytest rag-service/tests/test_hybrid_isolation_real_db.py -q -p no:cacheprovider",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-04T06:37:57.559Z",
+      "finishedAt": "2026-11-04T06:38:00.273Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104062209-a46a2b5a/logs/P1-6.log",
+      "outputSha256": "0c2e147f7f07683f48c0a85b60678497b99dce703ebbcd2d5d5246cd176d3eb9"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "rag-service/tests/test_hybrid_isolation_real_db.py",
+      "sha256": "a4d08bd20c11b03ecca33d213e30c9d62c8c75830d7dcdd15dca1c3cbdfe53a5"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-04T06:38:00.279Z",
+  "proofHash": "56ed96a823c08be249776d5aab118278b8232249a02b30a12406b5d7d6e57835",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "Cw6c1+QOukL0Pt3Kr/oSj/Yfu31oTkAriI0g5DSQD23M9vaKI0IMiFxUJXQxTk0YGuZ5sWoZpnhykKbynGxeAg==",
+    "signedAt": "2026-11-04T07:21:36.120Z"
+  }
+}

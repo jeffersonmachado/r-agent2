@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "10bc7f2d-785e-43e8-a502-e51bf4e32b3d",
+  "transitionId": "0e0533e7-eea7-4c75-96a3-fa547acd5d59",
   "defectId": "PROMPT-P1E-FENCING-OBRIGATORIO",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "39b224fb7312e099180cf2c681d003fadda85a41",
-  "codeFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
+  "evaluatedCommit": "2a29f745c82f725beb1b8d6c02ea61693b82fa00",
+  "codeFingerprint": "bbf603fffb2db94f3ea9ff76e7781d2197244d508a61f4d0fda39419112ed704",
   "requiredTests": [
     "tests/integration/lroServiceTransaction.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/integration/lroServiceTransaction.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-03T22:48:01.640Z",
-      "finishedAt": "2026-11-03T22:48:43.791Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103222617-06d7bb21/logs/PROMPT-P1E-FENCING-OBRIGATORIO.log",
-      "outputSha256": "953170faa596edccc3054ca27570ad32443841077ce047a2858c6ec96ca48ec6"
+      "startedAt": "2026-11-04T06:41:05.951Z",
+      "finishedAt": "2026-11-04T06:41:41.229Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104062209-a46a2b5a/logs/PROMPT-P1E-FENCING-OBRIGATORIO.log",
+      "outputSha256": "e6aacae7eb7c1044c583b8fb7e52945d37448279b060df7047cde65b823f0568"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-03T22:48:43.800Z",
-  "proofHash": "b2d02483713af367ec6b99ab68e7d59e754796f92883bd42e85fbb72ffe80112"
+  "createdAt": "2026-11-04T06:41:41.244Z",
+  "proofHash": "e347fca49b38b7866b94701d4c5aa44fe24879d398523d6505bd217bbac54170"
 }

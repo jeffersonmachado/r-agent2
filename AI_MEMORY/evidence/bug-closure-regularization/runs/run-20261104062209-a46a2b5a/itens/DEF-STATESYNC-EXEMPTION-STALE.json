@@ -1,0 +1,25 @@
+{
+  "id": "DEF-STATESYNC-EXEMPTION-STALE",
+  "severity": "P3",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Isenção de state-sync declarava 4 setInterval onde havia 3 (resíduo)",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "CAMPO_DO_ITEM",
+  "teste": "tests/unit/frontend/stateSyncExemptionExactness.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [
+    "ASSINATURA_INVALIDA"
+  ],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104062209-a46a2b5a/logs/DEF-STATESYNC-EXEMPTION-STALE.log",
+  "draft": "governance/bug-closure/proofs-drafts/DEF-STATESYNC-EXEMPTION-STALE.json",
+  "camposParaAssinar": 18,
+  "runId": "run-20261104062209-a46a2b5a",
+  "identidade": {
+    "commit": "2a29f745c82f725beb1b8d6c02ea61693b82fa00",
+    "sourceFingerprint": "bbf603fffb2db94f3ea9ff76e7781d2197244d508a61f4d0fda39419112ed704",
+    "inventoryFingerprint": "39003d9ea50ba5df64c09cac080101b8cfe1011e0128cbf74c0f5c426d38ce8c",
+    "hardeningQueueFingerprint": "41a2ed2eb744a1e0a5aaf3245bc92fb2426fa54c721fcc14387d94092f502580",
+    "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+  },
+  "artifactSha256": "3089586226b8b525aecf0b82d6ec19e19f66e1f19fdaba61427f92d83cffcc11"
+}

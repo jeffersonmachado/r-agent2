@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "e2f239d0-db58-474e-807d-5b7cc2a35da5",
+  "defectId": "P1-3",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "2a29f745c82f725beb1b8d6c02ea61693b82fa00",
+  "codeFingerprint": "bbf603fffb2db94f3ea9ff76e7781d2197244d508a61f4d0fda39419112ed704",
+  "requiredTests": [
+    "tests/unit/engineeringMission/deriveGatesEvidence.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/engineeringMission/deriveGatesEvidence.test.js",
+      "command": "npx jest tests/unit/engineeringMission/deriveGatesEvidence.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-04T06:37:46.430Z",
+      "finishedAt": "2026-11-04T06:37:50.831Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104062209-a46a2b5a/logs/P1-3.log",
+      "outputSha256": "02f85f7b5eca5f4ed8a4b9c60d95d457e3047951c14eeff88e7fa4eea93ace93"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/engineeringMission/deriveGatesEvidence.test.js",
+      "sha256": "ff13352481e3a987bf4a5d0dcef940e4dc5c6c64ee5567a741ffe8f29bafa8c4"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-04T06:37:50.838Z",
+  "proofHash": "dd5ad493ac496f4395490505e1eb4c39c5021e7a5207960ffc02f9eab60483b4",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "Yb8omkVKZJCkgmE83R5wGgHVgR/Xlw/l0o9xLT+rzCERUQ94UsRXpLA7dahhskPOUenVnY9zlwoJJat6E+f8Bw==",
+    "signedAt": "2026-11-04T07:21:33.853Z"
+  }
+}

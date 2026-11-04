@@ -1,0 +1,25 @@
+{
+  "id": "H14-CDR-SUPERVISIONADO",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "CDR do Asterisk nao morre mais em silencio (ponte + backend)",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+  "teste": "tests/unit/pbx/pbxCdrHealth.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [
+    "ASSINATURA_INVALIDA"
+  ],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104062209-a46a2b5a/logs/H14-CDR-SUPERVISIONADO.log",
+  "draft": "governance/bug-closure/proofs-drafts/H14-CDR-SUPERVISIONADO.json",
+  "camposParaAssinar": 18,
+  "runId": "run-20261104062209-a46a2b5a",
+  "identidade": {
+    "commit": "2a29f745c82f725beb1b8d6c02ea61693b82fa00",
+    "sourceFingerprint": "bbf603fffb2db94f3ea9ff76e7781d2197244d508a61f4d0fda39419112ed704",
+    "inventoryFingerprint": "39003d9ea50ba5df64c09cac080101b8cfe1011e0128cbf74c0f5c426d38ce8c",
+    "hardeningQueueFingerprint": "41a2ed2eb744a1e0a5aaf3245bc92fb2426fa54c721fcc14387d94092f502580",
+    "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+  },
+  "artifactSha256": "42b66e67ec5467394676e42eb29d9848fb77961802023ea721affb000c73d8d4"
+}

@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "f57fe943-2d1e-4016-8b92-950caffc55c9",
+  "transitionId": "c2e17939-2a9b-445f-83c3-32db44852108",
   "defectId": "P1-PROJECAO-GRAVADA-ANTES-DA-DECISAO-FINAL-JANELA-ABERTA",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "39b224fb7312e099180cf2c681d003fadda85a41",
-  "codeFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
+  "evaluatedCommit": "2a29f745c82f725beb1b8d6c02ea61693b82fa00",
+  "codeFingerprint": "bbf603fffb2db94f3ea9ff76e7781d2197244d508a61f4d0fda39419112ed704",
   "requiredTests": [
     "tests/unit/governance/projectionSyncOnCanonicalWrite.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/projectionSyncOnCanonicalWrite.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-03T22:45:40.499Z",
-      "finishedAt": "2026-11-03T22:45:50.509Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103222617-06d7bb21/logs/P1-PROJECAO-GRAVADA-ANTES-DA-DECISAO-FINAL-JANELA-ABERTA.log",
-      "outputSha256": "7135b5598169c83b1cf14bc8f70f9ea601ee255fc91db0223e7d6a9380f36cd0"
+      "startedAt": "2026-11-04T06:39:39.843Z",
+      "finishedAt": "2026-11-04T06:39:45.744Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104062209-a46a2b5a/logs/P1-PROJECAO-GRAVADA-ANTES-DA-DECISAO-FINAL-JANELA-ABERTA.log",
+      "outputSha256": "c0f53399cbff4588028e1b7d96f1da9c88cb228f1f3d24589f32afaef4649ab9"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-03T22:45:50.519Z",
-  "proofHash": "c2c949e12a1d82cbeada3db7005545ee42509896c810606ba01cbf68dd78ba40"
+  "createdAt": "2026-11-04T06:39:45.752Z",
+  "proofHash": "9471aa4a05ff493dccb5a550e998ba65570e22582678f33de37923718f7da36c"
 }

@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "8cb2ed89-df0c-4cec-a6e0-79ff52a91e4b",
+  "defectId": "ENG-RECONCILIACAO-BOOT-STARVATION",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "2a29f745c82f725beb1b8d6c02ea61693b82fa00",
+  "codeFingerprint": "bbf603fffb2db94f3ea9ff76e7781d2197244d508a61f4d0fda39419112ed704",
+  "requiredTests": [
+    "tests/integration/engineeringMissionSourceE2E.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/integration/engineeringMissionSourceE2E.test.js",
+      "command": "npx jest tests/integration/engineeringMissionSourceE2E.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-04T06:32:44.038Z",
+      "finishedAt": "2026-11-04T06:33:00.405Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104062209-a46a2b5a/logs/ENG-RECONCILIACAO-BOOT-STARVATION.log",
+      "outputSha256": "a0e103d2df6b7bac9fab4059e5ed0892937a35da39c0d4d7fee4db445806b295"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/integration/engineeringMissionSourceE2E.test.js",
+      "sha256": "e8b417ce6cd96391b8366bb15fd3a992afc34e9c4ecae7072b3df00226768407"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-04T06:33:00.413Z",
+  "proofHash": "4775e403089ad6d5022584f6a7d9720fac37a0e445e6fb9dcb32cd78a0b2f878",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "FfBQdu03FLSvDh9yIR8CiF2DdOzkTgerE1ti+/Qc+iYJFkeSPyzF7gztwY2RPHHh4bWdWAVHy5pocEiTgIVoCw==",
+    "signedAt": "2026-11-04T07:20:31.343Z"
+  }
+}

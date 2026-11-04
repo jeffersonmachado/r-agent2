@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "e9e2ef62-ecaa-47fa-abd8-298170418f55",
+  "defectId": "P1-5",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "2a29f745c82f725beb1b8d6c02ea61693b82fa00",
+  "codeFingerprint": "bbf603fffb2db94f3ea9ff76e7781d2197244d508a61f4d0fda39419112ed704",
+  "requiredTests": [
+    "rag-service/tests/test_hybrid_search.py"
+  ],
+  "executions": [
+    {
+      "testPath": "rag-service/tests/test_hybrid_search.py",
+      "command": "/opt/results/ria/r-agent2/rag-service/venv/bin/python -m pytest rag-service/tests/test_hybrid_search.py -q -p no:cacheprovider",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-04T06:37:54.960Z",
+      "finishedAt": "2026-11-04T06:37:57.546Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104062209-a46a2b5a/logs/P1-5.log",
+      "outputSha256": "bb61a5f6335ff05c71dfd3d70fefe4fb7715d16644d9ac3b891eb2a58f141f20"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "rag-service/tests/test_hybrid_search.py",
+      "sha256": "7014c15096d65e060522d28133c583ab923437933293256087c07ce306017461"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-04T06:37:57.553Z",
+  "proofHash": "9344a4b0b0aa3b09b858615ee368db0cc8a81f4ba98a605ec57ec486f35792aa",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "z6lL008x/i9RKUyxBupiQ+5l+XYto7PA+mmCkg48rmqT/fA6kvsfHY3SezmUKlqVL33WNo8WzXRw/c6fyLOrDQ==",
+    "signedAt": "2026-11-04T07:21:35.271Z"
+  }
+}

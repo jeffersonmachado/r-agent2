@@ -1,0 +1,18 @@
+[jest-global-setup] .env carregado (0 chave(s) aplicada(s); ambiente explícito vence)
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/engineeringRouterSandboxAvailabilityCache.test.js
+  isSandboxAvailable — cache
+    ✓ Docker disponível é cacheado: o probe roda UMA vez (117 ms)
+    ✓ transiente na 1ª tentativa e sucesso na 2ª ⇒ TRUE (o retry é o ponto) (103 ms)
+    ✓ todas as tentativas falham por timeout ⇒ FALSE, mas a próxima chamada reavalia (104 ms)
+    ✓ SIGTERM (processo morto por timeout) também não envenena o cache (104 ms)
+    ✓ CLI inexistente (ENOENT) é DEFINITIVO: não reavalia nem retenta (105 ms)
+    ✓ resetSandboxAvailabilityCache força reavaliação (102 ms)
+    ✓ sucesso após falha passa a ser cacheado (não há probe extra) (104 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       7 passed, 7 total
+Snapshots:   0 total
+Time:        1.248 s, estimated 2 s
+Ran all test suites matching /tests\/unit\/engineeringRouterSandboxAvailabilityCache.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

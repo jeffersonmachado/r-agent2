@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "fdea29e2-fae0-406c-bb4a-b456e45e4e82",
+  "transitionId": "c4e99f4a-c44c-429f-bb11-afa3b0c9b585",
   "defectId": "TESTE-DEV-SUPERVISAO-PORTA-EFEMERA",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "39b224fb7312e099180cf2c681d003fadda85a41",
-  "codeFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
+  "evaluatedCommit": "2a29f745c82f725beb1b8d6c02ea61693b82fa00",
+  "codeFingerprint": "bbf603fffb2db94f3ea9ff76e7781d2197244d508a61f4d0fda39419112ed704",
   "requiredTests": [
     "tests/unit/dev/devServicesSupervision.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/dev/devServicesSupervision.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-03T23:13:13.792Z",
-      "finishedAt": "2026-11-03T23:13:53.453Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103222617-06d7bb21/logs/TESTE-DEV-SUPERVISAO-PORTA-EFEMERA.log",
-      "outputSha256": "354d74c745311849aa9be156d92c0ac8e3b1f2b4693fb591cc38204d31802ee8"
+      "startedAt": "2026-11-04T07:00:42.065Z",
+      "finishedAt": "2026-11-04T07:01:27.151Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104062209-a46a2b5a/logs/TESTE-DEV-SUPERVISAO-PORTA-EFEMERA.log",
+      "outputSha256": "6b1bbbcbfd654cf1a6326ad3e54edd34cad38abf5ab2736f2bc9f3037c1372ca"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-03T23:13:53.460Z",
-  "proofHash": "a39e5b920d43efd1dbe0f8516b4a70db808e233879c110911db131e0b97c2ff9"
+  "createdAt": "2026-11-04T07:01:27.159Z",
+  "proofHash": "0c76d2f707b3a61f36d623cd8d7955c31d14917013ae8e4d27f81ce36836c187"
 }

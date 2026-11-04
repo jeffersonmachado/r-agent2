@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "cc06e9e0-f85d-4a73-8172-1958b6dcd9e8",
+  "transitionId": "440cb821-cc1d-4005-8d8f-24cd7befa18c",
   "defectId": "P2-TESTES-REGRAVAM-EVIDENCIA-GOVERNADA-TEMPORAL",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "RESOLVED",
   "toState": "RESOLVED",
-  "evaluatedCommit": "39b224fb7312e099180cf2c681d003fadda85a41",
-  "codeFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
+  "evaluatedCommit": "2a29f745c82f725beb1b8d6c02ea61693b82fa00",
+  "codeFingerprint": "bbf603fffb2db94f3ea9ff76e7781d2197244d508a61f4d0fda39419112ed704",
   "requiredTests": [
     "tests/unit/governance/governedArtifactPreservation.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/governedArtifactPreservation.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-03T23:12:26.765Z",
-      "finishedAt": "2026-11-03T23:12:33.170Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103222617-06d7bb21/logs/P2-TESTES-REGRAVAM-EVIDENCIA-GOVERNADA-TEMPORAL.log",
-      "outputSha256": "36335256b654c9504b6db3e26748781b6c33dda1d04fb4fa6a07cc63ad2729cd"
+      "startedAt": "2026-11-04T06:59:56.752Z",
+      "finishedAt": "2026-11-04T07:00:01.443Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104062209-a46a2b5a/logs/P2-TESTES-REGRAVAM-EVIDENCIA-GOVERNADA-TEMPORAL.log",
+      "outputSha256": "dfe510b481eba2972933d372fb39d3cdae1dd5e94ceec45ca58dd7cf298159bb"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-03T23:12:33.178Z",
-  "proofHash": "02e5dc2714a7c11dfd03aad29e49db18f522fed90a3bd7cd4f37c2c63084045c"
+  "createdAt": "2026-11-04T07:00:01.449Z",
+  "proofHash": "7e47466d020315a31558a431f71bbb52d75bebb14f98366ffea0c246ae4cefd6"
 }

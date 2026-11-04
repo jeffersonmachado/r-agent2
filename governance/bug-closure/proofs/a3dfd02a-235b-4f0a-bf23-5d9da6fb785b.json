@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "a3dfd02a-235b-4f0a-bf23-5d9da6fb785b",
+  "defectId": "H9-IDENTIDADE-PORTA",
+  "severityBefore": "P2",
+  "severityAfter": "P2",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "2a29f745c82f725beb1b8d6c02ea61693b82fa00",
+  "codeFingerprint": "bbf603fffb2db94f3ea9ff76e7781d2197244d508a61f4d0fda39419112ed704",
+  "requiredTests": [
+    "tests/unit/dev/devServicesSupervision.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/dev/devServicesSupervision.test.js",
+      "command": "npx jest tests/unit/dev/devServicesSupervision.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-04T06:56:25.039Z",
+      "finishedAt": "2026-11-04T06:57:04.569Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104062209-a46a2b5a/logs/H9-IDENTIDADE-PORTA.log",
+      "outputSha256": "24c4881af961fc755e60b6d4ab0ae066746c9e5fccfd722886df237e5ab8c1c0"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/dev/devServicesSupervision.test.js",
+      "sha256": "62f4628fcf762cbaf0e9e3dad48a45987c36428275e9d683e8f914e661f7f298"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-04T06:57:04.575Z",
+  "proofHash": "b8d1c1d4405d27c2fa12371cb63a172b2527f4b0cf2869e21250198bbec8dc3d",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "7slRSOr47U2cvC4CU0dhqAjNuZcQx+ax9LT15LHEWAS5LhhZhPs22H5OSPWaujujmZjhR4qYIk5xsOA1w2XNDg==",
+    "signedAt": "2026-11-04T07:20:44.015Z"
+  }
+}

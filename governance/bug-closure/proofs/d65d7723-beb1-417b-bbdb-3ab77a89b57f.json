@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "d65d7723-beb1-417b-bbdb-3ab77a89b57f",
+  "defectId": "P1-L0-INDETERMINISTA-POR-CONTENCAO",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "2a29f745c82f725beb1b8d6c02ea61693b82fa00",
+  "codeFingerprint": "bbf603fffb2db94f3ea9ff76e7781d2197244d508a61f4d0fda39419112ed704",
+  "requiredTests": [
+    "tests/unit/ciGateL0Determinism.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/ciGateL0Determinism.test.js",
+      "command": "npx jest tests/unit/ciGateL0Determinism.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-04T06:39:19.199Z",
+      "finishedAt": "2026-11-04T06:39:22.746Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104062209-a46a2b5a/logs/P1-L0-INDETERMINISTA-POR-CONTENCAO.log",
+      "outputSha256": "d2d14fcb5709a0aa5017d9c71e0bdd61acc7acae791eaae2890752c13638861b"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/ciGateL0Determinism.test.js",
+      "sha256": "03c38792d35c7eaf06c23966104f7ab2d60f76bf45882207112a9ea4d8326cf6"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-04T06:39:22.760Z",
+  "proofHash": "5d9f6b29313c95c60ae07674ce24eb7249ca02e2f48fef7e17cd258f37267a65",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "NKv2IR1iOKzvacFWjJpXB/SU5C9lMnCsoZE2p5I0ZgxRAuNc3PsDOf2wMzeB7DLyh67zXXvn6Wx8Zay2n74WAg==",
+    "signedAt": "2026-11-04T07:21:46.738Z"
+  }
+}

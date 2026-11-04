@@ -1,0 +1,34 @@
+[jest-global-setup] .env carregado (0 chave(s) aplicada(s); ambiente explícito vence)
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/governance/devGovernanceModels.test.js
+  pendenciesModel
+    ✓ blocked exige ação humana e transporta a razão VERBATIM (106 ms)
+    ✓ done NÃO é pendência (e não ganha motivo inventado) (102 ms)
+    ✓ blocked sem razão escrita é denunciado, não escondido (102 ms)
+    ✓ waiver em PENDING_APPROVAL exige ação humana; aprovado não (103 ms)
+    ✓ bloqueio de release só conta com declaração EXPLÍCITA (desconhecido não é bloqueio) (104 ms)
+    ✓ monta o resumo e ordena por severidade e ação humana (124 ms)
+    ✓ fonte indisponível é declarada e não vira item (102 ms)
+    ✓ onlyPending devolve SÓ o que exige ação humana (103 ms)
+  releaseStateModel
+    ✓ HEAD diferente do commit do run ⇒ SUPERSEDED (nunca "verificado") (103 ms)
+    ✓ HEAD igual ao commit do run + entrega VERIFICADA ⇒ DELIVERED_VERIFIED (105 ms)
+    ✓ DEFEITO: entregue presente sem veredito positivo ⇒ DELIVERED_UNVERIFIED (nunca VERIFIED) (107 ms)
+    ✓ veredito POSITIVO mas bloqueio canônico ativo ⇒ DELIVERED_UNVERIFIED (104 ms)
+    ✓ evidência indisponível ⇒ DELIVERED_UNVERIFIED (evidência faltante não é verificação) (103 ms)
+    ✓ run sem sourceCommit ⇒ identidade incompleta, nunca VERIFIED (103 ms)
+    ✓ sem entregue o novo veredito NÃO aparece (estados anteriores preservados) (103 ms)
+    ✓ guard local que recusa tag DESABILITA publish-tag e mostra o motivo (103 ms)
+    ✓ worktree sujo desabilita o selo (ofertar ação que já sabe que falha é mentir) (105 ms)
+    ✓ publish-tag NÃO é oferecida quando a entrega não está verificada (103 ms)
+    ✓ publish-tag é oferecida SOMENTE com DELIVERED_VERIFIED (sem guard bloqueando) (104 ms)
+    ✓ bloqueio canônico ativo também derruba publish-tag (não só o guard local) (105 ms)
+    ✓ sem artefato nem candidato ⇒ NOT_SEALED; evidência faltante é declarada (103 ms)
+    ✓ verify continua disponível mesmo com tudo bloqueado (é leitura) (102 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       22 passed, 22 total
+Snapshots:   0 total
+Time:        2.725 s, estimated 4 s
+Ran all test suites matching /tests\/unit\/governance\/devGovernanceModels.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

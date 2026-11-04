@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "9ee14327-d530-4c9f-8469-7b8cdb7e4e89",
+  "transitionId": "cf508df5-92a7-488a-9fec-78db5cd45fc6",
   "defectId": "AUDITORIA-FASE-B-FALSO-POSITIVO-SCANNER-FILA",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "39b224fb7312e099180cf2c681d003fadda85a41",
-  "codeFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
+  "evaluatedCommit": "2a29f745c82f725beb1b8d6c02ea61693b82fa00",
+  "codeFingerprint": "bbf603fffb2db94f3ea9ff76e7781d2197244d508a61f4d0fda39419112ed704",
   "requiredTests": [
     "tests/unit/governance/jsonPersistenceNoPhantomWrite.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/jsonPersistenceNoPhantomWrite.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-03T22:53:01.522Z",
-      "finishedAt": "2026-11-03T22:53:05.985Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103222617-06d7bb21/logs/AUDITORIA-FASE-B-FALSO-POSITIVO-SCANNER-FILA.log",
-      "outputSha256": "840f4265c633bc4fa130963844f40a045a9d4f428e40b5aab095f642a8d3ab03"
+      "startedAt": "2026-11-04T06:45:50.851Z",
+      "finishedAt": "2026-11-04T06:45:59.051Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104062209-a46a2b5a/logs/AUDITORIA-FASE-B-FALSO-POSITIVO-SCANNER-FILA.log",
+      "outputSha256": "e58965edbce33369a1098455b72fe10b40cd44c6ce0de318cd213c52d89d3fa0"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-03T22:53:05.997Z",
-  "proofHash": "89b9808172a179a9fd612ad904b6fc9437c2d5d3491d4283e7b8db164037ca48"
+  "createdAt": "2026-11-04T06:45:59.058Z",
+  "proofHash": "d6b670abd7fc3856192568a5705e0f055c03a856580cdba1f07e88ce0c65da45"
 }

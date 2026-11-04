@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "9402d79b-c6d6-4794-837e-3aa80090c0f1",
+  "defectId": "PROMPT-P1B-ONLY-RESTRINGE-EXECUCAO",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "2a29f745c82f725beb1b8d6c02ea61693b82fa00",
+  "codeFingerprint": "bbf603fffb2db94f3ea9ff76e7781d2197244d508a61f4d0fda39419112ed704",
+  "requiredTests": [
+    "tests/unit/governance/certificationLadder.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/certificationLadder.test.js",
+      "command": "npx jest tests/unit/governance/certificationLadder.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-04T06:40:21.763Z",
+      "finishedAt": "2026-11-04T06:40:26.609Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104062209-a46a2b5a/logs/PROMPT-P1B-ONLY-RESTRINGE-EXECUCAO.log",
+      "outputSha256": "eb7769f389a3d274e4e5f51160ece275a7e942b0edd07df8803d3deb06338d9e"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/certificationLadder.test.js",
+      "sha256": "89fb783b3ddc353409e6c9b51b35f68f1e26b284cf72c8cf31906986fcc00d40"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-04T06:40:26.616Z",
+  "proofHash": "535c39238bf02502eea19ca3b130b7b01bc67ec0cb3fc5153fe713b3fa880c69",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "rZ5OT07tWlOCX8Hw8486+7kyZhxib84mu9aWhZxb45ef4DXaNdaIAtSd3630r8cWWkfOOyMN1Xy14IkywydcCA==",
+    "signedAt": "2026-11-04T07:21:53.537Z"
+  }
+}

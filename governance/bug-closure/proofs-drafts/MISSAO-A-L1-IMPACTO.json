@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "4f6350cf-c7a2-49a5-bda2-c0e81e8f490b",
+  "transitionId": "a6473d51-cc0e-4e1e-9795-a91c2e5fee9a",
   "defectId": "MISSAO-A-L1-IMPACTO",
   "severityBefore": "P3",
   "severityAfter": "P3",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "39b224fb7312e099180cf2c681d003fadda85a41",
-  "codeFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
+  "evaluatedCommit": "2a29f745c82f725beb1b8d6c02ea61693b82fa00",
+  "codeFingerprint": "bbf603fffb2db94f3ea9ff76e7781d2197244d508a61f4d0fda39419112ed704",
   "requiredTests": [
     "tests/unit/coverage/impactGraph.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/coverage/impactGraph.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-03T23:16:22.455Z",
-      "finishedAt": "2026-11-03T23:16:29.637Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103222617-06d7bb21/logs/MISSAO-A-L1-IMPACTO.log",
-      "outputSha256": "894b41377c5d815811f858bf84ea7ae6046e00506d752f5544e4d98a0c64bda8"
+      "startedAt": "2026-11-04T07:03:58.391Z",
+      "finishedAt": "2026-11-04T07:04:07.432Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104062209-a46a2b5a/logs/MISSAO-A-L1-IMPACTO.log",
+      "outputSha256": "e4f543883d1b7afa2b37151a6924ed89292053d80d7a9dd7d0aba10074ffb3e1"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-03T23:16:29.648Z",
-  "proofHash": "588cc5c9413f02e7f375eeee63ef8a09f0a1f47d92e4c44568bc1cdbc24a6637"
+  "createdAt": "2026-11-04T07:04:07.440Z",
+  "proofHash": "17e1b8ff13c006b69166e7446556fbda9c4a001074db07f8a329ac879e07104e"
 }

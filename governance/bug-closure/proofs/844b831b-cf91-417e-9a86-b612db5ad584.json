@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "844b831b-cf91-417e-9a86-b612db5ad584",
+  "defectId": "ENG-LEASE-FENCE-NAO-VALIDADO",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "2a29f745c82f725beb1b8d6c02ea61693b82fa00",
+  "codeFingerprint": "bbf603fffb2db94f3ea9ff76e7781d2197244d508a61f4d0fda39419112ed704",
+  "requiredTests": [
+    "tests/integration/engineeringBugLoop.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/integration/engineeringBugLoop.test.js",
+      "command": "npx jest tests/integration/engineeringBugLoop.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-04T07:08:31.992Z",
+      "finishedAt": "2026-11-04T07:09:42.753Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104070831-50d7e7c0/logs/ENG-LEASE-FENCE-NAO-VALIDADO.log",
+      "outputSha256": "614439b38fbe01a7d1aa2593d823cb7e15d2c8b58957ed97c8697ccda8e84473"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/integration/engineeringBugLoop.test.js",
+      "sha256": "3a1bc90410a2fa92290856e6c2ae73001653068a77a6c9c6668dec041b00932d"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-04T07:09:42.795Z",
+  "proofHash": "a2cfe0591492ea7d6cc7a62f1752dffb89effa3155a56b241834a88aceef1a21",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "YOoxPzCsgaqNJnHnstWi/ShGIvs4vc7jsv02wPS2+Nxz0X6XBlSaAA4Dk8l/Lm+kUmzUkddqR4mC9N4oHm69DQ==",
+    "signedAt": "2026-11-04T07:20:30.639Z"
+  }
+}

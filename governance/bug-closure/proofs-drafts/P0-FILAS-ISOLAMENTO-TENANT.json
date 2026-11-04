@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "82cbb01f-06f0-4a43-a498-4a57a7208c47",
+  "transitionId": "a2d94737-077b-4480-a4ab-55926a854056",
   "defectId": "P0-FILAS-ISOLAMENTO-TENANT",
   "severityBefore": "P0",
   "severityAfter": "P0",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "39b224fb7312e099180cf2c681d003fadda85a41",
-  "codeFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
+  "evaluatedCommit": "2a29f745c82f725beb1b8d6c02ea61693b82fa00",
+  "codeFingerprint": "bbf603fffb2db94f3ea9ff76e7781d2197244d508a61f4d0fda39419112ed704",
   "requiredTests": [
     "tests/unit/queueTenantIsolation.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/queueTenantIsolation.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-03T22:28:59.386Z",
-      "finishedAt": "2026-11-03T22:29:02.528Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103222617-06d7bb21/logs/P0-FILAS-ISOLAMENTO-TENANT.log",
-      "outputSha256": "696e484dfe11a34dbc42da22625ef0344b85931823e460456dbec88516e075d8"
+      "startedAt": "2026-11-04T06:25:07.669Z",
+      "finishedAt": "2026-11-04T06:25:10.784Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104062209-a46a2b5a/logs/P0-FILAS-ISOLAMENTO-TENANT.log",
+      "outputSha256": "c5a5200af89d399ad6dc238b7760f139b3798cd26a5085bd8e0795bf1c263d05"
     }
   ],
   "negativeEvidence": [
@@ -63,7 +63,7 @@
   "humanAuthorization": {
     "channel": "VSCODE_AGENT",
     "by": "platform-owner:jeffersonmachado",
-    "at": "2026-11-03T23:20:56.166Z",
+    "at": "2026-11-04T07:20:08.039Z",
     "ref": "session:e92510ac-0f54-41c6-bb85-90f42042999c",
     "agentSession": "session:e92510ac-0f54-41c6-bb85-90f42042999c"
   },
@@ -74,6 +74,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-03T22:29:02.535Z",
-  "proofHash": "eae7aeae5e92f3c89dbeff309c4f0d005f04d6010e8154f167f79b72cc522515"
+  "createdAt": "2026-11-04T06:25:10.836Z",
+  "proofHash": "ee55d03b7c9c4fa054944364757306f1935cb10a7d4aadac57f4d9274a46a0ea"
 }

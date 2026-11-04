@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "8ef8cdcb-eedb-489c-af73-4bcb7e5f1d0f",
+  "transitionId": "e6ce3773-ab13-4ca3-bdc0-21dd62ded162",
   "defectId": "HARDENING-ENG-GOV-RELEASE-AGREGADO-SEM-RELATORIO-PROPRIO",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "39b224fb7312e099180cf2c681d003fadda85a41",
-  "codeFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
+  "evaluatedCommit": "2a29f745c82f725beb1b8d6c02ea61693b82fa00",
+  "codeFingerprint": "bbf603fffb2db94f3ea9ff76e7781d2197244d508a61f4d0fda39419112ed704",
   "requiredTests": [
     "tests/unit/governance/aggregateVerdict.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/aggregateVerdict.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-03T22:37:22.017Z",
-      "finishedAt": "2026-11-03T22:37:29.681Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103222617-06d7bb21/logs/HARDENING-ENG-GOV-RELEASE-AGREGADO-SEM-RELATORIO-PROPRIO.log",
-      "outputSha256": "2738b0f0d4a3a9f88b8ffa6e51f3c5e1f92b18a3bf12f73346ed691f1d2ab6bc"
+      "startedAt": "2026-11-04T06:34:23.495Z",
+      "finishedAt": "2026-11-04T06:34:30.878Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104062209-a46a2b5a/logs/HARDENING-ENG-GOV-RELEASE-AGREGADO-SEM-RELATORIO-PROPRIO.log",
+      "outputSha256": "39e7530d6356bcbcfb12499da8159e34af4501030c4231d262d515ebf56bd5b5"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-03T22:37:29.689Z",
-  "proofHash": "2e0c0c986d827e2f77422381504ccfd0d40ec65312a8973114aac1c52f45d135"
+  "createdAt": "2026-11-04T06:34:30.886Z",
+  "proofHash": "4e9a7dd8da7ce7c3f6a0bb764f308a3cada61093b479d411ef28af29a4915888"
 }

@@ -1,0 +1,393 @@
+  console.error
+    [2026-11-04T07:01:36.547Z] [ERROR] [WebScraping] cheerio não instalado. Defina SCRAPING_ALLOW_DEGRADED=true para modo degradado explícito.
+
+    [0m [90m 183 |[39m       
+     [90m 184 |[39m       [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 185 |[39m       console[33m.[39merror(formatMessage([33mLOG_LEVELS[39m[33m.[39m[33mERROR[39m[33m,[39m message[33m,[39m errorData))[33m;[39m
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 186 |[39m     }
+     [90m 187 |[39m   }[33m,[39m
+     [90m 188 |[39m   [0m
+
+      at Object.error (api/utils/logger.js:185:15)
+      at Object.error (api/services/webScrapingService.js:63:12)
+      at Object.require (api/services/tenantService.js:24:28)
+      at Object.require (api/services/authService.js:18:55)
+      at Object.require (api/services/websocketService.js:19:27)
+      at Object.require (api/services/engineeringMission/missionEvents.js:11:23)
+      at Object.require (api/services/engineeringMission/missionCompilerService.js:52:30)
+      at Object.require (tests/integration/engineeringMissionDurableResume.test.js:20:18)
+
+  console.info
+    [2026-11-04T07:01:59.748Z] [INFO] [Sequelize] Conectado ao PostgreSQL com sucesso
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.log
+    [2026-11-04T07:01:59.944Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.warn
+    [2026-11-04T07:02:09.888Z] [WARN] [TenantService] Tenant não encontrado
+    {
+      "identifier": "system"
+    }
+
+    [0m [90m 166 |[39m     [36mif[39m (level [33m<=[39m [33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m) {
+     [90m 167 |[39m       [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 168 |[39m       console[33m.[39mwarn(formatMessage([33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m[33m,[39m message[33m,[39m data))[33m;[39m
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 169 |[39m     }
+     [90m 170 |[39m   }[33m,[39m
+     [90m 171 |[39m   [0m
+
+      at Object.warn (api/utils/logger.js:168:15)
+      at warn (api/services/tenantService.js:863:10)
+      at findTenantByIdentifier (api/services/tenantAIService.js:73:12)
+      at getCredentialDetailsMap (api/services/tenantAIService.js:464:38)
+      at Object.buildAvailableModels (api/services/engineeringRouter/engineeringModelAvailabilityService.js:101:25)
+      at proposeIntent (api/services/engineeringMission/missionCompilerService.js:135:18)
+      at enrichMission (api/services/engineeringMission/missionCompilerService.js:333:22)
+      at Object.compileMission (api/services/engineeringMission/missionCompilerService.js:519:18)
+      at Object.<anonymous> (tests/integration/engineeringMissionDurableResume.test.js:144:25)
+
+  console.log
+    [2026-11-04T07:02:10.207Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-11-04T07:02:25.619Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.warn
+    [2026-11-04T07:02:35.109Z] [WARN] [TenantService] Tenant não encontrado
+    {
+      "identifier": "system"
+    }
+
+    [0m [90m 166 |[39m     [36mif[39m (level [33m<=[39m [33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m) {
+     [90m 167 |[39m       [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 168 |[39m       console[33m.[39mwarn(formatMessage([33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m[33m,[39m message[33m,[39m data))[33m;[39m
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 169 |[39m     }
+     [90m 170 |[39m   }[33m,[39m
+     [90m 171 |[39m   [0m
+
+      at Object.warn (api/utils/logger.js:168:15)
+      at warn (api/services/tenantService.js:863:10)
+      at findTenantByIdentifier (api/services/tenantAIService.js:73:12)
+      at getCredentialDetailsMap (api/services/tenantAIService.js:464:38)
+      at Object.buildAvailableModels (api/services/engineeringRouter/engineeringModelAvailabilityService.js:101:25)
+      at proposeIntent (api/services/engineeringMission/missionCompilerService.js:135:18)
+      at Object.enrichMission (api/services/engineeringMission/missionCompilerService.js:333:22)
+      at Object.resumeInterruptedMissions (api/services/engineeringMission/missionOrchestratorService.js:421:9)
+      at Object.<anonymous> (tests/integration/engineeringMissionDurableResume.test.js:162:21)
+
+  console.log
+    [2026-11-04T07:02:35.545Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-11-04T07:02:35.752Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.warn
+    [2026-11-04T07:02:40.225Z] [WARN] [TenantService] Tenant não encontrado
+    {
+      "identifier": "system"
+    }
+
+    [0m [90m 166 |[39m     [36mif[39m (level [33m<=[39m [33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m) {
+     [90m 167 |[39m       [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 168 |[39m       console[33m.[39mwarn(formatMessage([33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m[33m,[39m message[33m,[39m data))[33m;[39m
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 169 |[39m     }
+     [90m 170 |[39m   }[33m,[39m
+     [90m 171 |[39m   [0m
+
+      at Object.warn (api/utils/logger.js:168:15)
+      at warn (api/services/tenantService.js:863:10)
+      at findTenantByIdentifier (api/services/tenantAIService.js:73:12)
+      at getCredentialDetailsMap (api/services/tenantAIService.js:464:38)
+      at Object.buildAvailableModels (api/services/engineeringRouter/engineeringModelAvailabilityService.js:101:25)
+      at proposeIntent (api/services/engineeringMission/missionCompilerService.js:135:18)
+      at enrichMission (api/services/engineeringMission/missionCompilerService.js:333:22)
+      at Object.compileMission (api/services/engineeringMission/missionCompilerService.js:519:18)
+      at Object.<anonymous> (tests/integration/engineeringMissionDurableResume.test.js:177:25)
+
+  console.log
+    [2026-11-04T07:02:40.319Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-11-04T07:02:40.528Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.warn
+    [2026-11-04T07:02:45.204Z] [WARN] [TenantService] Tenant não encontrado
+    {
+      "identifier": "system"
+    }
+
+    [0m [90m 166 |[39m     [36mif[39m (level [33m<=[39m [33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m) {
+     [90m 167 |[39m       [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 168 |[39m       console[33m.[39mwarn(formatMessage([33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m[33m,[39m message[33m,[39m data))[33m;[39m
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 169 |[39m     }
+     [90m 170 |[39m   }[33m,[39m
+     [90m 171 |[39m   [0m
+
+      at Object.warn (api/utils/logger.js:168:15)
+      at warn (api/services/tenantService.js:863:10)
+      at findTenantByIdentifier (api/services/tenantAIService.js:73:12)
+      at getCredentialDetailsMap (api/services/tenantAIService.js:464:38)
+      at Object.buildAvailableModels (api/services/engineeringRouter/engineeringModelAvailabilityService.js:101:25)
+      at proposeIntent (api/services/engineeringMission/missionCompilerService.js:135:18)
+      at enrichMission (api/services/engineeringMission/missionCompilerService.js:333:22)
+      at Object.compileMission (api/services/engineeringMission/missionCompilerService.js:519:18)
+      at Object.<anonymous> (tests/integration/engineeringMissionDurableResume.test.js:200:25)
+
+  console.log
+    [2026-11-04T07:02:45.342Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-11-04T07:02:45.513Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.warn
+    [2026-11-04T07:02:49.886Z] [WARN] [TenantService] Tenant não encontrado
+    {
+      "identifier": "system"
+    }
+
+    [0m [90m 166 |[39m     [36mif[39m (level [33m<=[39m [33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m) {
+     [90m 167 |[39m       [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 168 |[39m       console[33m.[39mwarn(formatMessage([33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m[33m,[39m message[33m,[39m data))[33m;[39m
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 169 |[39m     }
+     [90m 170 |[39m   }[33m,[39m
+     [90m 171 |[39m   [0m
+
+      at Object.warn (api/utils/logger.js:168:15)
+      at warn (api/services/tenantService.js:863:10)
+      at findTenantByIdentifier (api/services/tenantAIService.js:73:12)
+      at getCredentialDetailsMap (api/services/tenantAIService.js:464:38)
+      at Object.buildAvailableModels (api/services/engineeringRouter/engineeringModelAvailabilityService.js:101:25)
+      at proposeIntent (api/services/engineeringMission/missionCompilerService.js:135:18)
+      at enrichMission (api/services/engineeringMission/missionCompilerService.js:333:22)
+      at Object.compileMission (api/services/engineeringMission/missionCompilerService.js:519:18)
+      at Object.<anonymous> (tests/integration/engineeringMissionDurableResume.test.js:221:25)
+
+  console.log
+    [2026-11-04T07:02:50.014Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-11-04T07:02:50.147Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-11-04T07:02:50.434Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.warn
+    [2026-11-04T07:02:56.386Z] [WARN] [TenantService] Tenant não encontrado
+    {
+      "identifier": "system"
+    }
+
+    [0m [90m 166 |[39m     [36mif[39m (level [33m<=[39m [33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m) {
+     [90m 167 |[39m       [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 168 |[39m       console[33m.[39mwarn(formatMessage([33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m[33m,[39m message[33m,[39m data))[33m;[39m
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 169 |[39m     }
+     [90m 170 |[39m   }[33m,[39m
+     [90m 171 |[39m   [0m
+
+      at Object.warn (api/utils/logger.js:168:15)
+      at warn (api/services/tenantService.js:863:10)
+      at findTenantByIdentifier (api/services/tenantAIService.js:73:12)
+      at getCredentialDetailsMap (api/services/tenantAIService.js:464:38)
+      at Object.buildAvailableModels (api/services/engineeringRouter/engineeringModelAvailabilityService.js:101:25)
+      at proposeIntent (api/services/engineeringMission/missionCompilerService.js:135:18)
+      at enrichMission (api/services/engineeringMission/missionCompilerService.js:333:22)
+      at Object.compileMission (api/services/engineeringMission/missionCompilerService.js:519:18)
+      at Object.<anonymous> (tests/integration/engineeringMissionDurableResume.test.js:244:25)
+
+  console.log
+    [2026-11-04T07:02:56.596Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-11-04T07:02:56.746Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.info
+    [2026-11-04T07:02:56.876Z] [INFO] [missionSource] InitializationIntent PREPARED persistido antes de criar a branch da fonte
+    {
+      "missionId": "fe094810-93c0-4560-a838-241f6ce2ca68",
+      "branch": "engineering/missions/fe094810-93c0-4560-a838-241f6ce2ca68",
+      "baseCommit": "04cad9c1b639",
+      "worker": "pid-1636168"
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-04T07:02:57.029Z] [INFO] [missionSource] fonte da missão inicializada
+    {
+      "missionId": "fe094810-93c0-4560-a838-241f6ce2ca68",
+      "branch": "engineering/missions/fe094810-93c0-4560-a838-241f6ce2ca68",
+      "baseCommit": "04cad9c1b639",
+      "actor": "jest-resume",
+      "alreadyPersisted": null
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.log
+    [2026-11-04T07:02:57.412Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-11-04T07:02:57.786Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-11-04T07:02:58.008Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.warn
+    [2026-11-04T07:03:06.283Z] [WARN] [TenantService] Tenant não encontrado
+    {
+      "identifier": "system"
+    }
+
+    [0m [90m 166 |[39m     [36mif[39m (level [33m<=[39m [33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m) {
+     [90m 167 |[39m       [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 168 |[39m       console[33m.[39mwarn(formatMessage([33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m[33m,[39m message[33m,[39m data))[33m;[39m
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 169 |[39m     }
+     [90m 170 |[39m   }[33m,[39m
+     [90m 171 |[39m   [0m
+
+      at Object.warn (api/utils/logger.js:168:15)
+      at warn (api/services/tenantService.js:863:10)
+      at findTenantByIdentifier (api/services/tenantAIService.js:73:12)
+      at getCredentialDetailsMap (api/services/tenantAIService.js:464:38)
+      at Object.buildAvailableModels (api/services/engineeringRouter/engineeringModelAvailabilityService.js:101:25)
+      at proposeIntent (api/services/engineeringMission/missionCompilerService.js:135:18)
+      at enrichMission (api/services/engineeringMission/missionCompilerService.js:333:22)
+      at Object.compileMission (api/services/engineeringMission/missionCompilerService.js:519:18)
+      at Object.<anonymous> (tests/integration/engineeringMissionDurableResume.test.js:264:25)
+
+  console.log
+    [2026-11-04T07:03:06.468Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-11-04T07:03:06.606Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+          at async Promise.all (index 1)
+
+  console.warn
+    [2026-11-04T07:03:17.672Z] [WARN] [TenantService] Tenant não encontrado
+    {
+      "identifier": "system"
+    }
+
+    [0m [90m 166 |[39m     [36mif[39m (level [33m<=[39m [33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m) {
+     [90m 167 |[39m       [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 168 |[39m       console[33m.[39mwarn(formatMessage([33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m[33m,[39m message[33m,[39m data))[33m;[39m
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 169 |[39m     }
+     [90m 170 |[39m   }[33m,[39m
+     [90m 171 |[39m   [0m
+
+      at Object.warn (api/utils/logger.js:168:15)
+      at warn (api/services/tenantService.js:863:10)
+      at findTenantByIdentifier (api/services/tenantAIService.js:73:12)
+      at getCredentialDetailsMap (api/services/tenantAIService.js:464:38)
+      at Object.buildAvailableModels (api/services/engineeringRouter/engineeringModelAvailabilityService.js:101:25)
+      at proposeIntent (api/services/engineeringMission/missionCompilerService.js:135:18)
+      at Object.enrichMission (api/services/engineeringMission/missionCompilerService.js:333:22)
+          at async Promise.all (index 1)
+
+  console.log
+    [2026-11-04T07:03:17.880Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+          at async Promise.all (index 1)
+
+  console.info
+    [2026-11-04T07:03:18.144Z] [INFO] [Sequelize] Conexão fechada
+
+      at Object.info (api/utils/logger.js:155:15)
+
+[jest-global-setup] .env carregado (0 chave(s) aplicada(s); ambiente explícito vence)
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+FAIL tests/integration/engineeringMissionDurableResume.test.js (106.428 s)
+  Engineering Mission — durable resume e idempotência
+    ✓ §17 crash durante ENRICHMENT: retomada completa o enriquecimento sem duplicar versão (35914 ms)
+    ✓ §17 lease órfão expira e outro worker assume (idade de locked_at NÃO concede posse) (4808 ms)
+    ✓ TEST 43 crash em AWAITING_APPROVAL preserva estado, preview e decisão pendente (4991 ms)
+    ✓ TEST 44 crash após approval não perde a aprovação (nem autoriza outra versão) (4904 ms)
+    ✓ §18 crash entre "criar task" e "vincular task" não duplica a EngineeringTask (7535 ms)
+    ✕ §18 aprovar/enriquecer repetidamente é idempotente (uma decisão, uma versão por hash) (20090 ms)
+
+  ● Engineering Mission — durable resume e idempotência › §18 aprovar/enriquecer repetidamente é idempotente (uma decisão, uma versão por hash)
+
+    mission f36ed843-0f78-42c1-a766-410033f93be0 está com outro worker (desconhecido) — MISSION_TERMINAL_OR_UNKNOWN
+
+    [0m [90m 290 |[39m     })[33m;[39m
+     [90m 291 |[39m     [36mif[39m ([33m![39macquired[33m.[39macquired) {
+    [31m[1m>[22m[39m[90m 292 |[39m       [36mconst[39m err [33m=[39m [36mnew[39m [33mError[39m([32m`mission ${missionId} está com outro worker (${acquired.lease?.workerInstanceId || 'desconhecido'}) — ${acquired.reason}`[39m)[33m;[39m
+     [90m     |[39m                   [31m[1m^[22m[39m
+     [90m 293 |[39m       err[33m.[39mcode [33m=[39m [32m'MISSION_LOCKED_BY_OTHER_WORKER'[39m[33m;[39m
+     [90m 294 |[39m       err[33m.[39mlockedBy [33m=[39m acquired[33m.[39mlease[33m?[39m[33m.[39mworkerInstanceId [33m||[39m [36mnull[39m[33m;[39m
+     [90m 295 |[39m       err[33m.[39mleaseState [33m=[39m acquired[33m.[39mreason[33m;[39m[0m
+
+      at Object.enrichMission (api/services/engineeringMission/missionCompilerService.js:292:19)
+          at async Promise.all (index 0)
+
+  ● Engineering Mission — durable resume e idempotência › §18 aprovar/enriquecer repetidamente é idempotente (uma decisão, uma versão por hash)
+
+    mission f36ed843-0f78-42c1-a766-410033f93be0 está com outro worker (desconhecido) — MISSION_TERMINAL_OR_UNKNOWN
+
+    [0m [90m 290 |[39m     })[33m;[39m
+     [90m 291 |[39m     [36mif[39m ([33m![39macquired[33m.[39macquired) {
+    [31m[1m>[22m[39m[90m 292 |[39m       [36mconst[39m err [33m=[39m [36mnew[39m [33mError[39m([32m`mission ${missionId} está com outro worker (${acquired.lease?.workerInstanceId || 'desconhecido'}) — ${acquired.reason}`[39m)[33m;[39m
+     [90m     |[39m                   [31m[1m^[22m[39m
+     [90m 293 |[39m       err[33m.[39mcode [33m=[39m [32m'MISSION_LOCKED_BY_OTHER_WORKER'[39m[33m;[39m
+     [90m 294 |[39m       err[33m.[39mlockedBy [33m=[39m acquired[33m.[39mlease[33m?[39m[33m.[39mworkerInstanceId [33m||[39m [36mnull[39m[33m;[39m
+     [90m 295 |[39m       err[33m.[39mleaseState [33m=[39m acquired[33m.[39mreason[33m;[39m[0m
+
+      at Object.enrichMission (api/services/engineeringMission/missionCompilerService.js:292:19)
+          at async Promise.all (index 0)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 5 passed, 6 total
+Snapshots:   0 total
+Time:        106.573 s
+Ran all test suites matching /tests\/integration\/engineeringMissionDurableResume.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

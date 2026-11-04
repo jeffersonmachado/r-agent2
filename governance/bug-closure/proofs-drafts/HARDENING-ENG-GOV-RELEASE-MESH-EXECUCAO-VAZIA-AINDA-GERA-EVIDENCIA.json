@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "555ef57e-e486-446c-8987-d8e617be8a2e",
+  "transitionId": "8c9130ec-8413-40bc-9c34-c3e327cc1674",
   "defectId": "HARDENING-ENG-GOV-RELEASE-MESH-EXECUCAO-VAZIA-AINDA-GERA-EVIDENCIA",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "39b224fb7312e099180cf2c681d003fadda85a41",
-  "codeFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
+  "evaluatedCommit": "2a29f745c82f725beb1b8d6c02ea61693b82fa00",
+  "codeFingerprint": "bbf603fffb2db94f3ea9ff76e7781d2197244d508a61f4d0fda39419112ed704",
   "requiredTests": [
     "tests/unit/qa-mesh/meshZeroResultsPromotion.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/qa-mesh/meshZeroResultsPromotion.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-03T22:37:41.355Z",
-      "finishedAt": "2026-11-03T22:37:49.932Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103222617-06d7bb21/logs/HARDENING-ENG-GOV-RELEASE-MESH-EXECUCAO-VAZIA-AINDA-GERA-EVIDENCIA.log",
-      "outputSha256": "6b9165ece7cebe6b6be5cdf9ae2320d3ad3fb22ff34febc686ea3a558c90b45a"
+      "startedAt": "2026-11-04T06:34:41.170Z",
+      "finishedAt": "2026-11-04T06:34:49.986Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104062209-a46a2b5a/logs/HARDENING-ENG-GOV-RELEASE-MESH-EXECUCAO-VAZIA-AINDA-GERA-EVIDENCIA.log",
+      "outputSha256": "d4644150c91abbd761881d08e4f8d8fcb0a4cc25c9dc50f5005864d248ea4489"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-03T22:37:49.940Z",
-  "proofHash": "2dab8cf4d6fcbf4e26e9beb4a3e426b078b6564df57b5827dc1d39fe798e0431"
+  "createdAt": "2026-11-04T06:34:49.994Z",
+  "proofHash": "d27f9a178ddd5a77f146b53ccfcc266861b5a380cf3d8a79d635bf4144455d07"
 }

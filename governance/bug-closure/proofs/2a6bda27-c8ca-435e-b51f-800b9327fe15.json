@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "2a6bda27-c8ca-435e-b51f-800b9327fe15",
+  "defectId": "MISSAO-B9-CI-GITHUB-ACTIONS",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "2a29f745c82f725beb1b8d6c02ea61693b82fa00",
+  "codeFingerprint": "bbf603fffb2db94f3ea9ff76e7781d2197244d508a61f4d0fda39419112ed704",
+  "requiredTests": [
+    "tests/unit/governance/devBranchCiGate.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/devBranchCiGate.test.js",
+      "command": "npx jest tests/unit/governance/devBranchCiGate.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-04T06:36:51.748Z",
+      "finishedAt": "2026-11-04T06:36:56.095Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104062209-a46a2b5a/logs/MISSAO-B9-CI-GITHUB-ACTIONS.log",
+      "outputSha256": "3b6c4c2756ce5cbcf39b26a969234461369831aacf7b7d7b561d81955cfcbce9"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/devBranchCiGate.test.js",
+      "sha256": "0fbf926905c371c76cb36f10c22f7560cc0d0b954554712fcedeb0fdb32bcc29"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-04T06:36:56.103Z",
+  "proofHash": "c616fa68096f9bc5db2a39f825b526b15cb87ceeb886a78005d780dd3823d9aa",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "l4Ogvx/J6nlaRAZWQj5oxLQMOhsinSX6i1ZOW2LKphhxCFNgaL+DWqzdeRy1a2SVulYQ+kk8VC+m16fDwS4pBg==",
+    "signedAt": "2026-11-04T07:21:09.298Z"
+  }
+}

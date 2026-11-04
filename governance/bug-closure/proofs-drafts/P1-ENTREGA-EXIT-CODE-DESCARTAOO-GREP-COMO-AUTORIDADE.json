@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "301e293f-e14c-4552-b8aa-758a9070a501",
+  "transitionId": "71ad9c17-531b-4290-9b3b-ccc8e19d7171",
   "defectId": "P1-ENTREGA-EXIT-CODE-DESCARTAOO-GREP-COMO-AUTORIDADE",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "39b224fb7312e099180cf2c681d003fadda85a41",
-  "codeFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
+  "evaluatedCommit": "2a29f745c82f725beb1b8d6c02ea61693b82fa00",
+  "codeFingerprint": "bbf603fffb2db94f3ea9ff76e7781d2197244d508a61f4d0fda39419112ed704",
   "requiredTests": [
     "tests/unit/governance/deliveryVerification.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/deliveryVerification.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-03T22:44:05.726Z",
-      "finishedAt": "2026-11-03T22:44:16.291Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103222617-06d7bb21/logs/P1-ENTREGA-EXIT-CODE-DESCARTAOO-GREP-COMO-AUTORIDADE.log",
-      "outputSha256": "beff3e089536e49fd166f797cd06d6a3411802c37d2edf4f231065c8b1206bb9"
+      "startedAt": "2026-11-04T06:38:55.704Z",
+      "finishedAt": "2026-11-04T06:39:01.956Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104062209-a46a2b5a/logs/P1-ENTREGA-EXIT-CODE-DESCARTAOO-GREP-COMO-AUTORIDADE.log",
+      "outputSha256": "2c72dba51d24710b0b36ace8ae370b63537d4dbd5cdd010dd12c721881e575c2"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-03T22:44:16.362Z",
-  "proofHash": "49e0c1c31c43aac8da7763ed923a4b11f82c02063cd92d9e64c8d5053722a087"
+  "createdAt": "2026-11-04T06:39:01.963Z",
+  "proofHash": "40310affb683d556b744d6c0f5403002ffc1dd2234a9eafea2acce8a8285e985"
 }
