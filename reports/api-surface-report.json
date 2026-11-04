@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-11-03T18:12:37.725Z",
-  "commit": "78418d2761910a724cc57d577a83da102231f1d4",
+  "generatedAt": "2026-11-04T00:47:59.322Z",
+  "commit": "4aeea47d956e49d78815a05379397afebd31fbff",
   "baseUrl": "http://127.0.0.1:3001",
   "tokens": {
     "development": true,
@@ -9,8 +9,8 @@
   "totals": {
     "items": 924,
     "byState": {
-      "VALIDATED": 889,
-      "VISITED": 14,
+      "VALIDATED": 892,
+      "VISITED": 11,
       "NOT_APPLICABLE": 21
     }
   },
@@ -5279,10 +5279,7 @@
           "status": 401,
           "notFoundFallback": false
         },
-        "p2": {
-          "status": 200,
-          "notFoundFallback": false
-        },
+        "p2": "network-error",
         "p3": "skipped"
       }
     },
@@ -6403,6 +6400,44 @@
         {
           "name": "authEnforced",
           "passed": true,
+          "detail": "P1 com erro de rede",
+          "notEvaluated": true
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
+        },
+        {
+          "name": "developmentReachable",
+          "passed": true,
+          "detail": "super_admin alcançou a rota (404)"
+        }
+      ],
+      "probes": {
+        "p1": "network-error",
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
+        "p3": {
+          "status": 404,
+          "notFoundFallback": false
+        }
+      }
+    },
+    {
+      "id": "api:GET:/api/qa-waves/executions/history",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
           "detail": "anônimo rejeitado com 401"
         },
         {
@@ -6413,8 +6448,7 @@
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "P3 com erro de rede",
-          "notEvaluated": true
+          "detail": "super_admin alcançou a rota (200)"
         }
       ],
       "probes": {
@@ -6426,39 +6460,6 @@
           "status": 403,
           "notFoundFallback": false
         },
-        "p3": "network-error"
-      }
-    },
-    {
-      "id": "api:GET:/api/qa-waves/executions/history",
-      "state": "VISITED",
-      "assertions": [
-        {
-          "name": "routeRegistered",
-          "passed": true,
-          "detail": "rota respondeu no runtime"
-        },
-        {
-          "name": "authEnforced",
-          "passed": true,
-          "detail": "P1 com erro de rede",
-          "notEvaluated": true
-        },
-        {
-          "name": "classificationEnforced",
-          "passed": true,
-          "detail": "P2 com erro de rede",
-          "notEvaluated": true
-        },
-        {
-          "name": "developmentReachable",
-          "passed": true,
-          "detail": "super_admin alcançou a rota (200)"
-        }
-      ],
-      "probes": {
-        "p1": "network-error",
-        "p2": "network-error",
         "p3": {
           "status": 200,
           "notFoundFallback": false
@@ -6467,7 +6468,7 @@
     },
     {
       "id": "api:GET:/api/qa-waves/governance",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -6477,8 +6478,7 @@
         {
           "name": "authEnforced",
           "passed": true,
-          "detail": "P1 com erro de rede",
-          "notEvaluated": true
+          "detail": "anônimo rejeitado com 401"
         },
         {
           "name": "classificationEnforced",
@@ -6492,7 +6492,10 @@
         }
       ],
       "probes": {
-        "p1": "network-error",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": {
           "status": 403,
           "notFoundFallback": false
@@ -6505,7 +6508,7 @@
     },
     {
       "id": "api:GET:/api/qa-waves/health",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -6515,8 +6518,7 @@
         {
           "name": "authEnforced",
           "passed": true,
-          "detail": "P1 com erro de rede",
-          "notEvaluated": true
+          "detail": "anônimo rejeitado com 401"
         },
         {
           "name": "classificationEnforced",
@@ -6538,7 +6540,10 @@
         "date": "2026-07-28"
       },
       "probes": {
-        "p1": "network-error",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": {
           "status": 403,
           "notFoundFallback": false
@@ -26150,10 +26155,10 @@
       }
     }
   ],
-  "runId": "rap-governed-20261103142739249-066256bb",
-  "sourceFingerprint": "025726e0cbee6873d83d35f7f4a11270d1f7fd12d68d4ea648f2f85553d29ab8",
-  "sourceCommit": "78418d2761910a724cc57d577a83da102231f1d4",
-  "sourceTree": "00a0988fbc17046e618fd538b9c9f74d7757bb6e",
+  "runId": "rap-governed-20261103211809917-039cadf5",
+  "sourceFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
+  "sourceCommit": "39b224fb7312e099180cf2c681d003fadda85a41",
+  "sourceTree": "5bbbccb009dce7cefc50269ff5f18e56068d6a24",
   "artifactType": "api-surface-report",
   "artifactVersion": "1.0.0"
 }

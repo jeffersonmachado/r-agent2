@@ -1,9 +1,9 @@
 # Platform Status
 
-- Generated at: 2026-11-03T23:19:43.851Z
-- Canonical mesh execution: mesh-2026-11-03T17-21-12-568Z
+- Generated at: 2026-11-04T01:01:59.628Z
+- Canonical mesh execution: mesh-2026-11-03T23-51-59-600Z
 - Canonical mesh decision: GO
-- Readiness decision: NO_GO:MANDATORY_GATE_BLOCKED [governance=NO_GO:GOVERNANCE_BLOCKED [MASTER_SCORECARD_NOT_10_OF_10: RAP-055: score=6 target=10 | RAP-055: mandatory requirement failures=runtime-validated,governed,no-known-gap | RAP-055: open gaps=2 | RAP-056: score=6 target=10 | RAP-056: mandatory requirement failures=runtime-validated,no-known-gap | RAP-056: open gaps=1 | scorecard: open gaps=3 | FINAL_PROOF_NOT_PASS: PASS_WITH_DEFERRED_PACKAGE_GATE | FINAL_READINESS_NOT_PASS: PASS_WITH_DEFERRED_PACKAGE_GATE | FINAL_GOVERNANCE declara GO, mas o filho obrigatório PLATFORM_READINESS está NOT_GO (PASS_WITH_DEFERRED_PACKAGE_GATE)]]
+- Readiness decision: NO_GO:MANDATORY_GATE_BLOCKED [governance=NO_GO]
 - Readiness score: 100
 - QA coverage: 100%
 - Replay coverage: 100%
@@ -13,7 +13,7 @@
 - none
 
 ## Canonical mesh artifacts
-- History: /opt/results/ria/er-fixci/qa-mesh/meshHistory/mesh-2026-11-03T17-21-12-568Z.json
+- History: /opt/results/ria/er-fixci/qa-mesh/meshHistory/mesh-2026-11-03T23-51-59-600Z.json
 - Summary: /opt/results/ria/er-fixci/qa-mesh/meshReport.json
 - GO/NO_GO: /opt/results/ria/er-fixci/qa-mesh/go-no-go-report.json
 - Metrics: /opt/results/ria/er-fixci/qa-mesh/metrics.json
@@ -23,4 +23,4 @@
 - Operational smokes L01-L05 remain available as evidence-backed platform pillars.
 
 ## NO_GO reasons
-- Fingerprint chain divergente — codigo/cenarios/politicas mudaram apos o proof (STALE) [gap-proof-stale-fingerprints]
+- Proof artifacts presentes mas semanticamente invalidos (presenca != validade) [gap-proof-invalid-artifact-semantics]

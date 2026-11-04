@@ -1,9 +1,9 @@
 {
   "artifactType": "outbound-reliability-report",
   "artifactVersion": "1.0.0",
-  "generatedAt": "2026-11-03T19:49:30.130Z",
-  "runId": "rap-governed-20261103142739249-066256bb",
-  "sourceFingerprint": "025726e0cbee6873d83d35f7f4a11270d1f7fd12d68d4ea648f2f85553d29ab8",
+  "generatedAt": "2026-11-04T00:42:29.137Z",
+  "runId": "rap-governed-20261103211809917-039cadf5",
+  "sourceFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
   "status": "PASS",
   "transactionalOutbox": true,
   "partialStatePossible": false,
@@ -34,5 +34,5 @@
       "violations": 0
     }
   },
-  "sourceCommit": "78418d2761910a724cc57d577a83da102231f1d4"
+  "sourceCommit": "39b224fb7312e099180cf2c681d003fadda85a41"
 }
