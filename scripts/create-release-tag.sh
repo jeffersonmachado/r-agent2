@@ -61,14 +61,36 @@ git cat-file -e "$COMMIT^{commit}" 2>/dev/null || {
 # ── VÍNCULO ENTRE A DECISÃO E O COMMIT TAGUEADO (Fase 3, achado 4 da revisão) ──
 # `assert-canonical-release-decision` valida a árvore de trabalho; sem esta checagem qualquer sha
 # local passava a receber uma tag de "release", usando um GO de outro conteúdo. Quando existe run
-# governado corrente, o commit tagueado tem de ser o MESMO que ele selou.
+# governado corrente, o commit tagueado tem de ser o MESMO CONTEÚDO que ele selou.
+#
+# DEFEITO MEDIDO (2026-11-04, release r-agent2-20261104-000924): a comparação era por SHA BRUTO
+# contra `sourceCommit`. Mas o ciclo canônico produz commits de EVIDÊNCIA depois de congelar o run
+# (`create-governed-run` → converge commita governance/*.json, reports/, qa/ → selo V2 → zip:release
+# commita evidência). Nenhum deles toca a superfície provada, então o `sourceFingerprint` continua
+# idêntico — e o guard recusava a tag do PRÓPRIO caminho oficial. Gate que proíbe o caminho oficial
+# está errado, não o caminho.
+#
+# O discriminador de conteúdo é o `sourceFingerprint` (a superfície provada inteira entra no hash;
+# um GO de outro conteúdo tem fingerprint diferente). A comparação é feita pelo helper
+# `scripts/governance/source-fingerprint-at-commit.js`, que usa a MESMA função canônica do
+# fingerprint — nunca uma segunda regra. Fail-closed: sem fingerprint idêntico, a tag é recusada.
 CURRENT_RUN="$REPO_ROOT/governance/.current-run.json"
 if [[ -f "$CURRENT_RUN" ]]; then
   RUN_COMMIT="$(node -pe "try{JSON.parse(require('fs').readFileSync(process.argv[1],'utf8')).sourceCommit||''}catch(_){''}" "$CURRENT_RUN" 2>/dev/null || true)"
+  RUN_FP="$(node -pe "try{JSON.parse(require('fs').readFileSync(process.argv[1],'utf8')).sourceFingerprint||''}catch(_){''}" "$CURRENT_RUN" 2>/dev/null || true)"
   if [[ -n "$RUN_COMMIT" && "$RUN_COMMIT" != "$COMMIT" ]]; then
-    echo "[release-tag] ERRO: commit $COMMIT != sourceCommit do run governado ($RUN_COMMIT)" >&2
-    echo "[release-tag] A decisão canônica vale para o commit que ela selou — não para outro conteúdo." >&2
-    exit 1
+    if [[ -z "$RUN_FP" ]]; then
+      echo "[release-tag] ERRO: run governado sem sourceFingerprint — vínculo de conteúdo impossível" >&2
+      exit 1
+    fi
+    TAGGED_FP="$(node "$SCRIPT_DIR/governance/source-fingerprint-at-commit.js" "$COMMIT" 2>/dev/null || true)"
+    if [[ "$TAGGED_FP" != "$RUN_FP" ]]; then
+      echo "[release-tag] ERRO: commit $COMMIT != sourceCommit do run governado ($RUN_COMMIT) e o" >&2
+      echo "[release-tag]       sourceFingerprint diverge (commit=${TAGGED_FP:-INDISPONIVEL} run=$RUN_FP)." >&2
+      echo "[release-tag] A decisão canônica vale para o conteúdo que ela selou — não para outro conteúdo." >&2
+      exit 1
+    fi
+    echo "[release-tag] OK: $COMMIT avança o run ($RUN_COMMIT) apenas com evidência — sourceFingerprint idêntico ($RUN_FP)"
   fi
 fi
 

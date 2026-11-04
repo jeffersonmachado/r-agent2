@@ -132,3 +132,100 @@ describe('create-release-tag.sh — tag imutável de release (repo temporário, 
     expect(result.output).toContain('malformado');
   });
 });
+
+/**
+ * VÍNCULO DE CONTEÚDO (defeito medido em 2026-11-04, release r-agent2-20261104-000924).
+ *
+ * O guard comparava o SHA BRUTO do commit tagueado com `sourceCommit` do run. O ciclo
+ * canônico, porém, produz commits de EVIDÊNCIA depois de congelar o run (converge →
+ * selo → packaging) sem tocar a superfície provada, então o `sourceFingerprint`
+ * permanece idêntico — e a tag do PRÓPRIO caminho oficial era recusada.
+ *
+ * A regra correta: o commit tagueado pode avançar o run APENAS se o fingerprint de
+ * conteúdo for o mesmo; fingerprint diferente continua recusado (fail-closed).
+ */
+describe('create-release-tag.sh — vínculo por sourceFingerprint (não por sha bruto)', () => {
+  let dir;
+  let work;
+  let runCommit;
+  let evidenceCommit;
+  let otherCommit;
+  let runFingerprint;
+
+  function fingerprintAt(commit) {
+    return execFileSync(
+      process.execPath,
+      [path.join(__dirname, '..', '..', '..', 'scripts', 'governance', 'source-fingerprint-at-commit.js'), commit],
+      { cwd: work, encoding: 'utf8' },
+    ).trim();
+  }
+
+  function writeRunContext(sourceCommit, sourceFingerprint) {
+    fs.mkdirSync(path.join(work, 'governance'), { recursive: true });
+    fs.writeFileSync(
+      path.join(work, 'governance', '.current-run.json'),
+      `${JSON.stringify({ runId: 'rap-governed-test', sourceCommit, sourceFingerprint }, null, 2)}\n`,
+    );
+  }
+
+  beforeAll(() => {
+    dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rap-release-tag-fp-'));
+    execFileSync('git', ['init', '--bare', path.join(dir, 'remote.git')], { stdio: 'ignore' });
+    work = path.join(dir, 'work');
+    execFileSync('git', ['init', work], { stdio: 'ignore' });
+    git(work, ['config', 'user.email', 'qa@example.com']);
+    git(work, ['config', 'user.name', 'QA Bot']);
+    git(work, ['remote', 'add', 'origin', path.join(dir, 'remote.git')]);
+
+    // `lib/` é uma SOURCE_ROOT do fingerprint-chain: muda o fingerprint.
+    fs.mkdirSync(path.join(work, 'lib'), { recursive: true });
+    fs.writeFileSync(path.join(work, 'lib', 'mod.js'), "'use strict';\nmodule.exports = 1;\n");
+    git(work, ['add', 'lib/mod.js']);
+    git(work, ['commit', '-m', 'run source']);
+    runCommit = git(work, ['rev-parse', 'HEAD']);
+    runFingerprint = fingerprintAt(runCommit);
+
+    // Commit SÓ de evidência: fora da superfície provada ⇒ fingerprint idêntico.
+    fs.mkdirSync(path.join(work, 'reports'), { recursive: true });
+    fs.writeFileSync(path.join(work, 'reports', 'evidence.json'), '{"pass":true}\n');
+    git(work, ['add', 'reports/evidence.json']);
+    git(work, ['commit', '-m', 'evidence only']);
+    evidenceCommit = git(work, ['rev-parse', 'HEAD']);
+
+    // Commit que ALTERA a fonte provada ⇒ fingerprint diferente.
+    fs.writeFileSync(path.join(work, 'lib', 'mod.js'), "'use strict';\nmodule.exports = 2;\n");
+    git(work, ['add', 'lib/mod.js']);
+    git(work, ['commit', '-m', 'source change']);
+    otherCommit = git(work, ['rev-parse', 'HEAD']);
+
+    git(work, ['push', 'origin', 'HEAD:refs/heads/main']);
+  });
+
+  afterAll(() => {
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  test('commit de EVIDÊNCIA após o run (mesmo fingerprint) → tag permitida', () => {
+    writeRunContext(runCommit, runFingerprint);
+    const result = runScript(work, ['rel-evidence', evidenceCommit]);
+    expect(result.status).toBe(0);
+    expect(result.output).toContain('apenas com evidência');
+    expect(remoteTagTarget(work, 'rel-evidence')).toBe(evidenceCommit);
+  });
+
+  test('commit que MUDA a fonte provada (fingerprint diferente) → recusado', () => {
+    writeRunContext(runCommit, runFingerprint);
+    const result = runScript(work, ['rel-drift', otherCommit]);
+    expect(result.status).toBe(1);
+    expect(result.output).toContain('sourceFingerprint diverge');
+    // Nada foi criado: a tag do conteúdo divergente não existe.
+    expect(git(work, ['tag', '-l', 'rel-drift'])).toBe('');
+  });
+
+  test('commit idêntico ao do run continua passando pelo caminho direto', () => {
+    writeRunContext(runCommit, runFingerprint);
+    const result = runScript(work, ['rel-same', runCommit]);
+    expect(result.status).toBe(0);
+    expect(remoteTagTarget(work, 'rel-same')).toBe(runCommit);
+  });
+});
