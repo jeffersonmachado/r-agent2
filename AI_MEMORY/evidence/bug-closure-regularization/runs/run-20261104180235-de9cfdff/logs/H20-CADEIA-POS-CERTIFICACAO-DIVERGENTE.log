@@ -1,0 +1,13 @@
+[jest-global-setup] .env carregado (0 chave(s) aplicada(s); ambiente explícito vence)
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/governance/governanceChainPostPackagingCertification.test.js
+  H20 — cadeia pós-certificação
+    ✓ verifyChainHashes acusa divergência quando um membro muda depois da gravação (133 ms)
+    ✓ a fase certify reconstrói, verifica e afirma a decisão canônica nesta ordem (109 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       2 passed, 2 total
+Snapshots:   0 total
+Time:        0.942 s, estimated 2 s
+Ran all test suites matching /tests\/unit\/governance\/governanceChainPostPackagingCertification.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

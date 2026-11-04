@@ -1,0 +1,85 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "9163ce0e-fb11-4e48-b8ec-4766db2d8398",
+  "defectId": "H20-CADEIA-POS-CERTIFICACAO-DIVERGENTE",
+  "severityBefore": "P2",
+  "severityAfter": "P2",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "2951080dada41f0c508ee0547d563b081ecb5d4e",
+  "codeFingerprint": "6d91637f14c652d9dc1029b58f57c0300fb5b62e443f6192a0db95fc0769fa0c",
+  "requiredTests": [
+    "tests/unit/governance/governanceChainPostPackagingCertification.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/governanceChainPostPackagingCertification.test.js",
+      "command": "npx jest tests/unit/governance/governanceChainPostPackagingCertification.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-04T18:02:35.559Z",
+      "finishedAt": "2026-11-04T18:02:39.603Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104180235-de9cfdff/logs/H20-CADEIA-POS-CERTIFICACAO-DIVERGENTE.log",
+      "outputSha256": "473f766bb8e6dcd62b44b7a8635ba312cc3e8a888b3e5a3ae8d6a6b7c00dee47"
+    }
+  ],
+  "negativeEvidence": [
+    {
+      "targetFile": "governance/governance-chain.json",
+      "control": "sem a reconstrução pós-empacotamento, os relatórios reescritos DEPOIS do selo deixam a cadeia de 10 elos irrecuperável (13 divergências) e a publicação fica bloqueada",
+      "mutatedFromSha256": "1da7a651a5315d5f1840340725d1cd980b2711ea652a7fbc72e8f86ff7ce3d9a",
+      "mutatedToSha256": "4ec0722fc0f451eaa50ab29d46671bf88caaf62e2b474937a4f86ca660ca0ec4",
+      "testPath": "scripts/governance/validate-governance-chain.js",
+      "command": "node scripts/governance/validate-governance-chain.js",
+      "baseline": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/H20-baseline-mw2fb2re.log",
+        "logSha256": "e9fb3de48c78da19a05dc7a238cc52aa964299931058b17710d00997bf4941c5"
+      },
+      "mutated": {
+        "exitCode": 1,
+        "log": "AI_MEMORY/evidence/prova-negativa/H20-mutado-mw2fb2re.log",
+        "logSha256": "72a921153d67bb9d735715c1c3a8c6e19dc48dc416160a8069cd03087d5a11b4"
+      },
+      "restored": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/H20-restaurado-verify-mw2fb2re.log",
+        "logSha256": "e9fb3de48c78da19a05dc7a238cc52aa964299931058b17710d00997bf4941c5"
+      },
+      "capturedAt": "2026-11-04T18:01:35.741Z"
+    }
+  ],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/governanceChainPostPackagingCertification.test.js",
+      "sha256": "656d2a0561f9e6683ed415a14f7c386ac705d5ba510ca51b837c4d1ba2dc3da9"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": {
+    "channel": "VSCODE_AGENT",
+    "by": "platform-owner:jeffersonmachado",
+    "at": "2026-11-04T18:03:11.926Z",
+    "ref": "session:e92510ac-0f54-41c6-bb85-90f42042999c",
+    "agentSession": "session:e92510ac-0f54-41c6-bb85-90f42042999c"
+  },
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+  },
+  "createdAt": "2026-11-04T18:02:39.614Z",
+  "proofHash": "3f94c1889653f313d9716eb667b45713779858476b77ed0446712c6547bcf3e9",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "SzpqoC04zc1gBn/2O0EeUMO3WZCYpYK2pV+GP4D6rJvffLNZ87Tc2eK3e0LZitpr/yu8gjXAjEEQqIBG8p/zCw==",
+    "signedAt": "2026-11-04T18:03:13.945Z"
+  }
+}

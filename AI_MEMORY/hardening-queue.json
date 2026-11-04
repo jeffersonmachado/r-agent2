@@ -3,7 +3,7 @@
   "repository": "jeffersonmachado/r-agent2",
   "branch": "mission/p0p1-hardening-20261010",
   "baseline": "2f1795454",
-  "updatedAt": "2026-11-04T17:45:50.951Z",
+  "updatedAt": "2026-11-04",
   "consumers": [
     ".github/hooks/continue-until-done.cjs (eventos Stop/SessionStart)"
   ],
@@ -1948,7 +1948,7 @@
       "id": "H20-CADEIA-POS-CERTIFICACAO-DIVERGENTE",
       "title": "Cadeia de governanca diverge do conteudo atual (escritas pos-certificacao) e projecoes de status divergem dos relatorios finais",
       "status": "done",
-      "commit": "b61a9cf47",
+      "commit": "2951080da",
       "evidence": "Causa raiz medida: os relatorios finais (evidence-manifest, final-proof-report, final-readiness-report, package-validation-report e proof-signature) sao reescritos DEPOIS de a cadeia ser construida e assinada no PASS 4 do two-pass, e nenhum passo a reconstruia — validate-governance-chain acusava 13 divergencias e assert-canonical-release-decision ficava NO_GO (CADEIA_RECOMPUTADA_INVALIDA). Correcao pelo caminho sancionado (governance/sign-governance.js -> preSign) seguida de verify da cadeia: PASS 10/10 elos e state=CERTIFIED_GO. Prova material: payload r-agent2-20261104-135808, tag publicada apontando para 05779ad76, remote-provenance PASS (commitExists=true treeMatches=true) e verify:delivered-release=DELIVERED_RELEASE_VERIFIED.",
       "severity": "P2",
       "severityStatus": "DECLARADA_POR_ANALISE",
@@ -1959,10 +1959,13 @@
       "nextAction": "Executar ciclo release:seal completo em janela autorizada e re-rodar a fase D do gate.",
       "description": "CAUSA RAIZ MEDIDA E CORRIGIDA (ad81f13f6): o two-pass revalidava platform-readiness DEPOIS de construida/assinada a cadeia; essa revalidacao reescreve 5/5 elos divergentes (evidence-manifest, final-proof-report, final-readiness, proof-signature, package-validation). Fix: RAP_READINESS_NO_PERSIST=1 no passo pos-packaging + sourceCommit/policy no final-governance-engine. Prova: payload r-agent2-20261104-000924 extraido reprovava 27 divergencias/tampered=true; medicao direta mostra 5/5 elos reescritos por platform-readiness. FALTA: novo ciclo de selagem com a ordem corrigida para produzir payload autoconsistente (o payload anterior NAO e publicavel; tag local removida, nada pushado).",
       "root_cause_commit": "ad81f13f6c8ad0bac9553afc69ddfe0711f6a8d7",
-      "regressionTest": "tests/unit/governance/governanceChainCertification.test.js",
+      "regressionTest": "tests/unit/governance/governanceChainPostPackagingCertification.test.js",
       "targetedTestPassing": true,
       "targetedTestAt": "2026-11-04T17:45:50.951Z",
-      "targetedTestExit": 0
+      "targetedTestExit": 0,
+      "closureProof": "governance/bug-closure/proofs/9163ce0e-fb11-4e48-b8ec-4766db2d8398.json",
+      "attestationId": "9163ce0e-fb11-4e48-b8ec-4766db2d8398",
+      "attestedAt": "2026-11-04T18:03:14.748Z"
     },
     {
       "id": "H21-CRM-PERSISTENCIA-X-METRICAS",
