@@ -1900,10 +1900,23 @@ function syncDerivedProjections() {
 }
 
 function main() {
-  materializeProofArtifacts();
+  // MODO DE REVALIDAÇÃO SEM PERSISTÊNCIA (RAP_READINESS_NO_PERSIST=1).
+  // DEFEITO MEDIDO (2026-11-04, release r-agent2-20261104-000924): o two-pass
+  // revalida o readiness DEPOIS de a cadeia de governança ter sido construída e
+  // assinada. Como este produtor reescreve final-proof-report, final-readiness,
+  // evidence-manifest e as projeções docs/, essas escritas aconteciam APÓS a
+  // certificação e o veredito canônico reprovava com
+  // CADEIA_RECOMPUTADA_INVALIDA/tampered — bloqueando a publicação da tag.
+  // Revalidar não precisa reescrever: no modo sem persistência o produtor apenas
+  // AVALIA e reporta; os artefatos certificados (os que estão no payload)
+  // permanecem os últimos bytes escritos.
+  const persist = process.env.RAP_READINESS_NO_PERSIST !== '1';
+  if (persist) materializeProofArtifacts();
   const report = buildReport();
-  persistReport(report);
-  syncDerivedProjections();
+  if (persist) {
+    persistReport(report);
+    syncDerivedProjections();
+  }
   // eslint-disable-next-line no-console
   console.log(JSON.stringify({
     status: report.finalDecision,

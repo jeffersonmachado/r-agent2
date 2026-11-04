@@ -1,34 +1,38 @@
 {
-  "generatedAt": "2026-11-04T03:26:26.802Z",
+  "generatedAt": "2026-11-04T06:19:03.656Z",
   "engine": "final-governance-engine/v1",
   "artifactType": "final-governance-report",
   "artifactVersion": "2.0.0",
   "runId": "rap-governed-20261103211809917-039cadf5",
   "sourceFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
+  "sourceCommit": "39b224fb7312e099180cf2c681d003fadda85a41",
+  "policyId": "RAP-AGENT-CONSTITUTION",
+  "policyVersion": "1.0.4",
+  "policyFingerprint": "4105767b265223362456fabfab89eef312e12d777e55af409f5eb9b1bb8548fb",
   "strictMode": true,
-  "finalDecision": "AUTONOMOUS_READY_GO",
-  "autonomousReady": true,
-  "allChecksPass": true,
-  "criticalBlocked": false,
+  "finalDecision": "NO_GO:GOVERNANCE_BLOCKED [RUN_INVALIDATED: RUN_INVALIDATED: rap-governed-20261103211809917-039cadf5 is invalidated | INVALID_ARTIFACT: missing lineage fields: runId, sourceFingerprint, artifactType, artifactVersion | Governance signature inválida — governança adulterada ou chave diverge]",
+  "autonomousReady": false,
+  "allChecksPass": false,
+  "criticalBlocked": true,
   "checks": [
     {
       "id": "run_context",
       "gateId": "run_context",
       "mandatory": true,
-      "status": "PASS",
-      "pass": true,
-      "severity": "OK",
+      "status": "FAIL",
+      "pass": false,
+      "severity": "CRITICAL",
       "runId": "rap-governed-20261103211809917-039cadf5",
       "sourceFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
-      "reason": null,
+      "reason": "RUN_INVALIDATED: RUN_INVALIDATED: rap-governed-20261103211809917-039cadf5 is invalidated",
       "runContext": {
         "runId": "rap-governed-20261103211809917-039cadf5",
         "sourceFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
         "sourceCommit": "39b224fb7312e099180cf2c681d003fadda85a41",
         "sourceTree": "5bbbccb009dce7cefc50269ff5f18e56068d6a24",
         "startedAt": "2026-11-03T21:18:10.125Z",
-        "generatedAt": "2026-11-04T03:26:22.641Z",
-        "status": "COMPLETED",
+        "generatedAt": "2026-11-04T06:07:24.337Z",
+        "status": "INVALIDATED",
         "artifactType": "run-context",
         "artifactVersion": "1.0.0",
         "policyId": "RAP-AGENT-CONSTITUTION",
@@ -88,7 +92,15 @@
             "verifiedAt": "2026-11-04T03:26:22.641Z"
           }
         ],
-        "completedAt": "2026-11-04T03:08:44.046Z"
+        "completedAt": "2026-11-04T03:08:44.046Z",
+        "invalidatedAt": "2026-11-04T06:07:24.337Z",
+        "invalidation": {
+          "reason": "RUN_SOURCE_DRIFT",
+          "stage": "final-governance",
+          "expectedSourceFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
+          "actualSourceFingerprint": "d13bbbb5e5f6bd6b4fa70a89e1c0f8756af6cb75d2bd4aab77331a14ed514c63",
+          "detectedAt": "2026-11-04T06:07:24.337Z"
+        }
       }
     },
     {
@@ -126,14 +138,23 @@
       "id": "tamper_detection",
       "gateId": "tamper_detection",
       "mandatory": true,
-      "status": "PASS",
-      "pass": true,
-      "severity": "OK",
+      "status": "FAIL",
+      "pass": false,
+      "severity": "CRITICAL",
       "runId": "rap-governed-20261103211809917-039cadf5",
       "sourceFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
-      "reason": null,
-      "decision": "GO",
-      "failedChecks": 0
+      "reason": "INVALID_ARTIFACT: missing lineage fields: runId, sourceFingerprint, artifactType, artifactVersion",
+      "lineage": {
+        "valid": false,
+        "code": "INVALID_ARTIFACT",
+        "reason": "missing lineage fields: runId, sourceFingerprint, artifactType, artifactVersion",
+        "missing": [
+          "runId",
+          "sourceFingerprint",
+          "artifactType",
+          "artifactVersion"
+        ]
+      }
     },
     {
       "id": "final_proof",
@@ -230,12 +251,25 @@
     },
     {
       "id": "governance_signature",
-      "pass": true,
-      "severity": "OK",
-      "reason": null
+      "pass": false,
+      "severity": "CRITICAL",
+      "reason": "Governance signature inválida — governança adulterada ou chave diverge"
     }
   ],
-  "criticalFailed": [],
+  "criticalFailed": [
+    {
+      "id": "run_context",
+      "reason": "RUN_INVALIDATED: RUN_INVALIDATED: rap-governed-20261103211809917-039cadf5 is invalidated"
+    },
+    {
+      "id": "tamper_detection",
+      "reason": "INVALID_ARTIFACT: missing lineage fields: runId, sourceFingerprint, artifactType, artifactVersion"
+    },
+    {
+      "id": "governance_signature",
+      "reason": "Governance signature inválida — governança adulterada ou chave diverge"
+    }
+  ],
   "highFailed": [],
-  "summary": "Governança limpa. Decisão: AUTONOMOUS_READY_GO"
+  "summary": "3 bloqueio(s) crítico(s). Decisão: NO_GO:GOVERNANCE_BLOCKED [RUN_INVALIDATED: RUN_INVALIDATED: rap-governed-20261103211809917-039cadf5 is invalidated | INVALID_ARTIFACT: missing lineage fields: runId, sourceFingerprint, artifactType, artifactVersion | Governance signature inválida — governança adulterada ou chave diverge]"
 }

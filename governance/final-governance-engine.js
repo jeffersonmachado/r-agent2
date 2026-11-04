@@ -541,6 +541,18 @@ function runGovernanceEngine() {
     artifactVersion: '2.0.0',
     runId:           runContext?.runId || null,
     sourceFingerprint: runContext?.sourceFingerprint || null,
+    // DEFEITO MEDIDO (2026-11-04, release r-agent2-20261104-000924): este motor
+    // gravava runId + sourceFingerprint SEM `sourceCommit`, enquanto
+    // `export-governance-artifacts.js` grava os três. A decisão canônica
+    // (`assert-canonical-release-decision`, gate de identidade) classificava o
+    // relatório como INCOMPLETA:faltantes=sourceCommit e o GO definitivo virava
+    // impossível — a publicação era bloqueada por um campo ausente, não por falha
+    // de conteúdo. A identidade vem do RUN congelado (`checkRunContext`), nunca do
+    // HEAD vivo.
+    sourceCommit:    runContext?.sourceCommit || null,
+    policyId:        runContext?.policyId || null,
+    policyVersion:   runContext?.policyVersion || null,
+    policyFingerprint: runContext?.policyFingerprint || null,
     strictMode:      STRICT_MODE,
     finalDecision,
     autonomousReady: finalDecision === 'AUTONOMOUS_READY_GO',

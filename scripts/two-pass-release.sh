@@ -1571,9 +1571,16 @@ if bash "$VERIFIER"; then
     || fail "payload governance NO_GO — release bloqueada"
 
   # ── Revalidação pós-packaging (gap estrutural de pacote já resolvido) ─────
+  # REVALIDAÇÃO SEM ESCRITA (RAP_READINESS_NO_PERSIST=1). DEFEITO MEDIDO
+  # (2026-11-04, release r-agent2-20261104-000924): esta chamada reescrevia
+  # final-proof-report/final-readiness/evidence-manifest e as projeções docs/
+  # DEPOIS de a cadeia de governança ter sido construída e assinada, produzindo
+  # CADEIA_RECOMPUTADA_INVALIDA/tampered no veredito canônico e bloqueando a
+  # publicação da tag. Aqui o objetivo é AVALIAR (o pacote já foi certificado);
+  # reescrever os artefatos selados não é revalidar — é invalidar.
   step "Revalidando platform-readiness com o pacote final (gap transitório resolvido)..."
-  if node_with_workspace_env "$PROJECT_ROOT/tools/system/platform-readiness.js" 2>/dev/null; then
-    ok "platform-readiness AUTONOMOUS_READY_GO (pós-packaging)"
+  if RAP_READINESS_NO_PERSIST=1 node_with_workspace_env "$PROJECT_ROOT/tools/system/platform-readiness.js" 2>/dev/null; then
+    ok "platform-readiness AUTONOMOUS_READY_GO (pós-packaging, sem reescrita)"
   else
     fail "platform-readiness pós-packaging retornou NO_GO — release bloqueada"
   fi
