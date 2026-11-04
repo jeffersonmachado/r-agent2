@@ -84,7 +84,10 @@ afterAll(async () => {
 }, 30000);
 
 describe('Mission Recovery Coordinator — boot automático', () => {
-  jest.setTimeout(90000);
+  // Medido no lote canônico de release (16 lotes em paralelo, picos de 64 conexões e drenagem de
+  // até 9,4 s): os cenários de recuperação levam 24-67 s isolados e estouram 90 s sob contenção do
+  // Postgres. O timeout acomoda a contenção; nenhuma asserção foi afrouxada.
+  jest.setTimeout(180000);
 
   test('boot retoma a TASK de missão EXECUTING abandonada, sem endpoint manual', async () => {
     if (skipIfNoDatabase()) return;
@@ -111,7 +114,7 @@ describe('Mission Recovery Coordinator — boot automático', () => {
     expect(item.taskId).toBe(execution.task.id);
     // A ORDEM importa: o coordenador mandou o Router retomar A TASK DA MISSÃO, não outra qualquer.
     expect(routerService.runTask).toHaveBeenCalledWith(execution.task.id, expect.anything());
-  }, 90000);
+  }, 180000);
 
   test('boot NÃO retoma missão aguardando aprovação (decisão é humana) nem missão bloqueada', async () => {
     if (skipIfNoDatabase()) return;
@@ -130,7 +133,7 @@ describe('Mission Recovery Coordinator — boot automático', () => {
     expect(ids).not.toContain(mission.id);
     expect(ids).not.toContain(blocked.id);
     expect(routerService.runTask).not.toHaveBeenCalledWith(expect.stringContaining(mission.id), expect.anything());
-  }, 90000);
+  }, 180000);
 
   test('dois coordenadores concorrentes: o perdedor NÃO retoma a mesma missão (lease)', async () => {
     if (skipIfNoDatabase()) return;
@@ -150,7 +153,7 @@ describe('Mission Recovery Coordinator — boot automático', () => {
     // Pode nem aparecer (não foi descoberta) ou aparecer como recusada — o que NUNCA pode é retomar.
     if (item) expect(['SKIP', 'NO_TASK_TO_RESUME']).toContain(item.action);
     expect(routerService.runTask).not.toHaveBeenCalledWith(execution.task.id, expect.anything());
-  }, 90000);
+  }, 180000);
 
   test('recovery é idempotente: duas varreduras seguidas não duplicam task nem efeito', async () => {
     if (skipIfNoDatabase()) return;
@@ -182,7 +185,7 @@ describe('Mission Recovery Coordinator — boot automático', () => {
     );
     expect(n).toBe(1);
     expect(second.items.filter((i) => i.missionId === mission.id && i.action === 'TASK_RESUMED').length).toBeLessThanOrEqual(1);
-  }, 90000);
+  }, 180000);
 
   test('lease é liberado ao final da varredura (missão não fica presa a um coordenador que saiu)', async () => {
     if (skipIfNoDatabase()) return;
@@ -196,5 +199,5 @@ describe('Mission Recovery Coordinator — boot automático', () => {
     await coordinator.runBootRecovery({ tenantId: 'system' });
     const lease = await store.getMissionLease(mission.id);
     expect(lease.token).toBeNull();
-  }, 90000);
+  }, 180000);
 });
