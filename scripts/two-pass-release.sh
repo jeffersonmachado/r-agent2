@@ -1579,11 +1579,16 @@ if bash "$VERIFIER"; then
   # publicação da tag. Aqui o objetivo é AVALIAR (o pacote já foi certificado);
   # reescrever os artefatos selados não é revalidar — é invalidar.
   step "Revalidando platform-readiness com o pacote final (gap transitório resolvido)..."
-  if RAP_READINESS_NO_PERSIST=1 node_with_workspace_env "$PROJECT_ROOT/tools/system/platform-readiness.js" 2>/dev/null; then
+  # A variável é EXPORTADA (e não prefixada na chamada) para não depender da
+  # semântica de assignment-antes-de-função do shell.
+  export RAP_READINESS_NO_PERSIST=1
+  if node_with_workspace_env "$PROJECT_ROOT/tools/system/platform-readiness.js" 2>/dev/null; then
     ok "platform-readiness AUTONOMOUS_READY_GO (pós-packaging, sem reescrita)"
   else
+    unset RAP_READINESS_NO_PERSIST
     fail "platform-readiness pós-packaging retornou NO_GO — release bloqueada"
   fi
+  unset RAP_READINESS_NO_PERSIST
 
   # ── Resumo final ─────────────────────────────────────────────────────────
   SP_STATUS="$(node -e "
