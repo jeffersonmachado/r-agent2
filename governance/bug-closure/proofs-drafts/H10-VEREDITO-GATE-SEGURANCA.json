@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "59a5ae82-2302-48ff-89cf-5dc9bb0cdd4d",
+  "transitionId": "6bc8c7b1-ed53-429e-870e-e23d92074a23",
   "defectId": "H10-VEREDITO-GATE-SEGURANCA",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "2a29f745c82f725beb1b8d6c02ea61693b82fa00",
-  "codeFingerprint": "bbf603fffb2db94f3ea9ff76e7781d2197244d508a61f4d0fda39419112ed704",
+  "evaluatedCommit": "16b651d77569b9a225b26c4f086530784f729e17",
+  "codeFingerprint": "6d91637f14c652d9dc1029b58f57c0300fb5b62e443f6192a0db95fc0769fa0c",
   "requiredTests": [
     "tests/unit/governance/securityGateState.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/securityGateState.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-04T06:33:19.934Z",
-      "finishedAt": "2026-11-04T06:33:35.498Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104062209-a46a2b5a/logs/H10-VEREDITO-GATE-SEGURANCA.log",
-      "outputSha256": "1e6fe7fd800a9f30e4a701b27aee5a9625909d40eeb5909fcc0dd1896de6731e"
+      "startedAt": "2026-11-04T09:23:17.090Z",
+      "finishedAt": "2026-11-04T09:23:24.497Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104091244-2a69839e/logs/H10-VEREDITO-GATE-SEGURANCA.log",
+      "outputSha256": "f243159e8fc4569114d10a70b1dee447e7eb6bb48c782b990d84910db0a87669"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-04T06:33:35.507Z",
-  "proofHash": "afaf7586c9ddc907ea7f23748b0a06e76b3902ff4b0a21195da8bc91d584e09b"
+  "createdAt": "2026-11-04T09:23:24.503Z",
+  "proofHash": "ea9d51165a128b771b5a4789a391ef745f58bce54e28b7bce9f03e7cd2859998"
 }

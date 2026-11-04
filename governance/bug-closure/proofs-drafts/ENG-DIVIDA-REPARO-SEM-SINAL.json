@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "e265d88f-4d22-40ee-8f08-64422abe573c",
+  "transitionId": "5691f9b0-bbd6-4ece-aa79-41c6f4f5857b",
   "defectId": "ENG-DIVIDA-REPARO-SEM-SINAL",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "2a29f745c82f725beb1b8d6c02ea61693b82fa00",
-  "codeFingerprint": "bbf603fffb2db94f3ea9ff76e7781d2197244d508a61f4d0fda39419112ed704",
+  "evaluatedCommit": "16b651d77569b9a225b26c4f086530784f729e17",
+  "codeFingerprint": "6d91637f14c652d9dc1029b58f57c0300fb5b62e443f6192a0db95fc0769fa0c",
   "requiredTests": [
     "tests/integration/engineeringMissionSourceE2E.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/integration/engineeringMissionSourceE2E.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-04T06:48:18.460Z",
-      "finishedAt": "2026-11-04T06:48:34.807Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104062209-a46a2b5a/logs/ENG-DIVIDA-REPARO-SEM-SINAL.log",
-      "outputSha256": "3bdb47c1c1ee4610201bbc3457b8ba5959628b51214a88a52895be548fd65038"
+      "startedAt": "2026-11-04T09:51:48.971Z",
+      "finishedAt": "2026-11-04T09:52:01.723Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104091244-2a69839e/logs/ENG-DIVIDA-REPARO-SEM-SINAL.log",
+      "outputSha256": "43405566d75bcd317103b8686c065efdfc96e57a1dfecaf87e58eb7d0a7b0934"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-04T06:48:34.828Z",
-  "proofHash": "34e3e8eadbf82264079c2736042028ae9bb956657ed76b1e5a0219bf9c97412f"
+  "createdAt": "2026-11-04T09:52:01.733Z",
+  "proofHash": "7637d2c59b6ee47d8fb9cd12344b1160f13f9f24441cc2e8ec3f310190892120"
 }

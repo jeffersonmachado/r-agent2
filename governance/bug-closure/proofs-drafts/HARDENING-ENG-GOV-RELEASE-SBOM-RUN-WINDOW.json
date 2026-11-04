@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "9308cd30-89e3-4cdb-b6fc-66c25ad04d72",
+  "transitionId": "267973ca-989c-4ed6-b83b-7c4e5e9eb0d7",
   "defectId": "HARDENING-ENG-GOV-RELEASE-SBOM-RUN-WINDOW",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "RESOLVED",
   "toState": "RESOLVED",
-  "evaluatedCommit": "2a29f745c82f725beb1b8d6c02ea61693b82fa00",
-  "codeFingerprint": "bbf603fffb2db94f3ea9ff76e7781d2197244d508a61f4d0fda39419112ed704",
+  "evaluatedCommit": "16b651d77569b9a225b26c4f086530784f729e17",
+  "codeFingerprint": "6d91637f14c652d9dc1029b58f57c0300fb5b62e443f6192a0db95fc0769fa0c",
   "requiredTests": [
     "tests/unit/governance/taskLeaseHandshakeParsing.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/taskLeaseHandshakeParsing.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-04T06:57:21.082Z",
-      "finishedAt": "2026-11-04T06:57:26.884Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104062209-a46a2b5a/logs/HARDENING-ENG-GOV-RELEASE-SBOM-RUN-WINDOW.log",
-      "outputSha256": "6883d712177c3fa312d57df297147a03573b9aa7bb3e72796790f49261a85151"
+      "startedAt": "2026-11-04T10:01:15.507Z",
+      "finishedAt": "2026-11-04T10:01:20.205Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104091244-2a69839e/logs/HARDENING-ENG-GOV-RELEASE-SBOM-RUN-WINDOW.log",
+      "outputSha256": "3bff5bd6bcb981c4aa6825b768bb599d2041244380fc9b43e2b5e73cd54baa6b"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-04T06:57:26.892Z",
-  "proofHash": "b41dd5d0364ca4a29d40f2ad9dabf68fe5b68ddefb95abf2d2d6bce1770588f7"
+  "createdAt": "2026-11-04T10:01:20.213Z",
+  "proofHash": "d7ec05146bb6d76d8c1809aed39836b6e1480ea366684a3775ede25faff270e8"
 }

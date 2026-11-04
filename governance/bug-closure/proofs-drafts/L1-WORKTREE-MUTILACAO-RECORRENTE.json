@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "eb20cd65-5730-4462-81e4-467f02fc5ff2",
+  "transitionId": "09b6f810-c20b-4d2b-9715-16a08e6db496",
   "defectId": "L1-WORKTREE-MUTILACAO-RECORRENTE",
   "severityBefore": "P0",
   "severityAfter": "P0",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "2a29f745c82f725beb1b8d6c02ea61693b82fa00",
-  "codeFingerprint": "bbf603fffb2db94f3ea9ff76e7781d2197244d508a61f4d0fda39419112ed704",
+  "evaluatedCommit": "16b651d77569b9a225b26c4f086530784f729e17",
+  "codeFingerprint": "6d91637f14c652d9dc1029b58f57c0300fb5b62e443f6192a0db95fc0769fa0c",
   "requiredTests": [
     "tests/unit/governance/worktreeIntegrity.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/worktreeIntegrity.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-04T06:23:26.862Z",
-      "finishedAt": "2026-11-04T06:23:34.381Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104062209-a46a2b5a/logs/L1-WORKTREE-MUTILACAO-RECORRENTE.log",
-      "outputSha256": "3702dad5c1c30321c1fa0fef2c478be5083fea13cd30f445687ea785b321365f"
+      "startedAt": "2026-11-04T09:13:49.786Z",
+      "finishedAt": "2026-11-04T09:13:57.638Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104091244-2a69839e/logs/L1-WORKTREE-MUTILACAO-RECORRENTE.log",
+      "outputSha256": "cc75d4a999873696525abbadfe2ce676d93655760a7fff8170f842b2b2c5e3d4"
     }
   ],
   "negativeEvidence": [
@@ -63,7 +63,7 @@
   "humanAuthorization": {
     "channel": "VSCODE_AGENT",
     "by": "platform-owner:jeffersonmachado",
-    "at": "2026-11-04T07:20:08.039Z",
+    "at": "2026-11-04T10:12:26.095Z",
     "ref": "session:e92510ac-0f54-41c6-bb85-90f42042999c",
     "agentSession": "session:e92510ac-0f54-41c6-bb85-90f42042999c"
   },
@@ -74,6 +74,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-04T06:23:34.390Z",
-  "proofHash": "12f1d83ec2c06e3e2313b374e688261aef9db128ce9f5f910b57e191d806ab4f"
+  "createdAt": "2026-11-04T09:13:57.646Z",
+  "proofHash": "d9cb78306de657783a591e7effe6c12428c538cb9975f507fce02d84de235075"
 }

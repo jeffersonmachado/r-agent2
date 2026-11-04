@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "12fd6d3c-8765-4371-8292-b4d996616e1f",
+  "defectId": "MISSAO-DEMO-SELF-ENGINEERING",
+  "severityBefore": "P3",
+  "severityAfter": "P3",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "16b651d77569b9a225b26c4f086530784f729e17",
+  "codeFingerprint": "6d91637f14c652d9dc1029b58f57c0300fb5b62e443f6192a0db95fc0769fa0c",
+  "requiredTests": [
+    "tests/unit/governance/selfEngineeringDemonstration.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/selfEngineeringDemonstration.test.js",
+      "command": "npx jest tests/unit/governance/selfEngineeringDemonstration.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-04T10:08:18.953Z",
+      "finishedAt": "2026-11-04T10:08:24.210Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104091244-2a69839e/logs/MISSAO-DEMO-SELF-ENGINEERING.log",
+      "outputSha256": "43792dc53cd9d272a191692229f209cb0cb4cafdeb4b40e0997aaf14eb070496"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/selfEngineeringDemonstration.test.js",
+      "sha256": "31f4ed15662d228168a8c3f356abf015bca9ed866025e1aa94cb3534ff3bd011"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-04T10:08:24.216Z",
+  "proofHash": "8244a67a293c28c511050a28a9019bd27e688174b578c95107712e00003ad63e",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "V/mkW9idNMggpR3kA6VGvT2zsGGWGfZQ3HUujr68y3qKUtkr0F0sQXACAJmWm2CLCY/jVj4kT3pXeib8qB1cDA==",
+    "signedAt": "2026-11-04T10:13:32.175Z"
+  }
+}

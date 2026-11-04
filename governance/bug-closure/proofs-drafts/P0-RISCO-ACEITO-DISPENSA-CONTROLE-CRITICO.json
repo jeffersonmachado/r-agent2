@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "e6db867a-8a65-478c-9dd7-a253e7131a6a",
+  "transitionId": "6ea46387-8e5f-4e36-b1c6-ccf8db34d1fe",
   "defectId": "P0-RISCO-ACEITO-DISPENSA-CONTROLE-CRITICO",
   "severityBefore": "P0",
   "severityAfter": "P0",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "2a29f745c82f725beb1b8d6c02ea61693b82fa00",
-  "codeFingerprint": "bbf603fffb2db94f3ea9ff76e7781d2197244d508a61f4d0fda39419112ed704",
+  "evaluatedCommit": "16b651d77569b9a225b26c4f086530784f729e17",
+  "codeFingerprint": "6d91637f14c652d9dc1029b58f57c0300fb5b62e443f6192a0db95fc0769fa0c",
   "requiredTests": [
     "tests/unit/governance/riskAcceptedCriticalControl.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/riskAcceptedCriticalControl.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-04T06:25:45.223Z",
-      "finishedAt": "2026-11-04T06:25:53.100Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104062209-a46a2b5a/logs/P0-RISCO-ACEITO-DISPENSA-CONTROLE-CRITICO.log",
-      "outputSha256": "853b74a97cdb88792743acf3710bd24961842a8718245f819bfb3c41037e2a4d"
+      "startedAt": "2026-11-04T09:15:40.922Z",
+      "finishedAt": "2026-11-04T09:15:49.221Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104091244-2a69839e/logs/P0-RISCO-ACEITO-DISPENSA-CONTROLE-CRITICO.log",
+      "outputSha256": "ecc5058771d8c03eb8c02d0d47e652660c56a6c7ada56b77f856227d932fb4f7"
     }
   ],
   "negativeEvidence": [
@@ -63,7 +63,7 @@
   "humanAuthorization": {
     "channel": "VSCODE_AGENT",
     "by": "platform-owner:jeffersonmachado",
-    "at": "2026-11-04T07:20:08.039Z",
+    "at": "2026-11-04T10:12:26.095Z",
     "ref": "session:e92510ac-0f54-41c6-bb85-90f42042999c",
     "agentSession": "session:e92510ac-0f54-41c6-bb85-90f42042999c"
   },
@@ -74,6 +74,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-04T06:25:53.107Z",
-  "proofHash": "ba6251fd8a733e922ef28cc30950f8de0d92609dea1a0399d6cde503b45bdaa8"
+  "createdAt": "2026-11-04T09:15:49.229Z",
+  "proofHash": "24c6add747adf23a42b951ebffd693c4b035782426552518365a54dcc01a4285"
 }

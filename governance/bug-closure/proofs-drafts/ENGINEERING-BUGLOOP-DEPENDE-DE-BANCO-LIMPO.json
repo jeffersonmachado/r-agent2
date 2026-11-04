@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "cb9e0b95-c556-41a7-9bd5-0a30a3f641e9",
+  "transitionId": "b1507709-9928-4579-9bb1-99acd9de2d82",
   "defectId": "ENGINEERING-BUGLOOP-DEPENDE-DE-BANCO-LIMPO",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "2a29f745c82f725beb1b8d6c02ea61693b82fa00",
-  "codeFingerprint": "bbf603fffb2db94f3ea9ff76e7781d2197244d508a61f4d0fda39419112ed704",
+  "evaluatedCommit": "16b651d77569b9a225b26c4f086530784f729e17",
+  "codeFingerprint": "6d91637f14c652d9dc1029b58f57c0300fb5b62e443f6192a0db95fc0769fa0c",
   "requiredTests": [
     "tests/integration/engineeringBugLoopNaturalPathE2E.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/integration/engineeringBugLoopNaturalPathE2E.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-04T06:53:36.925Z",
-      "finishedAt": "2026-11-04T06:55:37.289Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104062209-a46a2b5a/logs/ENGINEERING-BUGLOOP-DEPENDE-DE-BANCO-LIMPO.log",
-      "outputSha256": "de58f3b6f300fa60ef12713b65af0931a9e4ea8dc010e206079729c7809a7ddf"
+      "startedAt": "2026-11-04T09:57:29.364Z",
+      "finishedAt": "2026-11-04T09:59:14.173Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104091244-2a69839e/logs/ENGINEERING-BUGLOOP-DEPENDE-DE-BANCO-LIMPO.log",
+      "outputSha256": "f2dedb194e8bfc90a435279ff4eb32893702b0d3ef785ee3323e7421aee58974"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-04T06:55:37.300Z",
-  "proofHash": "2f349ba2fd646845d24e1f189323a6418344b161e8d81eb69aa33fa62f99f207"
+  "createdAt": "2026-11-04T09:59:14.187Z",
+  "proofHash": "4fa1b6066e077b41c218525cf3e1a769aadd749816306a14dcf15f0eae25c307"
 }

@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "a76aeb29-7bfb-45bb-9b0c-6dac5721608a",
+  "transitionId": "40c5fa58-98a4-4203-8ae1-31d6d17d19ce",
   "defectId": "TESTE-DURABLE-RESUME-FLAKE-POR-BANCO-COMPARTILHADO",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "2a29f745c82f725beb1b8d6c02ea61693b82fa00",
-  "codeFingerprint": "bbf603fffb2db94f3ea9ff76e7781d2197244d508a61f4d0fda39419112ed704",
+  "evaluatedCommit": "16b651d77569b9a225b26c4f086530784f729e17",
+  "codeFingerprint": "6d91637f14c652d9dc1029b58f57c0300fb5b62e443f6192a0db95fc0769fa0c",
   "requiredTests": [
     "tests/integration/engineeringMissionDurableResume.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/integration/engineeringMissionDurableResume.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-04T07:13:46.469Z",
-      "finishedAt": "2026-11-04T07:16:35.637Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104070831-50d7e7c0/logs/TESTE-DURABLE-RESUME-FLAKE-POR-BANCO-COMPARTILHADO.log",
-      "outputSha256": "b719f36cdc6c5511efa92e7dd937e267aeeb938ef1aac5eb15683990cd1502df"
+      "startedAt": "2026-11-04T10:05:13.045Z",
+      "finishedAt": "2026-11-04T10:07:11.301Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104091244-2a69839e/logs/TESTE-DURABLE-RESUME-FLAKE-POR-BANCO-COMPARTILHADO.log",
+      "outputSha256": "0c0d30421b1d5ad738eb8075f154feabca90d7f06364c00969f52de7ffaf5ac6"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-04T07:16:35.647Z",
-  "proofHash": "9e423794b2cfe56b37b70559b8e5a834e4929fa5d70782418f8966f8149ede39"
+  "createdAt": "2026-11-04T10:07:11.363Z",
+  "proofHash": "632136f5ee172092d82f294dbc00dd8945e15e38b3b0f2a5cfa84505b8448b27"
 }

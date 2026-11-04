@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "3604732d-e6a1-46b3-a445-3cdaabb9c485",
+  "defectId": "P1-CRM-EDICAO-CRIA-DUPLICATA-E-RESPOSTA-AMBIGUA",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "16b651d77569b9a225b26c4f086530784f729e17",
+  "codeFingerprint": "6d91637f14c652d9dc1029b58f57c0300fb5b62e443f6192a0db95fc0769fa0c",
+  "requiredTests": [
+    "tests/unit/crmOpportunityUpdate.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/crmOpportunityUpdate.test.js",
+      "command": "npx jest tests/unit/crmOpportunityUpdate.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-04T09:28:28.819Z",
+      "finishedAt": "2026-11-04T09:28:34.648Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104091244-2a69839e/logs/P1-CRM-EDICAO-CRIA-DUPLICATA-E-RESPOSTA-AMBIGUA.log",
+      "outputSha256": "1abf4fef699c05a33f67f81b5c989f8e0569556badf82950e0db03a1ea393f6e"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/crmOpportunityUpdate.test.js",
+      "sha256": "2de59f68d8a9f420899ac8e4c94e06a38f6bc9895c15a9915f352a3c68b9da63"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-04T09:28:34.655Z",
+  "proofHash": "86dce9ba2400b5643ede394b3ab591b83abe88313d91cc2b7b3be7ec36bef7fa",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "eb+7RfBS5/MJOo6ZIPZOM0KYvx3/jr1C0R4KqBrKzqqfVAvKSsA13IGNP3M6cYtXi4QPcYewsBmd2x6OWsVeDg==",
+    "signedAt": "2026-11-04T10:13:51.099Z"
+  }
+}

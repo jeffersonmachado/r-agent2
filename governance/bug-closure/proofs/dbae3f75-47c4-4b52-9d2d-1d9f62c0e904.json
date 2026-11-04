@@ -1,0 +1,85 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "dbae3f75-47c4-4b52-9d2d-1d9f62c0e904",
+  "defectId": "API-QA-WAVES-INDICE-REPLAY-CUSTO",
+  "severityBefore": "P0",
+  "severityAfter": "P0",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "16b651d77569b9a225b26c4f086530784f729e17",
+  "codeFingerprint": "6d91637f14c652d9dc1029b58f57c0300fb5b62e443f6192a0db95fc0769fa0c",
+  "requiredTests": [
+    "api/services/__tests__/qaWavesReplayIndexCache.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "api/services/__tests__/qaWavesReplayIndexCache.test.js",
+      "command": "npx jest api/services/__tests__/qaWavesReplayIndexCache.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-04T09:08:30.290Z",
+      "finishedAt": "2026-11-04T09:08:35.538Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104090830-6fb3490b/logs/API-QA-WAVES-INDICE-REPLAY-CUSTO.log",
+      "outputSha256": "71c116e1da710ab03be0de20a17ba863839f3906ebb07ad92a673a7fbcb716b2"
+    }
+  ],
+  "negativeEvidence": [
+    {
+      "targetFile": "api/services/qaWavesExecutionService.js",
+      "control": "replay sem `executionId` volta a ser lido e parseado por inteiro e o índice de artefatos deixa de ser cacheado por tenant",
+      "mutatedFromSha256": "e7e6e932b8497563286c5e35fe7007f2168a3bcb6d963ed2b13a0df1ff83fba0",
+      "mutatedToSha256": "ec68acd057fcd64e0601f197ae6b855f0fb8b5ba9c895d5cbec1c6055da77a54",
+      "testPath": "api/services/__tests__/qaWavesReplayIndexCache.test.js",
+      "command": "npx jest api/services/__tests__/qaWavesReplayIndexCache.test.js --bail=1 --ci",
+      "baseline": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/API-QA-WAVES-INDICE-REPLAY-CUSTO-baseline-mw1wbmn0.log",
+        "logSha256": "9ad6d36098ad17502ac988c1ab718101a64df9577f9b19a5ab844fce7bc812d5"
+      },
+      "mutated": {
+        "exitCode": 1,
+        "log": "AI_MEMORY/evidence/prova-negativa/API-QA-WAVES-INDICE-REPLAY-CUSTO-mutado-mw1wbmn0.log",
+        "logSha256": "b075d9d59a95654567d64361d3ffeafe90e509668217d0c2e011b361d99352da"
+      },
+      "restored": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/API-QA-WAVES-INDICE-REPLAY-CUSTO-restaurado-mw1wbmn0.log",
+        "logSha256": "403ce055e6840aed7c50d437ac8f44c232acbcd665089bf21b9cab0d861bcbea"
+      },
+      "capturedAt": "2026-11-04T09:10:17.728Z"
+    }
+  ],
+  "artifactHashes": [
+    {
+      "path": "api/services/__tests__/qaWavesReplayIndexCache.test.js",
+      "sha256": "4ff17c81d76e4cd6f65b728c0544d50b563001e164ba02cdc80f92ce7134537d"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": {
+    "channel": "VSCODE_AGENT",
+    "by": "platform-owner:jeffersonmachado",
+    "at": "2026-11-04T09:12:15.771Z",
+    "ref": "session:e92510ac-0f54-41c6-bb85-90f42042999c",
+    "agentSession": "session:e92510ac-0f54-41c6-bb85-90f42042999c"
+  },
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+  },
+  "createdAt": "2026-11-04T09:08:35.547Z",
+  "proofHash": "b071a0cc3986a5daa8656597fda294c41b8579775114dcb56aa9365a6dd21d01",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "M5juKn9akGuLjA9v90hHy3YP9HykLQlXZZTxg+Q/0Q/4e5PohVd2zDMMZlU97bR7Pe/tBXpG4H1KoSGfTmI0Cg==",
+    "signedAt": "2026-11-04T09:12:25.524Z"
+  }
+}

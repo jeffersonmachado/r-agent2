@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "b32827e6-e53e-4c31-84b0-3cd19058238e",
+  "transitionId": "dbeaa64b-dbe9-44ad-920c-e9fc9500e84b",
   "defectId": "HARDENING-ENG-GOV-RELEASE-TAXONOMIA-PERSISTENCIA-AI-MEMORY-EVIDENCE",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "2a29f745c82f725beb1b8d6c02ea61693b82fa00",
-  "codeFingerprint": "bbf603fffb2db94f3ea9ff76e7781d2197244d508a61f4d0fda39419112ed704",
+  "evaluatedCommit": "16b651d77569b9a225b26c4f086530784f729e17",
+  "codeFingerprint": "6d91637f14c652d9dc1029b58f57c0300fb5b62e443f6192a0db95fc0769fa0c",
   "requiredTests": [
     "tests/unit/governance/jsonPersistenceNoPhantomWrite.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/jsonPersistenceNoPhantomWrite.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-04T06:57:26.902Z",
-      "finishedAt": "2026-11-04T06:57:32.357Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104062209-a46a2b5a/logs/HARDENING-ENG-GOV-RELEASE-TAXONOMIA-PERSISTENCIA-AI-MEMORY-EVIDENCE.log",
-      "outputSha256": "0b3a41f3e1191b3a57922eeb20949ec0b51929b9df0b0d3722d6e1e65ee9d466"
+      "startedAt": "2026-11-04T10:01:20.223Z",
+      "finishedAt": "2026-11-04T10:01:25.847Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104091244-2a69839e/logs/HARDENING-ENG-GOV-RELEASE-TAXONOMIA-PERSISTENCIA-AI-MEMORY-EVIDENCE.log",
+      "outputSha256": "ccdebb20d1c74eb7bf2df31e873a4cbf4cc46682a67600ba695036c74f3f870e"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-04T06:57:32.364Z",
-  "proofHash": "b53da84f1b0f72dee3313f3253189b514640e0073e9e14997f893f31e7a66898"
+  "createdAt": "2026-11-04T10:01:25.854Z",
+  "proofHash": "a4c2c65640a7c686cd0bc4cbbf32d499036c110874f4f5d31beed24de688be95"
 }

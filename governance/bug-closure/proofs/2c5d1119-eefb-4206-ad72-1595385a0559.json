@@ -1,0 +1,85 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "2c5d1119-eefb-4206-ad72-1595385a0559",
+  "defectId": "HARDENING-ENG-GOV-RELEASE-P0-7",
+  "severityBefore": "P0",
+  "severityAfter": "P0",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "16b651d77569b9a225b26c4f086530784f729e17",
+  "codeFingerprint": "6d91637f14c652d9dc1029b58f57c0300fb5b62e443f6192a0db95fc0769fa0c",
+  "requiredTests": [
+    "tests/unit/governance/branchProtectionApplyPayload.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/branchProtectionApplyPayload.test.js",
+      "command": "npx jest tests/unit/governance/branchProtectionApplyPayload.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-04T09:13:38.683Z",
+      "finishedAt": "2026-11-04T09:13:41.439Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104091244-2a69839e/logs/HARDENING-ENG-GOV-RELEASE-P0-7.log",
+      "outputSha256": "6b648453be6c532b7fa4eed59bb87654b331164bd75547de07129ed00cfcdb02"
+    }
+  ],
+  "negativeEvidence": [
+    {
+      "targetFile": "scripts/governance/verify-branch-protection.js",
+      "control": "corpo do PUT volta a omitir required_status_checks (HTTP 422 silencioso, --apply nunca funciona)",
+      "mutatedFromSha256": "b08c1f62fde96d1e910c5ecca687f7a62678641c71817ad6b9739abbc9d1ec67",
+      "mutatedToSha256": "69de739e15193aba74c81d5c7ff30fa189615a8461e0bbc799d72f511ca4aca3",
+      "testPath": "tests/unit/governance/branchProtectionApplyPayload.test.js",
+      "command": "npx jest tests/unit/governance/branchProtectionApplyPayload.test.js --bail=1 --ci",
+      "baseline": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/HARDENING-ENG-GOV-RELEASE-P0-7-baseline-68ef5958.log",
+        "logSha256": "2f7eacaef6f18cb85a7b8575820f14d804641b5197fe3570953c398a51a52ac1"
+      },
+      "mutated": {
+        "exitCode": 1,
+        "log": "AI_MEMORY/evidence/prova-negativa/HARDENING-ENG-GOV-RELEASE-P0-7-mutado-68ef5958.log",
+        "logSha256": "0c2645e00a5b7470a04bdbad167e27e48e1e8853cf70419cebce079a5d3ba344"
+      },
+      "restored": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/HARDENING-ENG-GOV-RELEASE-P0-7-restaurado-68ef5958.log",
+        "logSha256": "3d2060ebb803041e12446ccb04c317086138f8332e2ec9db74d86912899299e6"
+      },
+      "capturedAt": "2026-11-02T16:07:58.047Z"
+    }
+  ],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/branchProtectionApplyPayload.test.js",
+      "sha256": "039b5e0beca4dc02ea74c380889b7415b24f8f7d1b08a49414f33a021bef98b0"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": {
+    "channel": "VSCODE_AGENT",
+    "by": "platform-owner:jeffersonmachado",
+    "at": "2026-11-04T10:12:26.095Z",
+    "ref": "session:e92510ac-0f54-41c6-bb85-90f42042999c",
+    "agentSession": "session:e92510ac-0f54-41c6-bb85-90f42042999c"
+  },
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-04T09:13:41.446Z",
+  "proofHash": "f1d3d58a8c6cba6e5eaf17280ed48f062300476ab5cd390179a338700e8e1118",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "jlzoeocvKnVQQg3AGzh/hsFnEacB/nuUVHrSajMMg5R/SQQec6wTGwtiSRC2o1CpvgrzWMhCwW/Uvq8i4twICQ==",
+    "signedAt": "2026-11-04T10:13:13.344Z"
+  }
+}

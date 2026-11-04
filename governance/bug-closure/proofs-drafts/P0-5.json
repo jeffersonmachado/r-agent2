@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "0f16436c-b6d9-48ea-b124-af19cefea78f",
+  "transitionId": "68f1bce6-2047-4bb5-a66d-2c60597cf265",
   "defectId": "P0-5",
   "severityBefore": "P0",
   "severityAfter": "P0",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "2a29f745c82f725beb1b8d6c02ea61693b82fa00",
-  "codeFingerprint": "bbf603fffb2db94f3ea9ff76e7781d2197244d508a61f4d0fda39419112ed704",
+  "evaluatedCommit": "16b651d77569b9a225b26c4f086530784f729e17",
+  "codeFingerprint": "6d91637f14c652d9dc1029b58f57c0300fb5b62e443f6192a0db95fc0769fa0c",
   "requiredTests": [
     "tests/integration/securityWaiverApprovalE2E.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/integration/securityWaiverApprovalE2E.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-04T06:24:07.858Z",
-      "finishedAt": "2026-11-04T06:24:13.692Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104062209-a46a2b5a/logs/P0-5.log",
-      "outputSha256": "765b16956a718fbed9c4e84c2093a81377fea94568001dca4a619a5f5ee9077a"
+      "startedAt": "2026-11-04T09:14:22.269Z",
+      "finishedAt": "2026-11-04T09:14:26.576Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104091244-2a69839e/logs/P0-5.log",
+      "outputSha256": "085b8991e9e0472a6d9f9209d84298d2d1dbfffb2cd4d3bd2819e9c236a00375"
     }
   ],
   "negativeEvidence": [
@@ -63,7 +63,7 @@
   "humanAuthorization": {
     "channel": "VSCODE_AGENT",
     "by": "platform-owner:jeffersonmachado",
-    "at": "2026-11-04T07:20:08.039Z",
+    "at": "2026-11-04T10:12:26.095Z",
     "ref": "session:e92510ac-0f54-41c6-bb85-90f42042999c",
     "agentSession": "session:e92510ac-0f54-41c6-bb85-90f42042999c"
   },
@@ -74,6 +74,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-04T06:24:13.699Z",
-  "proofHash": "9b28b1233d2911079ede1170812dd578b900ad7698c7bf60af9d3f5ed21055fd"
+  "createdAt": "2026-11-04T09:14:26.584Z",
+  "proofHash": "fd9c7b6defcb9485785da72c2034fb1b16de380b202bf27e4606f39651802835"
 }

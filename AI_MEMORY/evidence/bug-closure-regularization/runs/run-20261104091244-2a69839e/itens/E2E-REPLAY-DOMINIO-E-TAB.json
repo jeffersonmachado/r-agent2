@@ -1,0 +1,25 @@
+{
+  "id": "E2E-REPLAY-DOMINIO-E-TAB",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "qa-waves-replay: jornada vive em outro domínio e o clique num tab inexistente consumia 420 s",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "CAMPO_DO_ITEM",
+  "teste": "tests/unit/governance/backfillRegressionTests.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [
+    "ASSINATURA_INVALIDA"
+  ],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104091244-2a69839e/logs/E2E-REPLAY-DOMINIO-E-TAB.log",
+  "draft": "governance/bug-closure/proofs-drafts/E2E-REPLAY-DOMINIO-E-TAB.json",
+  "camposParaAssinar": 18,
+  "runId": "run-20261104091244-2a69839e",
+  "identidade": {
+    "commit": "16b651d77569b9a225b26c4f086530784f729e17",
+    "sourceFingerprint": "6d91637f14c652d9dc1029b58f57c0300fb5b62e443f6192a0db95fc0769fa0c",
+    "inventoryFingerprint": "39003d9ea50ba5df64c09cac080101b8cfe1011e0128cbf74c0f5c426d38ce8c",
+    "hardeningQueueFingerprint": "5ab5ad91a11c619b3c149ae7f26af320985057af5bc0249a9489e85347bc1cae",
+    "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+  },
+  "artifactSha256": "cdb66087a2250dbfc1726d0f1ce9421ef4404fc1295cf8ffabe8304f1fc0c1b3"
+}

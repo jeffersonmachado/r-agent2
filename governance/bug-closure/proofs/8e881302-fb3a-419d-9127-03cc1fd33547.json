@@ -1,0 +1,85 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "8e881302-fb3a-419d-9127-03cc1fd33547",
+  "defectId": "API-LRO-LISTA-500-SEM-TENANT",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "16b651d77569b9a225b26c4f086530784f729e17",
+  "codeFingerprint": "6d91637f14c652d9dc1029b58f57c0300fb5b62e443f6192a0db95fc0769fa0c",
+  "requiredTests": [
+    "tests/integration/lroRoutes.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/integration/lroRoutes.test.js",
+      "command": "npx jest tests/integration/lroRoutes.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-04T09:08:35.556Z",
+      "finishedAt": "2026-11-04T09:09:12.008Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104090830-6fb3490b/logs/API-LRO-LISTA-500-SEM-TENANT.log",
+      "outputSha256": "1418d9330c19884e93bd69a20224f18e027db70a8d69f7e4d14ac55aa83e20b9"
+    }
+  ],
+  "negativeEvidence": [
+    {
+      "targetFile": "api/modules/lro/routes.js",
+      "control": "`tenantFromRequest` volta a ser chamado sem tratamento na lista, então a ausência de tenant vira 500 (erro não tratado) em vez de 400",
+      "mutatedFromSha256": "c0ca46f30b2b5363d42ed20c2fe186b061c14eaf05868b472d3fb48f611c989a",
+      "mutatedToSha256": "2d15a9a6b3f7ee1e8fc371d6ae598986027f6ae34376a80c954fcf9f89eed657",
+      "testPath": "tests/integration/lroRoutes.test.js",
+      "command": "npx jest tests/integration/lroRoutes.test.js --bail=1 --ci",
+      "baseline": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/API-LRO-LISTA-500-SEM-TENANT-baseline-mw1wbmn0.log",
+        "logSha256": "0762cc9cedb83fbf8a9881097067d40510fa55c6be7f55bc9691a159145afd7a"
+      },
+      "mutated": {
+        "exitCode": 1,
+        "log": "AI_MEMORY/evidence/prova-negativa/API-LRO-LISTA-500-SEM-TENANT-mutado-mw1wbmn0.log",
+        "logSha256": "266b96f6567e2f0992fb0e276658624034aba73b43bb365683f1696b486a3e1b"
+      },
+      "restored": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/API-LRO-LISTA-500-SEM-TENANT-restaurado-mw1wbmn0.log",
+        "logSha256": "48dce47e39a2f3831b5d1c75aeab810e71c2877891dda8af31b9c7d82d652263"
+      },
+      "capturedAt": "2026-11-04T09:11:57.022Z"
+    }
+  ],
+  "artifactHashes": [
+    {
+      "path": "tests/integration/lroRoutes.test.js",
+      "sha256": "52097539fa7c0a419905bd635bd8525c4ff53bced4839b8bbd16704c4b910720"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": {
+    "channel": "VSCODE_AGENT",
+    "by": "platform-owner:jeffersonmachado",
+    "at": "2026-11-04T09:12:15.771Z",
+    "ref": "session:e92510ac-0f54-41c6-bb85-90f42042999c",
+    "agentSession": "session:e92510ac-0f54-41c6-bb85-90f42042999c"
+  },
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+  },
+  "createdAt": "2026-11-04T09:09:12.025Z",
+  "proofHash": "95218bb9ffb9f67d03c3d5f48ec291ee93e0ba0d9c7bed1ebec2af83285b4cc2",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "Cez6n0TWgixMjhQ+J5+By1NpjN+NLlYk5nP2wyXCUGeAkdPp8rg/svxpyYGhdz7cPzNhkx794wTneliR2bxxBA==",
+    "signedAt": "2026-11-04T09:12:25.008Z"
+  }
+}

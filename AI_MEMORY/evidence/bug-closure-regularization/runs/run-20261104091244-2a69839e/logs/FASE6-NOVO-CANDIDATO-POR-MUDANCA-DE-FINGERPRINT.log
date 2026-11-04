@@ -1,0 +1,19 @@
+[jest-global-setup] .env carregado (0 chave(s) aplicada(s); ambiente explícito vence)
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/governance/newCandidateOnFingerprintChange.test.js
+  Fase 6 — mudou o conteúdo, o candidato anterior não serve
+    ✓ candidato do run/fingerprint ANTIGO não passa no run NOVO (111 ms)
+    ✓ MESMO run, conteúdo diferente ⇒ SOURCE_MISMATCH (a árvore mudou debaixo do candidato) (103 ms)
+    ✓ candidato NOVO (run e fingerprint correntes) passa — não-vacuidade (101 ms)
+  Fase 6 — a verificação completa reprova antes de publicar
+    ✓ cadeia coerente no MESMO fingerprint ⇒ PASS (104 ms)
+    ✓ candidato do run anterior reprova a verificação completa (não publica) (102 ms)
+    ✓ entregue reaproveitado com fingerprint antigo reprova mesmo com run corrente (102 ms)
+    ✓ sem run corrente NÃO há como provar que o candidato é o do conteúdo atual (101 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       7 passed, 7 total
+Snapshots:   0 total
+Time:        1.129 s, estimated 2 s
+Ran all test suites matching /tests\/unit\/governance\/newCandidateOnFingerprintChange.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "440cb821-cc1d-4005-8d8f-24cd7befa18c",
+  "transitionId": "b2826aa7-ac9c-4371-8147-441554210d70",
   "defectId": "P2-TESTES-REGRAVAM-EVIDENCIA-GOVERNADA-TEMPORAL",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "RESOLVED",
   "toState": "RESOLVED",
-  "evaluatedCommit": "2a29f745c82f725beb1b8d6c02ea61693b82fa00",
-  "codeFingerprint": "bbf603fffb2db94f3ea9ff76e7781d2197244d508a61f4d0fda39419112ed704",
+  "evaluatedCommit": "16b651d77569b9a225b26c4f086530784f729e17",
+  "codeFingerprint": "6d91637f14c652d9dc1029b58f57c0300fb5b62e443f6192a0db95fc0769fa0c",
   "requiredTests": [
     "tests/unit/governance/governedArtifactPreservation.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/governedArtifactPreservation.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-04T06:59:56.752Z",
-      "finishedAt": "2026-11-04T07:00:01.443Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104062209-a46a2b5a/logs/P2-TESTES-REGRAVAM-EVIDENCIA-GOVERNADA-TEMPORAL.log",
-      "outputSha256": "dfe510b481eba2972933d372fb39d3cdae1dd5e94ceec45ca58dd7cf298159bb"
+      "startedAt": "2026-11-04T10:04:00.865Z",
+      "finishedAt": "2026-11-04T10:04:03.998Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104091244-2a69839e/logs/P2-TESTES-REGRAVAM-EVIDENCIA-GOVERNADA-TEMPORAL.log",
+      "outputSha256": "efd84cbd76d74ec07f0193d32d4ffbfc13fba3c2d330c82a1e277cba2ddb05c8"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-04T07:00:01.449Z",
-  "proofHash": "7e47466d020315a31558a431f71bbb52d75bebb14f98366ffea0c246ae4cefd6"
+  "createdAt": "2026-11-04T10:04:04.003Z",
+  "proofHash": "955758308edb5cae59255bc1d1d9fc39df62c97a044720d13452775251a8fda0"
 }

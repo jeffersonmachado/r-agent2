@@ -1,0 +1,85 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "c9ba9879-84ca-4a05-9a66-988f67141850",
+  "defectId": "MISSAO-B1-CADEIA-CRIPTOGRAFICA",
+  "severityBefore": "P0",
+  "severityAfter": "P0",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "16b651d77569b9a225b26c4f086530784f729e17",
+  "codeFingerprint": "6d91637f14c652d9dc1029b58f57c0300fb5b62e443f6192a0db95fc0769fa0c",
+  "requiredTests": [
+    "tests/unit/governance/bugClosureHistoricalGuards.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/bugClosureHistoricalGuards.test.js",
+      "command": "npx jest tests/unit/governance/bugClosureHistoricalGuards.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-04T09:13:57.656Z",
+      "finishedAt": "2026-11-04T09:14:03.374Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104091244-2a69839e/logs/MISSAO-B1-CADEIA-CRIPTOGRAFICA.log",
+      "outputSha256": "2c274b386c0326458d986526331d0e6164fe514c8b9cefcf569b9f67124b7b30"
+    }
+  ],
+  "negativeEvidence": [
+    {
+      "targetFile": "governance/governance-chain.js",
+      "control": "verificador deixa de recalcular o hash do elo (aceita a cadeia como ela se declara)",
+      "mutatedFromSha256": "3ab195249af732ce6c376f3e8ba0cbe132598eab9a592fe4d84eb6c511fc1eb1",
+      "mutatedToSha256": "eb8811b0dd071da9d1353ede080e84549ecc555ae7b400743902acb733d2bec3",
+      "testPath": "tests/unit/governance/bugClosureHistoricalGuards.test.js",
+      "command": "npx jest tests/unit/governance/bugClosureHistoricalGuards.test.js --bail=1 --ci",
+      "baseline": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/MISSAO-B1-CADEIA-CRIPTOGRAFICA-baseline-c91aa707.log",
+        "logSha256": "e3f0e060148d6e2d62c1cbfceb1af2ca4876c3efb2a9cd6b44e015082e4b1072"
+      },
+      "mutated": {
+        "exitCode": 1,
+        "log": "AI_MEMORY/evidence/prova-negativa/MISSAO-B1-CADEIA-CRIPTOGRAFICA-mutado-c91aa707.log",
+        "logSha256": "32ce3ea4eab5181a2ecfbef53de7402d0c522862dffdb6108116be987acaa9a8"
+      },
+      "restored": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/MISSAO-B1-CADEIA-CRIPTOGRAFICA-restaurado-c91aa707.log",
+        "logSha256": "c68f5d05f7bae322fb83601414b8cf2f14e294f00ff2511391e98259c8e43954"
+      },
+      "capturedAt": "2026-11-02T16:08:12.086Z"
+    }
+  ],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/bugClosureHistoricalGuards.test.js",
+      "sha256": "19927a7226a1134557e9baa954d3fc7bd71b09f2ab9f26e32ee27e571ce446d1"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": {
+    "channel": "VSCODE_AGENT",
+    "by": "platform-owner:jeffersonmachado",
+    "at": "2026-11-04T10:12:26.095Z",
+    "ref": "session:e92510ac-0f54-41c6-bb85-90f42042999c",
+    "agentSession": "session:e92510ac-0f54-41c6-bb85-90f42042999c"
+  },
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-04T09:14:03.382Z",
+  "proofHash": "0e37ba10243a9fe54316372111fc0e743aa7f9cfe70ebcad5e9e3074f33d3a81",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "qSkm34Y/voiBVo14WLXGg7pkcNwBeOFtBRlj77C3NpxD8bhz+Bs6MJsHTYrjteuvScZlWa8LE9VudtvdPyu9Bg==",
+    "signedAt": "2026-11-04T10:13:27.334Z"
+  }
+}

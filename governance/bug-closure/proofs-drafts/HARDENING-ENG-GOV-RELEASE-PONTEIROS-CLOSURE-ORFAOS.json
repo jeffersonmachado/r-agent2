@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "cf02f4a6-3437-440c-a682-224dd9b6b1ab",
+  "transitionId": "3cc30eb9-f354-4d72-979a-f6af513a0c1a",
   "defectId": "HARDENING-ENG-GOV-RELEASE-PONTEIROS-CLOSURE-ORFAOS",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "RESOLVED",
   "toState": "RESOLVED",
-  "evaluatedCommit": "2a29f745c82f725beb1b8d6c02ea61693b82fa00",
-  "codeFingerprint": "bbf603fffb2db94f3ea9ff76e7781d2197244d508a61f4d0fda39419112ed704",
+  "evaluatedCommit": "16b651d77569b9a225b26c4f086530784f729e17",
+  "codeFingerprint": "6d91637f14c652d9dc1029b58f57c0300fb5b62e443f6192a0db95fc0769fa0c",
   "requiredTests": [
     "tests/unit/governance/closurePointersOrphans.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/closurePointersOrphans.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-04T06:57:11.993Z",
-      "finishedAt": "2026-11-04T06:57:17.267Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104062209-a46a2b5a/logs/HARDENING-ENG-GOV-RELEASE-PONTEIROS-CLOSURE-ORFAOS.log",
-      "outputSha256": "03218ad6d940c463d42ec586d674c42e315b0917d5cebc5035057764c5de6f23"
+      "startedAt": "2026-11-04T10:01:07.138Z",
+      "finishedAt": "2026-11-04T10:01:11.531Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261104091244-2a69839e/logs/HARDENING-ENG-GOV-RELEASE-PONTEIROS-CLOSURE-ORFAOS.log",
+      "outputSha256": "f89f1ceff961800a9becdf46e96f3fa1c9a34c447564ea6514e33457712cb1ab"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-04T06:57:17.273Z",
-  "proofHash": "3f64bbfa6a0da630a0e20af7e2b2f2cd2263580992aa7d15436d25270944ce98"
+  "createdAt": "2026-11-04T10:01:11.538Z",
+  "proofHash": "eadcbccc582ff0a0bf0f7534e2678c2f244ca7a067beab4a1fbbcd283292af37"
 }

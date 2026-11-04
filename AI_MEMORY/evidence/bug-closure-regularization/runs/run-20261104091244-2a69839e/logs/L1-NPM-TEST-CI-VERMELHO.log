@@ -1,0 +1,15 @@
+[jest-global-setup] .env carregado (0 chave(s) aplicada(s); ambiente explícito vence)
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/qaMeshOperationPolicy.test.js
+  QA Mesh — escopo do Bug Closure First
+    ✓ --refresh-registry ISOLADO é manutenção de índice (109 ms)
+    ✓ qualquer outra operação continua exigindo elegibilidade (106 ms)
+    ✓ não é vacuoso: a classificação distingue de fato as duas operações (101 ms)
+    ✓ o entrypoint usa a política (não volta a chamar o guard incondicionalmente) (103 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       4 passed, 4 total
+Snapshots:   0 total
+Time:        0.778 s, estimated 2 s
+Ran all test suites matching /tests\/unit\/qaMeshOperationPolicy.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?
