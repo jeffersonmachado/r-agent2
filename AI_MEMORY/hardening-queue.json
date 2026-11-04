@@ -3,7 +3,7 @@
   "repository": "jeffersonmachado/r-agent2",
   "branch": "mission/p0p1-hardening-20261010",
   "baseline": "2f1795454",
-  "updatedAt": "2026-11-04",
+  "updatedAt": "2026-11-04T18:32:34.849Z",
   "consumers": [
     ".github/hooks/continue-until-done.cjs (eventos Stop/SessionStart)"
   ],
@@ -3473,6 +3473,16 @@
       "closureProof": "governance/bug-closure/proofs/bd03b9f2-528f-4dd9-8d2e-c340247f0fcd.json",
       "attestationId": "bd03b9f2-528f-4dd9-8d2e-c340247f0fcd",
       "attestedAt": "2026-11-04T10:12:37.079Z"
+    },
+    {
+      "id": "P1-EVIDENCIA-ENTERPRISE-FORA-DA-JANELA-DO-RUN",
+      "title": "Evidencia enterprise (qa/enterprise/*) e reprocessada depois de o run fechar e o agregado fica vermelho",
+      "status": "blocked",
+      "blocked_reason": "MEDIDO em 2026-11-04 no run rap-governed-20261104102654604-d5d764ea: validate:qa-evidence-same-run reprova 3 artefatos RUNTIME_EVIDENCE (qa/enterprise/{pbx-voice-flow-prod-like,human-handoff-full-validation,omnichannel-unified-replay}.json) com QA_EVIDENCE_SAME_RUN_VIOLATION porque a regra exige generatedAt <= run.completed_at e o run ja estava COMPLETED quando o produtor real (scripts/smoke/qa-waves-enterprise-proof-smoke.js, executado pelo passo 1 do converge e de novo pelos passos do selo) regerou os artefatos. Regenerar dentro da janela exige um run governado NOVO (create-governed-run + regularize das 171 provas + waves + converge + selo V2 + empacotamento): ~2h30 de ciclo, fora do que restava desta sessao. NAO e relaxamento de gate: a correcao e o produtor rodar ANTES de o run fechar (ou o run so fechar depois de todos os produtores), nao aceitar evidencia pos-fechamento.",
+      "severity": "P1",
+      "severityStatus": "DECLARADA",
+      "state": "OPEN",
+      "legacyStatus": "blocked"
     }
   ],
   "schemaVersion": 2,
